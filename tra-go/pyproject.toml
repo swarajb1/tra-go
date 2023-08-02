@@ -9,7 +9,14 @@ packages = [{include = "tra_go"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 yfinance = "^0.2.26"
+kiteconnect = "^4.2.0"
+python-dotenv = "^1.0.0"
+requests = "^2.31.0"
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
 
 [build-system]
 requires = ["poetry-core"]
