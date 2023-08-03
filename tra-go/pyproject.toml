@@ -2,21 +2,22 @@
 name = "tra-go"
 version = "0.1.0"
 description = ""
-authors = ["Dell Laptop <bisae.swaraj@gmail.com>"]
+authors = ["Mac <bisae.swaraj@gmail.com>"]
 readme = "README.md"
 packages = [{include = "tra_go"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.8,<3.12"
 yfinance = "^0.2.26"
 kiteconnect = "^4.2.0"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
-
+pytz = "^2023.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 mypy = "^1.4.1"
+pytest = "^7.4.0"
 
 [build-system]
 requires = ["poetry-core"]

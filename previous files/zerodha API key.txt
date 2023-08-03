@@ -1,0 +1,15 @@
+To obtain the API key and access token for Zerodha's KiteConnect API, you need to follow these steps:
+
+1. Create an account on Zerodha: If you don't already have an account with Zerodha, you'll need to create one. Visit the Zerodha website (https://zerodha.com/) and follow the account opening process.
+
+2. Generate API key: Once you have an account with Zerodha, you can generate an API key by logging into the Zerodha developer portal. Go to the Zerodha API documentation website (https://kite.trade/) and click on "Developer Login" at the top right corner to log in using your Zerodha account credentials.
+
+3. Create a new app: After logging in, go to the "API Key" section in the developer portal. Click on "Create new app" to create a new app for your API key.
+
+4. Provide app details: Fill in the required details for your app, such as the app name, website URL, redirect URL, etc. The redirect URL is the URL where you want the user to be redirected after authentication. For testing purposes, you can use `http://localhost` as the redirect URL.
+
+5. Generate access token: Once your app is created, you can generate the access token. In the developer portal, go to the "API Key" section and click on "Generate access token" for your app. Follow the authentication process to obtain the access token.
+
+After completing these steps, you should have both the API key and access token necessary to access Zerodha's KiteConnect API.
+
+Note: Make sure to keep your API key and access token secure. Do not share them publicly or expose them in your code or any public repositories.
