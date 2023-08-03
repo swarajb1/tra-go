@@ -1,0 +1,16 @@
+I apologize for the confusion. Unfortunately, obtaining free historical data with a 1-minute interval for an extended period such as 10 years can be challenging. Free data providers typically offer limited historical data with 1-minute intervals, and their availability may vary.
+
+If you specifically require 10 years of 1-minute interval data for HDFC Bank or any other stock, you may need to consider using paid data providers or financial data platforms that offer comprehensive historical data with finer intervals. These platforms often provide APIs that allow you to access and download the data programmatically.
+
+Some popular paid data providers and financial data platforms include:
+
+1. **Alpha Vantage** (https://www.alphavantage.co/)
+2. **Quandl** (https://www.quandl.com/)
+3. **Polygon** (https://polygon.io/)
+4. **Intrinio** (https://intrinio.com/)
+
+These platforms offer various subscription plans and pricing options, so you can choose the one that best fits your requirements and budget. Make sure to review their documentation and terms of service to understand the data availability, pricing, and usage policies.
+
+Once you have subscribed to a data provider, you can typically use their APIs or libraries (if provided) to fetch the desired historical data with a 1-minute interval. The specific implementation details would depend on the chosen data provider and their API documentation.
+
+Please note that the availability and cost of historical data with a 1-minute interval may vary among these providers, so it's important to evaluate and compare the options to find the most suitable solution for your needs.
