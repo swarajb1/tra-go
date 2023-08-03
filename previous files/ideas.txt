@@ -1,0 +1,92 @@
+1:
+	all input data from 10am to 12pm, to give only 2 points buy price and sell price,
+		stop loss is a manual number, like 15-20%.
+
+2.
+	all input data from 10 am to 12 pm, in 30 minutes intervals, to generate price patterns for next 1-2 hours.
+		then taking that pattern into condsideration, the buy and sell price is decided.
+
+
+3.
+	many types of orders, in same interval size,
+		30 mins data, predits 30 minutes.
+		same for other amounts of intervals.
+
+		these intervals can be made to be different than common sizes of 30 mins, and 1 hr., max 2 hr to min 30 min.
+		30 mins to 120 mins, 91 sizes.
+
+		decide on number like 66, then train algorithm for this.
+
+
+4.
+	risk to reward ratio
+	between 4 to 6
+	meaning: stoploss of 1 rs and profit of 4-6 rs. in a single trade.
+
+	even if your trades are 50 percent correct. you earn an average of 1.5-2.5 rs every trade.
+
+
+5.
+	cost function  = mean cubed aboulute error
+
+
+
+
+list:
+	As of my knowledge cutoff in September 2021, here is a list of the Nifty 50 index tickers along with their corresponding company names:
+
+1. ADANIPORTS.NS - Adani Ports and Special Economic Zone Ltd.
+2. ASIANPAINT.NS - Asian Paints Ltd.
+3. AXISBANK.NS - Axis Bank Ltd.
+4. BAJAJ-AUTO.NS - Bajaj Auto Ltd.
+5. BAJFINANCE.NS - Bajaj Finance Ltd.
+6. BAJAJFINSV.NS - Bajaj Finserv Ltd.
+7. BHARTIARTL.NS - Bharti Airtel Ltd.
+8. BPCL.NS - Bharat Petroleum Corporation Ltd.
+9. BRITANNIA.NS - Britannia Industries Ltd.
+10. CIPLA.NS - Cipla Ltd.
+11. COALINDIA.NS - Coal India Ltd.
+12. DIVISLAB.NS - Divi's Laboratories Ltd.
+13. DRREDDY.NS - Dr. Reddy's Laboratories Ltd.
+14. EICHERMOT.NS - Eicher Motors Ltd.
+15. GAIL.NS - GAIL (India) Ltd.
+16. GRASIM.NS - Grasim Industries Ltd.
+17. HCLTECH.NS - HCL Technologies Ltd.
+18. HDFC.NS - Housing Development Finance Corporation Ltd.
+19. HDFCBANK.NS - HDFC Bank Ltd.
+20. HDFCLIFE.NS - HDFC Life Insurance Company Ltd.
+21. HEROMOTOCO.NS - Hero MotoCorp Ltd.
+22. HINDALCO.NS - Hindalco Industries Ltd.
+23. HINDUNILVR.NS - Hindustan Unilever Ltd.
+24. ICICIBANK.NS - ICICI Bank Ltd.
+25. INDUSINDBK.NS - IndusInd Bank Ltd.
+26. INFY.NS - Infosys Ltd.
+27. IOC.NS - Indian Oil Corporation Ltd.
+28. ITC.NS - ITC Ltd.
+29. JSWSTEEL.NS - JSW Steel Ltd.
+30. KOTAKBANK.NS - Kotak Mahindra Bank Ltd.
+31. LT.NS - Larsen & Toubro Ltd.
+32. M&M.NS - Mahindra & Mahindra Ltd.
+33. MARUTI.NS - Maruti Suzuki India Ltd.
+34. NESTLEIND.NS - Nestle India Ltd.
+35. NTPC.NS - NTPC Ltd.
+36. ONGC.NS - Oil and Natural Gas Corporation Ltd.
+37. POWERGRID.NS - Power Grid Corporation of India Ltd.
+38. RELIANCE.NS - Reliance Industries Ltd.
+39. SBILIFE.NS - SBI Life Insurance Company Ltd.
+40. SBIN.NS - State Bank of India
+41. SHREECEM.NS - Shree Cement Ltd.
+42. SUNPHARMA.NS - Sun Pharmaceutical Industries Ltd.
+43. TATAMOTORS.NS - Tata Motors Ltd.
+44. TATASTEEL.NS - Tata Steel Ltd.
+45. TCS.NS - Tata Consultancy Services Ltd.
+46. TECHM.NS - Tech Mahindra Ltd.
+47. TITAN.NS - Titan Company Ltd.
+48. ULTRACEMCO.NS - UltraTech Cement Ltd.
+49. UPL.NS - UPL Ltd.
+50. WIPRO.NS - Wipro Ltd.
+
+Please note that the composition of the Nifty 50 index may change over time as companies are added or removed based on certain criteria.
+
+
+list = ['ADANIPORTS.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BHARTIARTL.NS', 'BPCL.NS', 'CIPLA.NS', 'COALINDIA.NS', 'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFC.NS', 'HDFCBANK', 'NESTLEIND.NS', 'NTPC.NS', 'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SBIN.NS', 'SHREECEM.NS', 'SUNPHARMA.NS', 'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'UPL.NS', 'WIPRO.NS']
