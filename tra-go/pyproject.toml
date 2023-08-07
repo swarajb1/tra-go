@@ -2,12 +2,12 @@
 name = "tra-go"
 version = "0.1.0"
 description = ""
-authors = ["Mac <bisae.swaraj@gmail.com>"]
+authors = ["Mac <bisane.swaraj@gmail.com>"]
 readme = "README.md"
 packages = [{include = "tra_go"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.8.1,<3.12"
 yfinance = "^0.2.26"
 kiteconnect = "^4.2.0"
 python-dotenv = "^1.0.0"
@@ -21,6 +21,7 @@ scikit-learn = "^1.3.0"
 black = "^23.7.0"
 mypy = "^1.4.1"
 pytest = "^7.4.0"
+flake8 = "^6.1.0"
 
 [build-system]
 requires = ["poetry-core"]
