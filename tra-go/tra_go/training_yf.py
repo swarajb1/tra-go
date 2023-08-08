@@ -161,9 +161,9 @@ class MyANN:
 
         # make a set of all datetime to be there
         # and what datetime are actually there
-        # finding missing ones
+        # finding missing ones, using set
         # add them as zeros in correct datetimes, sort df
-        # put previous values in them if not there.
+        # put previous values in them in palce of zeros
 
         all_datetimes_required_set = set(all_datetimes_required)
         all_datetimes_in_data_set = set(all_datetimes_in_data)
@@ -184,10 +184,10 @@ class MyANN:
 
         new_df = pd.DataFrame(add_df_rows)
         df = pd.concat([df, new_df], ignore_index=True)
+
         df = df.sort_values(by="Datetime", ascending=True)
-        print(df.columns)
+
         df.drop("Dates", axis=1, inplace=True)
-        print(df.columns)
 
         missing_indexes = []
         for index, row in df.iterrows():
@@ -209,27 +209,78 @@ class MyANN:
                         df.at[index, "high"] = df.at[ref_index, "high"]
                         df.at[index, "low"] = df.at[ref_index, "low"]
                         missing_rows -= 1
-                        print(df.at[index, "Datetime"])
 
         # then divide accordingly into 2 zones
+        # send only full zone df, not full date.
+        df["to_add"] = df["Datetime"].apply(lambda x: self.is_in_zone(x))
+
+        new_2 = df[df["to_add"] == True].copy(deep=True)
+        new_2.reset_index(drop=True, inplace=True)
+
+        return new_2[
+            [
+                "Datetime",
+                "open",
+                "close",
+                "high",
+                "low",
+            ]
+        ]
+
+    def data_scaling(self, df: pd.DataFrame) -> pd.DataFrame:
+        # fixded 264 rows for all days in zone.
+        # just divide by the close value of previous row,
+        # for the very first day, use the open value
+
+        one_day = 264
+        num_days = len(df) // one_day
+
+        # for other days
+        for j in range(num_days - 1, 0, -1):
+            for i in range(one_day):
+                df.loc[j * one_day + i, "close"] /= df.loc[j * one_day - 1, "close"]
+                df.loc[j * one_day + i, "high"] /= df.loc[j * one_day - 1, "close"]
+                df.loc[j * one_day + i, "low"] /= df.loc[j * one_day - 1, "close"]
+                df.loc[j * one_day + i, "open"] /= df.loc[j * one_day - 1, "close"]
+
+        # for 1st day
+        open_val = df.at[0, "open"]
+        for i in range(one_day):
+            df.at[i, "close"] /= open_val
+            df.at[i, "high"] /= open_val
+            df.at[i, "low"] /= open_val
+            df.at[i, "open"] /= open_val
 
         return df
 
+    # def evaluate
+    # 1 - predicted high low is inside the actual high low
+    # 2 - predicted high low, with safety_factor is the actual high low
+
     def train_test_split(
         self,
-        test_size_proportion: float,
+        test_size=0.2,
     ) -> [pd.DataFrame]:
         # separate into 132, 132 entries df. for train and test df.
 
-        # divide the price data of that day by the cloding price of the previous day.
+        # divide the price data of that day by the closing price of the previous day.
         # for the very first day of the dataset - divide the prices by the opening price.
 
-        list_df = self.data_clean()
+        df = self.data_clean()
+        # getting clean and my zone data
+        df = self.data_scaling(df)
+        # getting scaled data according to previous day cloning, in percentages terms
 
-        if test_size_proportion:
-            test_size_proportion = 0.2
+        print(df)
 
-        test_num = round(len(list_df) * test_size_proportion)
+        df["Dates"] = df["Datetime"].apply(lambda x: self.to_date_str(x))
+        all_dates = df["Dates"].unique()
+        num_days = len(all_dates)
+        training_dates = all_dates[: int(num_days * test_size)]
+        testing_dates = all_dates[int(num_days * test_size) :]
+
+        list_df = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        test_num = round(len(list_df) * test_size)
 
         return (
             list_df[:test_num],
@@ -242,7 +293,7 @@ class MyANN:
 def main():
     obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
 
-    X_train, X_test, Y_train, Y_test = obj.train_test_split(test_size_proportion=0.2)
+    X_train, X_test, Y_train, Y_test = obj.train_test_split(test_size=0.2)
 
     # X_train, X_test, y_train, y_test = train_test_split(
     #     df[["age", "affordibility"]], df.bought_insurance, test_size=0.2, random_state=25
