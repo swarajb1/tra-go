@@ -42,6 +42,12 @@ class MyANN:
     def is_same_date(self, datetime_1, check_datetime):
         return self.to_date(datetime_1) == self.to_date(check_datetime)
 
+    def is_same_date_2(self, date_1, list_check_date_str):
+        for d_1 in list_check_date_str:
+            if d_1 == date_1:
+                return True
+        return False
+
     def is_in_zone(self, check_datetime) -> bool:
         datetime_1 = datetime.strptime(
             "2000-01-01 10:00:00+0530", "%Y-%m-%d %H:%M:%S%z"
@@ -85,10 +91,11 @@ class MyANN:
         df["low"] = df["Low"].apply(lambda x: self.round_decimals_2(x))
 
         new_2 = df[df["to_add"] == True].copy(deep=True)
+        new_2.rename(columns={"Datetime": "datetime"}, inplace=True)
 
         return new_2[
             [
-                "Datetime",
+                "datetime",
                 "open",
                 "close",
                 "high",
@@ -104,9 +111,11 @@ class MyANN:
         df["high"] = df["High"].apply(lambda x: self.round_decimals_2(x))
         df["low"] = df["Low"].apply(lambda x: self.round_decimals_2(x))
 
+        df.rename(columns={"Datetime": "datetime"}, inplace=True)
+
         return df[
             [
-                "Datetime",
+                "datetime",
                 "open",
                 "close",
                 "high",
@@ -118,7 +127,7 @@ class MyANN:
         file_path = f"./././data_stock_price_yf/{self.interval} data/{self.ticker} - {self.interval}.csv"
         return file_path
 
-    def data_clean(
+    def data_cleaning(
         self,
     ) -> pd.DataFrame:
         # start time = 0915
@@ -126,10 +135,10 @@ class MyANN:
         # total minutes = 375
 
         df = self.get_data_all_df()
-        df = df.sort_values(by="Datetime", ascending=True)
+        df = df.sort_values(by="datetime", ascending=True)
 
-        df["Dates"] = df["Datetime"].apply(lambda x: self.to_date_str(x))
-        all_dates = df["Dates"].unique()
+        df["date"] = df["datetime"].apply(lambda x: self.to_date_str(x))
+        all_dates = df["date"].unique()
 
         all_datetimes_required = []
         timezone = pytz.timezone("Asia/Kolkata")
@@ -154,7 +163,7 @@ class MyANN:
         all_datetimes_in_data = []
         for index, row in df.iterrows():
             all_datetimes_in_data.append(
-                datetime.strptime(row["Datetime"], "%Y-%m-%d %H:%M:%S%z").strftime(
+                datetime.strptime(row["datetime"], "%Y-%m-%d %H:%M:%S%z").strftime(
                     "%Y-%m-%d %H:%M:%S%z"
                 )
             )
@@ -173,7 +182,7 @@ class MyANN:
         add_df_rows = []
         for d in missing_datetimes:
             dict_1 = {
-                "Datetime": d,
+                "datetime": d,
                 "open": 0,
                 "close": 0,
                 "high": 0,
@@ -185,9 +194,10 @@ class MyANN:
         new_df = pd.DataFrame(add_df_rows)
         df = pd.concat([df, new_df], ignore_index=True)
 
-        df = df.sort_values(by="Datetime", ascending=True)
+        df = df.sort_values(by="datetime", ascending=True)
+        df.reset_index(drop=True, inplace=True)
 
-        df.drop("Dates", axis=1, inplace=True)
+        df.drop("date", axis=1, inplace=True)
 
         missing_indexes = []
         for index, row in df.iterrows():
@@ -212,14 +222,10 @@ class MyANN:
 
         # then divide accordingly into 2 zones
         # send only full zone df, not full date.
-        df["to_add"] = df["Datetime"].apply(lambda x: self.is_in_zone(x))
 
-        new_2 = df[df["to_add"] == True].copy(deep=True)
-        new_2.reset_index(drop=True, inplace=True)
-
-        return new_2[
+        return df[
             [
-                "Datetime",
+                "datetime",
                 "open",
                 "close",
                 "high",
@@ -228,20 +234,21 @@ class MyANN:
         ]
 
     def data_scaling(self, df: pd.DataFrame) -> pd.DataFrame:
-        # fixded 264 rows for all days in zone.
+        # fixded 375 rows for all days.
         # just divide by the close value of previous row,
         # for the very first day, use the open value
 
-        one_day = 264
+        one_day = 375
         num_days = len(df) // one_day
 
         # for other days
         for j in range(num_days - 1, 0, -1):
+            prev_close = df.loc[j * one_day - 1, "close"]
             for i in range(one_day):
-                df.loc[j * one_day + i, "close"] /= df.loc[j * one_day - 1, "close"]
-                df.loc[j * one_day + i, "high"] /= df.loc[j * one_day - 1, "close"]
-                df.loc[j * one_day + i, "low"] /= df.loc[j * one_day - 1, "close"]
-                df.loc[j * one_day + i, "open"] /= df.loc[j * one_day - 1, "close"]
+                df.loc[j * one_day + i, "close"] /= prev_close
+                df.loc[j * one_day + i, "high"] /= prev_close
+                df.loc[j * one_day + i, "low"] /= prev_close
+                df.loc[j * one_day + i, "open"] /= prev_close
 
         # for 1st day
         open_val = df.at[0, "open"]
@@ -253,9 +260,62 @@ class MyANN:
 
         return df
 
-    # def evaluate
-    # 1 - predicted high low is inside the actual high low
-    # 2 - predicted high low, with safety_factor is the actual high low
+    def data_my_zone(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["to_add"] = df["datetime"].apply(lambda x: self.is_in_zone(x))
+
+        new_2 = df[df["to_add"] == True].copy(deep=True)
+        new_2.reset_index(drop=True, inplace=True)
+
+        return new_2[
+            [
+                "datetime",
+                "open",
+                "close",
+                "high",
+                "low",
+            ]
+        ]
+
+    def data_split_train_test(self, df: pd.DataFrame, test_size) -> pd.DataFrame:
+        # split into train and test
+        # not 4 parts, with x and y
+        # now both x, y in one df
+
+        df["date"] = df["datetime"].apply(lambda x: self.to_date_str(x))
+        all_dates = df["date"].unique()
+        num_days = len(all_dates)
+        training_dates = all_dates[: int(num_days * (1 - test_size))]
+        testing_dates = all_dates[int(num_days * (1 - test_size)) :]
+
+        df["train"] = df["date"].apply(lambda x: self.is_same_date_2(x, training_dates))
+
+        df["test"] = df["date"].apply(lambda x: self.is_same_date_2(x, testing_dates))
+
+        train_df = df[df["train"] == True].copy(deep=True)
+        test_df = df[df["test"] == True].copy(deep=True)
+
+        train_df.reset_index(drop=True, inplace=True)
+        test_df.reset_index(drop=True, inplace=True)
+
+        return (
+            train_df[["datetime", "open", "close", "high", "low", "date"]],
+            test_df[["datetime", "open", "close", "high", "low", "date"]],
+        )
+
+    def data_split_x_y(self, df) -> pd.DataFrame:
+        df["input"] = df["datetime"].apply(lambda x: self.is_in_half(x, which_half=0))
+        df["output"] = df["datetime"].apply(lambda x: self.is_in_half(x, which_half=1))
+
+        df_i = df[df["input"] == True].copy(deep=True)
+        df_o = df[df["output"] == True].copy(deep=True)
+
+        df_i.reset_index(drop=True, inplace=True)
+        df_o.reset_index(drop=True, inplace=True)
+
+        return (
+            df_i[["datetime", "open", "close", "high", "low", "date"]],
+            df_o[["datetime", "open", "close", "high", "low", "date"]],
+        )
 
     def train_test_split(
         self,
@@ -266,64 +326,70 @@ class MyANN:
         # divide the price data of that day by the closing price of the previous day.
         # for the very first day of the dataset - divide the prices by the opening price.
 
-        df = self.data_clean()
+        df = self.data_cleaning()
         # getting clean and my zone data
         df = self.data_scaling(df)
-        # getting scaled data according to previous day cloning, in percentages terms
+        # getting scaled data according to previous day closing price, in percentages terms
+        df = self.data_my_zone(df)
+        # getting data is inside the full zone.
 
-        print(df)
+        df_train, df_test = self.data_split_train_test(df=df, test_size=test_size)
 
-        df["Dates"] = df["Datetime"].apply(lambda x: self.to_date_str(x))
-        all_dates = df["Dates"].unique()
-        num_days = len(all_dates)
-        training_dates = all_dates[: int(num_days * test_size)]
-        testing_dates = all_dates[int(num_days * test_size) :]
+        df_train_x, df_train_y = self.data_split_x_y(df=df_train)
+        # 3036x4, 792x4
 
-        list_df = [1, 1, 1, 1, 1, 1, 1, 1, 1]
-        test_num = round(len(list_df) * test_size)
+        df_test_x, df_test_y = self.data_split_x_y(df=df_test)
+
+        selected_columns = ["open", "close", "high", "low"]
+
+        np_array_train_x = df_train_x[selected_columns].values
+        np_array_train_y = df_train_y[selected_columns].values
+        np_array_test_x = df_test_x[selected_columns].values
+        np_array_test_y = df_test_y[selected_columns].values
 
         return (
-            list_df[:test_num],
-            list_df[test_num:],
-            list_df[:test_num],
-            list_df[test_num:],
+            np_array_train_x,
+            np_array_train_y,
+            np_array_test_x,
+            np_array_test_y,
         )
+
+    def evaluate(self) -> float:
+        # TODOO:
+        # 0 - direct values comparision with prediction 132x4, to 132x4
+        # 1 - predicted high low is inside the actual high low
+        # 2 - predicted high low, with safety_factor is the actual high low
+        return 0
 
 
 def main():
     obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
 
-    X_train, X_test, Y_train, Y_test = obj.train_test_split(test_size=0.2)
+    X_train, Y_train, X_test, Y_test = obj.train_test_split(test_size=0.2)
 
-    # X_train, X_test, y_train, y_test = train_test_split(
-    #     df[["age", "affordibility"]], df.bought_insurance, test_size=0.2, random_state=25
-    # )
-
-    # X_train_scaled = X_train.copy()
-    # X_train_scaled["age"] = X_train_scaled["age"] / 100
-
-    # X_test_scaled = X_test.copy()
-    # X_test_scaled["age"] = X_test_scaled["age"] / 100
+    print(X_train)
+    print(Y_train)
 
     # model = keras.Sequential(
     #     [
-    #         keras.layers.Dense(
-    #             1,
-    #             input_shape=(2,),
-    #             activation="relu",
-    #             kernel_initializer="ones",
-    #             bias_initializer="zeros",
-    #         )
+    #         # keras.layers.Flatten(input_shape=(4)),
+    #         keras.layers.LSTM(128, input_shape=(4), return_sequences=True),
+    #         # keras.layers.Dense(3000, activation="relu"),
+    #         keras.layers.Dense(3036, activation="relu"),
     #     ]
     # )
 
-    # model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    # print(model.summary())
 
-    # model.fit(X_train_scaled, y_train, epochs=5000)
+    # model.compile(
+    #     optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
+    # )
 
-    # model.evaluate(X_test_scaled, y_test)
+    # model.fit(X_train, Y_train, epochs=1)
 
-    # model.predict(X_test_scaled)
+    # model.evaluate(X_test, Y_test)
+
+    # model.predict(X_test)
 
     # coef, intercept = model.get_weights()
 
