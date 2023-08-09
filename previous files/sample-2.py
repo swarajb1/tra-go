@@ -39,7 +39,7 @@ model.summary()
 
 # Train the model with TensorBoard callback
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 50
 model.fit(
     x_train,
     y_train,
