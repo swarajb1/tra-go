@@ -1,18 +1,28 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+from keras.callbacks import TensorBoard
+
 import pandas as pd
 from matplotlib import pyplot as plt
 from datetime import datetime, timedelta
 from time import time
 import pytz
 from copy import deepcopy
+from sklearn.metrics import mean_squared_error
+import os
 
 
 class MyANN:
     def __init__(self, ticker: str, interval: str) -> None:
         self.ticker = ticker
         self.interval = interval
+        if self.interval == "1m":
+            self.num_one_zone = 132
+        if self.interval == "2m":
+            self.num_one_zone = 61
+        if self.interval == "5m":
+            self.num_one_zone = 27
 
     def is_in_half(self, check_datetime, which_half: int) -> bool:
         # which_half = 0, means 1st half - input data
@@ -342,16 +352,11 @@ class MyANN:
 
         selected_columns = ["open", "close", "high", "low"]
 
-        np_array_train_x = df_train_x[selected_columns].values
-        np_array_train_y = df_train_y[selected_columns].values
-        np_array_test_x = df_test_x[selected_columns].values
-        np_array_test_y = df_test_y[selected_columns].values
-
         return (
-            np_array_train_x,
-            np_array_train_y,
-            np_array_test_x,
-            np_array_test_y,
+            df_train_x[selected_columns],
+            df_train_y[selected_columns],
+            df_test_x[selected_columns],
+            df_test_y[selected_columns],
         )
 
     def evaluate(self) -> float:
@@ -361,35 +366,114 @@ class MyANN:
         # 2 - predicted high low, with safety_factor is the actual high low
         return 0
 
+    def custom_evaluate_full_envelope(self, model, X_test, Y_test):
+        """
+        Custom evaluation function for a regression model.
+
+        Args:
+        model (tf.keras.Model): The trained model.
+        X_test (numpy.ndarray): Input features for evaluation.
+        Y_test (numpy.ndarray): True target values for evaluation.
+
+        Returns: Boolean
+        whether inside envelope or not,
+        for each day.
+        """
+        y_pred = model.predict(X_test)
+
+        num_days = y_pred.shape[0] // 132
+
+        # high is 3rd column, low is 4th column
+
+        # for 1st day
+
+        res = []
+
+        list_min_pred = []
+        list_max_pred = []
+        list_min_actual = []
+        list_max_actual = []
+
+        for i in range(1, num_days):
+            min_pred = y_pred[i * 132, 3]
+            max_pred = y_pred[i * 132, 2]
+
+            min_actual = Y_test.iloc[i * 132, 3]
+            max_actual = Y_test.iloc[i * 132, 2]
+
+            for j in range(132):
+                min_pred = min(min_pred, y_pred[i * 132 + j, 3])
+                max_pred = max(max_pred, y_pred[i * 132 + j, 2])
+
+                min_actual = min(min_actual, Y_test.iloc[i * 132 + j, 3])
+                max_actual = max(max_actual, Y_test.iloc[i * 132 + j, 2])
+
+            list_min_pred.append(min_pred)
+            list_max_pred.append(max_pred)
+            list_min_actual.append(min_actual)
+            list_max_actual.append(max_actual)
+
+            # res.append((min_pred > min_actual) & (max_pred < max_actual))
+
+        error_low = mean_squared_error(list_min_pred, list_min_actual)
+        error_high = mean_squared_error(list_max_pred, list_max_actual)
+
+        # wins = 0
+        # for i in res:
+        #     if i:
+        #         wins += 1
+
+        # return (wins / len(res)) * 100
+
+        return error_high * 100, error_low * 100
+
 
 def main():
     obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
 
     X_train, Y_train, X_test, Y_test = obj.train_test_split(test_size=0.2)
 
-    print(X_train)
-    print(Y_train)
+    model = keras.Sequential(
+        [
+            keras.layers.Dense(900, input_shape=(4,), activation="relu"),
+            keras.layers.Dropout(0.4),
+            keras.layers.Dense(600, activation="relu"),
+            keras.layers.Dropout(0.4),
+            keras.layers.Dense(300, activation="relu"),
+            keras.layers.Dropout(0.4),
+            keras.layers.Dense(4, activation="relu"),
+        ]
+    )
 
-    # model = keras.Sequential(
-    #     [
-    #         # keras.layers.Flatten(input_shape=(4)),
-    #         keras.layers.LSTM(128, input_shape=(4), return_sequences=True),
-    #         # keras.layers.Dense(3000, activation="relu"),
-    #         keras.layers.Dense(3036, activation="relu"),
-    #     ]
-    # )
+    print(model.summary())
 
-    # print(model.summary())
+    log_dir = "logs/"  # Directory where you want to store the TensorBoard logs
+    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    # model.compile(
-    #     optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
-    # )
+    model.compile(
+        optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
+    )
 
-    # model.fit(X_train, Y_train, epochs=1)
+    model.fit(X_train, Y_train, epochs=100, callbacks=[tensorboard_callback])
+    print("\nmodel training done.\n")
+    model.save(f"tra-go/models_saved/model - {datetime.now()}.keras")
 
-    # model.evaluate(X_test, Y_test)
+    # tensorboard --logdir=logs/
 
-    # model.predict(X_test)
+    # loss = model.evaluate(X_test, Y_test)
+
+    accuracy_percent = obj.custom_evaluate_full_envelope(
+        model=model,
+        X_test=X_test,
+        Y_test=Y_test,
+    )
+
+    print(f"\nTest accuracy_percent: {accuracy_percent}")
+
+    # z = model.predict(X_test)
+    # print(type(z))
+    # print(z.shape)
+    # print(z)
 
     # coef, intercept = model.get_weights()
 
@@ -397,4 +481,4 @@ def main():
 if __name__ == "__main__":
     time_1 = time()
     main()
-    print(f"time taken = {round(time() - time_1, 2)} sec")
+    print(f"\ntime taken = {round(time() - time_1, 2)} sec\n")
