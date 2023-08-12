@@ -134,7 +134,7 @@ class MyANN:
         ]
 
     def get_csv_file_path(self) -> str:
-        file_path = f"./././data_stock_price_yf/{self.interval} data/{self.ticker} - {self.interval}.csv"
+        file_path = f"./data_stock_price_yf/{self.interval} data/{self.ticker} - {self.interval}.csv"
         return file_path
 
     def data_cleaning(
@@ -454,12 +454,11 @@ def main():
         optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
     )
 
-    model.fit(X_train, Y_train, epochs=100, callbacks=[tensorboard_callback])
+    model.fit(X_train, Y_train, epochs=10, callbacks=[tensorboard_callback])
     print("\nmodel training done.\n")
-    model.save(f"tra-go/models_saved/model - {datetime.now()}.keras")
+    model.save(f"models_saved/model - {datetime.now()}.keras")
 
     # tensorboard --logdir=logs/
-
     # loss = model.evaluate(X_test, Y_test)
 
     accuracy_percent = obj.custom_evaluate_full_envelope(
