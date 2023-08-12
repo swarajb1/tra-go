@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from time import time
 import pytz
 from copy import deepcopy
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import os
 
 
@@ -346,18 +346,36 @@ class MyANN:
         df_train, df_test = self.data_split_train_test(df=df, test_size=test_size)
 
         df_train_x, df_train_y = self.data_split_x_y(df=df_train)
-        # 3036x4, 792x4
+        # 23x(132,4)
 
         df_test_x, df_test_y = self.data_split_x_y(df=df_test)
+        # 6x(132,4)
 
         selected_columns = ["open", "close", "high", "low"]
 
+        arr_train_x = self.by_date_df_array(df_train_x[selected_columns])
+        arr_train_y = self.by_date_df_array(df_train_y[selected_columns])
+        arr_test_x = self.by_date_df_array(df_test_x[selected_columns])
+        arr_test_y = self.by_date_df_array(df_test_y[selected_columns])
+
         return (
-            df_train_x[selected_columns],
-            df_train_y[selected_columns],
-            df_test_x[selected_columns],
-            df_test_y[selected_columns],
+            arr_train_x,
+            arr_train_y,
+            arr_test_x,
+            arr_test_y,
         )
+
+    def by_date_df_array(self, df) -> [pd.DataFrame]:
+        res = []
+        full_rows = []
+        for index, row in df.iterrows():
+            x = row.values.tolist()
+            full_rows.append(x)
+
+        for i in range(len(full_rows) // 132):
+            res.append(deepcopy(full_rows[i * 132 : (i + 1) * 132]))
+
+        return res
 
     def evaluate(self) -> float:
         # TODOO:
@@ -381,42 +399,42 @@ class MyANN:
         """
         y_pred = model.predict(X_test)
 
-        num_days = y_pred.shape[0] // 132
-
+        num_days = y_pred.shape[0]
         # high is 3rd column, low is 4th column
-
-        # for 1st day
-
-        res = []
 
         list_min_pred = []
         list_max_pred = []
         list_min_actual = []
         list_max_actual = []
 
-        for i in range(1, num_days):
-            min_pred = y_pred[i * 132, 3]
-            max_pred = y_pred[i * 132, 2]
+        for i in range(num_days):
+            # i  -> day
+            # for 1st day
 
-            min_actual = Y_test.iloc[i * 132, 3]
-            max_actual = Y_test.iloc[i * 132, 2]
+            min_pred = y_pred[i][0][3]
+            max_pred = y_pred[i][0][2]
 
-            for j in range(132):
-                min_pred = min(min_pred, y_pred[i * 132 + j, 3])
-                max_pred = max(max_pred, y_pred[i * 132 + j, 2])
+            min_actual = Y_test[i][0][3]
+            max_actual = Y_test[i][0][2]
 
-                min_actual = min(min_actual, Y_test.iloc[i * 132 + j, 3])
-                max_actual = max(max_actual, Y_test.iloc[i * 132 + j, 2])
+            for j in range(y_pred.shape[1]):
+                # j -> time
+                min_pred = min(min_pred, y_pred[i][j][3])
+                max_pred = max(max_pred, y_pred[i][j][2])
+
+                min_actual = min(min_actual, Y_test[i][j][3])
+                max_actual = max(max_actual, Y_test[i][j][2])
 
             list_min_pred.append(min_pred)
             list_max_pred.append(max_pred)
             list_min_actual.append(min_actual)
             list_max_actual.append(max_actual)
 
-            # res.append((min_pred > min_actual) & (max_pred < max_actual))
-
-        error_low = mean_squared_error(list_min_pred, list_min_actual)
-        error_high = mean_squared_error(list_max_pred, list_max_actual)
+        # error_low = mean_squared_error(list_min_pred, list_min_actual)
+        # error_high = mean_squared_error(list_max_pred, list_max_actual)
+        error_low = mean_absolute_error(list_min_pred, list_min_actual)
+        error_high = mean_absolute_error(list_max_pred, list_max_actual)
+        print("mean_absolute_error")
 
         # wins = 0
         # for i in res:
@@ -435,13 +453,17 @@ def main():
 
     model = keras.Sequential(
         [
-            keras.layers.Dense(900, input_shape=(4,), activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(600, activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(300, activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(4, activation="relu"),
+            keras.layers.Dense(
+                900,
+                input_shape=(132, 4),
+                activation="relu",
+            ),
+            keras.layers.Dropout(0.3),
+            keras.layers.Dense(900, activation="relu"),
+            keras.layers.Dropout(0.3),
+            keras.layers.Dense(900, activation="relu"),
+            keras.layers.Dropout(0.3),
+            keras.layers.Dense(4),
         ]
     )
 
@@ -451,14 +473,17 @@ def main():
     tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     model.compile(
-        optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
+        optimizer="adam", loss="mean_absolute_error", metrics=["accuracy", "mse", "mae"]
     )
 
-    model.fit(X_train, Y_train, epochs=10, callbacks=[tensorboard_callback])
+    model.fit(X_train, Y_train, epochs=500, callbacks=[tensorboard_callback])
+
     print("\nmodel training done.\n")
+
     model.save(f"models_saved/model - {datetime.now()}.keras")
 
     # tensorboard --logdir=logs/
+
     # loss = model.evaluate(X_test, Y_test)
 
     accuracy_percent = obj.custom_evaluate_full_envelope(
@@ -467,7 +492,7 @@ def main():
         Y_test=Y_test,
     )
 
-    print(f"\nTest accuracy_percent: {accuracy_percent}")
+    print(f"\nTest error_percent: {accuracy_percent}")
 
     # z = model.predict(X_test)
     # print(type(z))
