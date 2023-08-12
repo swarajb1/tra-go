@@ -394,7 +394,7 @@ class MyANN:
         list_min_actual = []
         list_max_actual = []
 
-        for i in range(1, num_days):
+        for i in range(num_days):
             min_pred = y_pred[i * 132, 3]
             max_pred = y_pred[i * 132, 2]
 
@@ -454,7 +454,7 @@ def main():
         optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
     )
 
-    model.fit(X_train, Y_train, epochs=10, callbacks=[tensorboard_callback])
+    model.fit(X_train, Y_train, epochs=100, callbacks=[tensorboard_callback])
     print("\nmodel training done.\n")
     model.save(f"models_saved/model - {datetime.now()}.keras")
 
