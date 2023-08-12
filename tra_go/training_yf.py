@@ -445,6 +445,71 @@ class MyANN:
 
         return error_high * 100, error_low * 100
 
+    def custom_evaluate_safety_factor(self, model, X_test, Y_test, safety_factor=0.8):
+        """
+        Custom evaluation function for a regression model.
+
+        Args:
+        model (tf.keras.Model): The trained model.
+        X_test (numpy.ndarray): Input features for evaluation.
+        Y_test (numpy.ndarray): True target values for evaluation.
+
+        Returns: Boolean
+        whether inside envelope or not,
+        for each day.
+        """
+        y_pred = model.predict(X_test)
+
+        num_days = y_pred.shape[0]
+        # high is 3rd column, low is 4th column
+
+        list_min_pred = []
+        list_max_pred = []
+        list_min_actual = []
+        list_max_actual = []
+        res = []
+
+        for i in range(num_days):
+            # i  -> day
+            # for 1st day
+            min_pred = y_pred[i][0][3]
+            max_pred = y_pred[i][0][2]
+
+            min_actual = Y_test[i][0][3]
+            max_actual = Y_test[i][0][2]
+
+            for j in range(y_pred.shape[1]):
+                # j -> time
+                min_pred = round(min(min_pred, y_pred[i][j][3]), 6)
+                max_pred = round(max(max_pred, y_pred[i][j][2]), 6)
+
+                min_actual = round(min(min_actual, Y_test[i][j][3]), 6)
+                max_actual = round(max(max_actual, Y_test[i][j][2]), 6)
+
+            list_min_pred.append(min_pred)
+            list_max_pred.append(max_pred)
+
+            list_min_actual.append(min_actual)
+            list_max_actual.append(max_actual)
+
+            average = (min_pred + max_pred) / 2
+            max_t = average + (max_actual - average) * safety_factor
+            min_t = average + (min_actual - average) * safety_factor
+
+            print(max_t, max_actual, min_t, min_actual)
+            res.append(max_t < max_actual and min_t > min_actual)
+
+        # TODOO:
+        # - pred be one high and low, rather than all 4
+        # - concentrate and what is actually required for making a decision
+
+        wins = 0
+        for i in res:
+            if i:
+                wins += 1
+
+        return (wins / len(res)) * 100
+
 
 def main():
     obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
@@ -458,11 +523,11 @@ def main():
                 input_shape=(132, 4),
                 activation="relu",
             ),
-            keras.layers.Dropout(0.3),
+            keras.layers.Dropout(0.4),
             keras.layers.Dense(900, activation="relu"),
-            keras.layers.Dropout(0.3),
+            keras.layers.Dropout(0.4),
             keras.layers.Dense(900, activation="relu"),
-            keras.layers.Dropout(0.3),
+            keras.layers.Dropout(0.4),
             keras.layers.Dense(4),
         ]
     )
@@ -486,13 +551,11 @@ def main():
 
     # loss = model.evaluate(X_test, Y_test)
 
-    accuracy_percent = obj.custom_evaluate_full_envelope(
-        model=model,
-        X_test=X_test,
-        Y_test=Y_test,
+    win_percent = obj.custom_evaluate_safety_factor(
+        model=model, X_test=X_test, Y_test=Y_test, safety_factor=0.8
     )
 
-    print(f"\nTest error_percent: {accuracy_percent}")
+    print(f"\ win_percent: {win_percent}")
 
     # z = model.predict(X_test)
     # print(type(z))
