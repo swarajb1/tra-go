@@ -1,12 +1,8 @@
-from tensorflow import keras
-from keras.callbacks import TensorBoard
-
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import pandas as pd
 from datetime import datetime, timedelta
-from time import time
 import pytz
 from copy import deepcopy
-from sklearn.metrics import mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 
 
@@ -348,12 +344,13 @@ class MyANN:
         df_test_x, df_test_y = self.data_split_x_y(df=df_test)
         # 6x(132,4)
 
-        selected_columns = ["open", "close", "high", "low"]
+        selected_columns_1 = ["open", "close", "high", "low"]
+        selected_columns_2 = ["high", "low"]
 
-        arr_train_x = self.by_date_df_array(df_train_x[selected_columns])
-        arr_train_y = self.by_date_df_array(df_train_y[selected_columns])
-        arr_test_x = self.by_date_df_array(df_test_x[selected_columns])
-        arr_test_y = self.by_date_df_array(df_test_y[selected_columns])
+        arr_train_x = self.by_date_df_array(df_train_x[selected_columns_1])
+        arr_train_y = self.by_date_df_array(df_train_y[selected_columns_2])
+        arr_test_x = self.by_date_df_array(df_test_x[selected_columns_1])
+        arr_test_y = self.by_date_df_array(df_test_y[selected_columns_2])
 
         return (
             arr_train_x,
@@ -465,36 +462,38 @@ class MyANN:
         list_min_actual = []
         list_max_actual = []
         res = []
+        list_win_days = []
 
         for i in range(num_days):
             # i  -> day
             # for 1st day
-            min_pred = y_pred[i][0][3]
-            max_pred = y_pred[i][0][2]
+            min_pred = y_pred[i][0][1]
+            max_pred = y_pred[i][0][1]
 
-            min_actual = Y_test[i][0][3]
-            max_actual = Y_test[i][0][2]
+            min_actual = Y_test[i][0][1]
+            max_actual = Y_test[i][0][1]
 
             for j in range(y_pred.shape[1]):
                 # j -> time
-                min_pred = round(min(min_pred, y_pred[i][j][3]), 6)
-                max_pred = round(max(max_pred, y_pred[i][j][2]), 6)
+                min_pred = min(min_pred, y_pred[i][j][1])
+                max_pred = max(max_pred, y_pred[i][j][0])
 
-                min_actual = round(min(min_actual, Y_test[i][j][3]), 6)
-                max_actual = round(max(max_actual, Y_test[i][j][2]), 6)
-
-            list_min_pred.append(min_pred)
-            list_max_pred.append(max_pred)
+                min_actual = min(min_actual, Y_test[i][j][1])
+                max_actual = max(max_actual, Y_test[i][j][0])
 
             list_min_actual.append(min_actual)
             list_max_actual.append(max_actual)
 
-            average = (min_pred + max_pred) / 2
-            max_t = average + (max_actual - average) * safety_factor
-            min_t = average + (min_actual - average) * safety_factor
+            average_pred = (min_pred + max_pred) / 2
+            max_t = average_pred + (max_pred - average_pred) * safety_factor
+            min_t = average_pred + (min_pred - average_pred) * safety_factor
 
-            print(max_t, max_actual, min_t, min_actual)
-            res.append(max_t < max_actual and min_t > min_actual)
+            list_min_pred.append(min_t)
+            list_max_pred.append(max_t)
+
+            win = max_t < max_actual and min_t > min_actual
+
+            res.append(win)
 
         # TODOO:
         # - pred be one high and low, rather than all 4
@@ -510,88 +509,49 @@ class MyANN:
         # plt.scatter(x, list_min_actual, c="yellow")
         # plt.scatter(x, list_max_actual, c="yellow")
 
-        f = plt.figure()
-        f.set_figwidth(15)
-        f.set_figheight(10)
+        fig = plt.figure()
+        fig.set_figwidth(16)
+        fig.set_figheight(9)
 
-        plt.fill_between(x, list_min_actual, list_max_actual, color="#ffff33")
+        ax = fig.add_subplot(111)
+
+        plt.fill_between(x, list_min_actual, list_max_actual, color="yellow")
 
         plt.plot(x, list_pred_avg, linestyle="dashed", c="red")
 
-        plt.scatter(x, list_min_pred, c="blue")
-        plt.scatter(x, list_max_pred, c="blue")
+        for i in range(len(list_min_pred)):
+            plt.vlines(
+                x=x[i],
+                ymin=list_min_pred[i],
+                ymax=list_max_pred[i],
+                colors="green",
+            )
+
+        ax.set_xlabel("days", fontsize=15)
+        ax.set_ylabel("fraction of prev close", fontsize=15)
+        y_min = min(min(list_min_actual), min(list_min_pred))
+        y_max = max(max(list_max_actual), max(list_min_pred))
+
+        wins = 0
+        for i in range(len(res)):
+            if res[i]:
+                wins += 1
+                plt.scatter(
+                    x[i],
+                    y_min + (y_max - y_min) / 3,
+                    c="yellow",
+                    linewidths=2,
+                    marker="^",
+                    edgecolor="red",
+                    s=400,
+                )
+
+        win_percent = round((wins / len(res)) * 100, 2)
+
+        ax.set_title(
+            f"win percent: {win_percent}%   ||  {wins}/{len(res)}", fontsize=20
+        )
 
         plt.show()
 
-        wins = 0
-        for i in res:
-            if i:
-                wins += 1
-
-        return round((wins / len(res)) * 100, 2)
-
-
-def main():
-    obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
-
-    X_train, Y_train, X_test, Y_test = obj.train_test_split(test_size=0.2)
-
-    model = keras.Sequential(
-        [
-            keras.layers.Dense(
-                1200,
-                input_shape=(132, 4),
-                activation="relu",
-            ),
-            keras.layers.Dropout(0.3),
-            # keras.layers.Dense(100, activation="relu"),
-            # keras.layers.Dropout(0.3),
-            # keras.layers.Dense(300, activation="relu"),
-            # keras.layers.Dropout(0.45),
-            keras.layers.Dense(4),
-        ]
-    )
-
-    print(model.summary())
-
-    log_dir = "logs/"  # Directory where you want to store the TensorBoard logs
-    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-
-    model.compile(
-        optimizer="adam",
-        loss="mean_absolute_error",
-        metrics=["accuracy", "mse", "mae"],
-    )
-
-    model.fit(X_train, Y_train, epochs=500, callbacks=[tensorboard_callback])
-
-    print("\nmodel training done.\n")
-
-    model.save(f"models/model - {datetime.now()}.keras")
-
-    # tensorboard --logdir=logs/
-
-    # loss = model.evaluate(X_test, Y_test)
-
-    # win_percent = obj.custom_evaluate_safety_factor(
-    #     model=model, X_test=X_test, Y_test=Y_test, safety_factor=0.8
-    # )
-
-    win_percent = obj.custom_evaluate_safety_factor(
-        model=model, X_test=X_test, Y_test=Y_test, safety_factor=0.8
-    )
-
-    print(f"\t win_percent: {win_percent}")
-
-    # z = model.predict(X_test)
-    # print(type(z))
-    # print(z.shape)
-    # print(z)
-
-    # coef, intercept = model.get_weights()
-
-
-if __name__ == "__main__":
-    time_1 = time()
-    main()
-    print(f"\ntime taken = {round(time() - time_1, 2)} sec\n")
+        return win_percent
