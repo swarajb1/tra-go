@@ -1,16 +1,13 @@
-import numpy as np
-import tensorflow as tf
 from tensorflow import keras
 from keras.callbacks import TensorBoard
 
 import pandas as pd
-from matplotlib import pyplot as plt
 from datetime import datetime, timedelta
 from time import time
 import pytz
 from copy import deepcopy
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import os
+import matplotlib.pyplot as plt
 
 
 class MyANN:
@@ -502,13 +499,36 @@ class MyANN:
         # TODOO:
         # - pred be one high and low, rather than all 4
         # - concentrate and what is actually required for making a decision
+        # make graph of envelope of min max of day. caompare pred vs actual
+
+        x = [i + 1 for i in range(num_days)]
+
+        list_pred_avg = [
+            (list_min_pred[i] + list_max_pred[i]) / 2 for i in range(num_days)
+        ]
+
+        # plt.scatter(x, list_min_actual, c="yellow")
+        # plt.scatter(x, list_max_actual, c="yellow")
+
+        f = plt.figure()
+        f.set_figwidth(15)
+        f.set_figheight(10)
+
+        plt.fill_between(x, list_min_actual, list_max_actual, color="#ffff33")
+
+        plt.plot(x, list_pred_avg, linestyle="dashed", c="red")
+
+        plt.scatter(x, list_min_pred, c="blue")
+        plt.scatter(x, list_max_pred, c="blue")
+
+        plt.show()
 
         wins = 0
         for i in res:
             if i:
                 wins += 1
 
-        return (wins / len(res)) * 100
+        return round((wins / len(res)) * 100, 2)
 
 
 def main():
@@ -519,15 +539,15 @@ def main():
     model = keras.Sequential(
         [
             keras.layers.Dense(
-                900,
+                1200,
                 input_shape=(132, 4),
                 activation="relu",
             ),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(900, activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(900, activation="relu"),
-            keras.layers.Dropout(0.4),
+            keras.layers.Dropout(0.3),
+            # keras.layers.Dense(100, activation="relu"),
+            # keras.layers.Dropout(0.3),
+            # keras.layers.Dense(300, activation="relu"),
+            # keras.layers.Dropout(0.45),
             keras.layers.Dense(4),
         ]
     )
@@ -538,24 +558,30 @@ def main():
     tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     model.compile(
-        optimizer="adam", loss="mean_absolute_error", metrics=["accuracy", "mse", "mae"]
+        optimizer="adam",
+        loss="mean_absolute_error",
+        metrics=["accuracy", "mse", "mae"],
     )
 
     model.fit(X_train, Y_train, epochs=500, callbacks=[tensorboard_callback])
 
     print("\nmodel training done.\n")
 
-    model.save(f"models_saved/model - {datetime.now()}.keras")
+    model.save(f"models/model - {datetime.now()}.keras")
 
     # tensorboard --logdir=logs/
 
     # loss = model.evaluate(X_test, Y_test)
 
+    # win_percent = obj.custom_evaluate_safety_factor(
+    #     model=model, X_test=X_test, Y_test=Y_test, safety_factor=0.8
+    # )
+
     win_percent = obj.custom_evaluate_safety_factor(
         model=model, X_test=X_test, Y_test=Y_test, safety_factor=0.8
     )
 
-    print(f"\ win_percent: {win_percent}")
+    print(f"\t win_percent: {win_percent}")
 
     # z = model.predict(X_test)
     # print(type(z))
