@@ -1,16 +1,9 @@
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from keras.callbacks import TensorBoard
-
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import pandas as pd
-from matplotlib import pyplot as plt
 from datetime import datetime, timedelta
-from time import time
 import pytz
 from copy import deepcopy
-from sklearn.metrics import mean_squared_error
-import os
+import matplotlib.pyplot as plt
 
 
 class MyANN:
@@ -346,18 +339,37 @@ class MyANN:
         df_train, df_test = self.data_split_train_test(df=df, test_size=test_size)
 
         df_train_x, df_train_y = self.data_split_x_y(df=df_train)
-        # 3036x4, 792x4
+        # 23x(132,4)
 
         df_test_x, df_test_y = self.data_split_x_y(df=df_test)
+        # 6x(132,4)
 
-        selected_columns = ["open", "close", "high", "low"]
+        selected_columns_1 = ["open", "close", "high", "low"]
+        selected_columns_2 = ["high", "low"]
+
+        arr_train_x = self.by_date_df_array(df_train_x[selected_columns_1])
+        arr_train_y = self.by_date_df_array(df_train_y[selected_columns_2])
+        arr_test_x = self.by_date_df_array(df_test_x[selected_columns_1])
+        arr_test_y = self.by_date_df_array(df_test_y[selected_columns_2])
 
         return (
-            df_train_x[selected_columns],
-            df_train_y[selected_columns],
-            df_test_x[selected_columns],
-            df_test_y[selected_columns],
+            arr_train_x,
+            arr_train_y,
+            arr_test_x,
+            arr_test_y,
         )
+
+    def by_date_df_array(self, df) -> [pd.DataFrame]:
+        res = []
+        full_rows = []
+        for index, row in df.iterrows():
+            x = row.values.tolist()
+            full_rows.append(x)
+
+        for i in range(len(full_rows) // 132):
+            res.append(deepcopy(full_rows[i * 132 : (i + 1) * 132]))
+
+        return res
 
     def evaluate(self) -> float:
         # TODOO:
@@ -381,13 +393,8 @@ class MyANN:
         """
         y_pred = model.predict(X_test)
 
-        num_days = y_pred.shape[0] // 132
-
+        num_days = y_pred.shape[0]
         # high is 3rd column, low is 4th column
-
-        # for 1st day
-
-        res = []
 
         list_min_pred = []
         list_max_pred = []
@@ -395,28 +402,33 @@ class MyANN:
         list_max_actual = []
 
         for i in range(num_days):
-            min_pred = y_pred[i * 132, 3]
-            max_pred = y_pred[i * 132, 2]
+            # i  -> day
+            # for 1st day
 
-            min_actual = Y_test.iloc[i * 132, 3]
-            max_actual = Y_test.iloc[i * 132, 2]
+            min_pred = y_pred[i][0][3]
+            max_pred = y_pred[i][0][2]
 
-            for j in range(132):
-                min_pred = min(min_pred, y_pred[i * 132 + j, 3])
-                max_pred = max(max_pred, y_pred[i * 132 + j, 2])
+            min_actual = Y_test[i][0][3]
+            max_actual = Y_test[i][0][2]
 
-                min_actual = min(min_actual, Y_test.iloc[i * 132 + j, 3])
-                max_actual = max(max_actual, Y_test.iloc[i * 132 + j, 2])
+            for j in range(y_pred.shape[1]):
+                # j -> time
+                min_pred = min(min_pred, y_pred[i][j][3])
+                max_pred = max(max_pred, y_pred[i][j][2])
+
+                min_actual = min(min_actual, Y_test[i][j][3])
+                max_actual = max(max_actual, Y_test[i][j][2])
 
             list_min_pred.append(min_pred)
             list_max_pred.append(max_pred)
             list_min_actual.append(min_actual)
             list_max_actual.append(max_actual)
 
-            # res.append((min_pred > min_actual) & (max_pred < max_actual))
-
-        error_low = mean_squared_error(list_min_pred, list_min_actual)
-        error_high = mean_squared_error(list_max_pred, list_max_actual)
+        # error_low = mean_squared_error(list_min_pred, list_min_actual)
+        # error_high = mean_squared_error(list_max_pred, list_max_actual)
+        error_low = mean_absolute_error(list_min_pred, list_min_actual)
+        error_high = mean_absolute_error(list_max_pred, list_max_actual)
+        print("mean_absolute_error")
 
         # wins = 0
         # for i in res:
@@ -427,57 +439,119 @@ class MyANN:
 
         return error_high * 100, error_low * 100
 
+    def custom_evaluate_safety_factor(self, model, X_test, Y_test, safety_factor=0.8):
+        """
+        Custom evaluation function for a regression model.
 
-def main():
-    obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
+        Args:
+        model (tf.keras.Model): The trained model.
+        X_test (numpy.ndarray): Input features for evaluation.
+        Y_test (numpy.ndarray): True target values for evaluation.
 
-    X_train, Y_train, X_test, Y_test = obj.train_test_split(test_size=0.2)
+        Returns: Boolean
+        whether inside envelope or not,
+        for each day.
+        """
+        y_pred = model.predict(X_test)
 
-    model = keras.Sequential(
-        [
-            keras.layers.Dense(900, input_shape=(4,), activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(600, activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(300, activation="relu"),
-            keras.layers.Dropout(0.4),
-            keras.layers.Dense(4, activation="relu"),
+        num_days = y_pred.shape[0]
+        # high is 3rd column, low is 4th column
+
+        list_min_pred = []
+        list_max_pred = []
+        list_min_actual = []
+        list_max_actual = []
+        res = []
+        list_win_days = []
+
+        for i in range(num_days):
+            # i  -> day
+            # for 1st day
+            min_pred = y_pred[i][0][1]
+            max_pred = y_pred[i][0][1]
+
+            min_actual = Y_test[i][0][1]
+            max_actual = Y_test[i][0][1]
+
+            for j in range(y_pred.shape[1]):
+                # j -> time
+                min_pred = min(min_pred, y_pred[i][j][1])
+                max_pred = max(max_pred, y_pred[i][j][0])
+
+                min_actual = min(min_actual, Y_test[i][j][1])
+                max_actual = max(max_actual, Y_test[i][j][0])
+
+            list_min_actual.append(min_actual)
+            list_max_actual.append(max_actual)
+
+            average_pred = (min_pred + max_pred) / 2
+            max_t = average_pred + (max_pred - average_pred) * safety_factor
+            min_t = average_pred + (min_pred - average_pred) * safety_factor
+
+            list_min_pred.append(min_t)
+            list_max_pred.append(max_t)
+
+            win = max_t < max_actual and min_t > min_actual
+
+            res.append(win)
+
+        # TODOO:
+        # - pred be one high and low, rather than all 4
+        # - concentrate and what is actually required for making a decision
+        # make graph of envelope of min max of day. caompare pred vs actual
+
+        x = [i + 1 for i in range(num_days)]
+
+        list_pred_avg = [
+            (list_min_pred[i] + list_max_pred[i]) / 2 for i in range(num_days)
         ]
-    )
 
-    print(model.summary())
+        # plt.scatter(x, list_min_actual, c="yellow")
+        # plt.scatter(x, list_max_actual, c="yellow")
 
-    log_dir = "logs/"  # Directory where you want to store the TensorBoard logs
-    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+        fig = plt.figure()
+        fig.set_figwidth(16)
+        fig.set_figheight(9)
 
-    model.compile(
-        optimizer="adam", loss="mean_squared_error", metrics=["accuracy", "mse", "mae"]
-    )
+        ax = fig.add_subplot(111)
 
-    model.fit(X_train, Y_train, epochs=100, callbacks=[tensorboard_callback])
-    print("\nmodel training done.\n")
-    model.save(f"models_saved/model - {datetime.now()}.keras")
+        plt.fill_between(x, list_min_actual, list_max_actual, color="yellow")
 
-    # tensorboard --logdir=logs/
-    # loss = model.evaluate(X_test, Y_test)
+        plt.plot(x, list_pred_avg, linestyle="dashed", c="red")
 
-    accuracy_percent = obj.custom_evaluate_full_envelope(
-        model=model,
-        X_test=X_test,
-        Y_test=Y_test,
-    )
+        for i in range(len(list_min_pred)):
+            plt.vlines(
+                x=x[i],
+                ymin=list_min_pred[i],
+                ymax=list_max_pred[i],
+                colors="green",
+            )
 
-    print(f"\nTest accuracy_percent: {accuracy_percent}")
+        ax.set_xlabel("days", fontsize=15)
+        ax.set_ylabel("fraction of prev close", fontsize=15)
+        y_min = min(min(list_min_actual), min(list_min_pred))
+        y_max = max(max(list_max_actual), max(list_min_pred))
 
-    # z = model.predict(X_test)
-    # print(type(z))
-    # print(z.shape)
-    # print(z)
+        wins = 0
+        for i in range(len(res)):
+            if res[i]:
+                wins += 1
+                plt.scatter(
+                    x[i],
+                    y_min + (y_max - y_min) / 3,
+                    c="yellow",
+                    linewidths=2,
+                    marker="^",
+                    edgecolor="red",
+                    s=400,
+                )
 
-    # coef, intercept = model.get_weights()
+        win_percent = round((wins / len(res)) * 100, 2)
 
+        ax.set_title(
+            f"win percent: {win_percent}%   ||  {wins}/{len(res)}", fontsize=20
+        )
 
-if __name__ == "__main__":
-    time_1 = time()
-    main()
-    print(f"\ntime taken = {round(time() - time_1, 2)} sec\n")
+        plt.show()
+
+        return win_percent
