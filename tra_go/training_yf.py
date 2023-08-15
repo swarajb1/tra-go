@@ -405,37 +405,28 @@ class MyANN:
             # i  -> day
             # for 1st day
 
-            min_pred = y_pred[i][0][3]
-            max_pred = y_pred[i][0][2]
+            min_pred = y_pred[i][0][1]
+            max_pred = y_pred[i][0][0]
 
-            min_actual = Y_test[i][0][3]
-            max_actual = Y_test[i][0][2]
+            min_actual = Y_test[i][0][1]
+            max_actual = Y_test[i][0][0]
 
             for j in range(y_pred.shape[1]):
                 # j -> time
-                min_pred = min(min_pred, y_pred[i][j][3])
-                max_pred = max(max_pred, y_pred[i][j][2])
+                min_pred = min(min_pred, y_pred[i][j][1])
+                max_pred = max(max_pred, y_pred[i][j][0])
 
-                min_actual = min(min_actual, Y_test[i][j][3])
-                max_actual = max(max_actual, Y_test[i][j][2])
+                min_actual = min(min_actual, Y_test[i][j][1])
+                max_actual = max(max_actual, Y_test[i][j][0])
 
             list_min_pred.append(min_pred)
             list_max_pred.append(max_pred)
             list_min_actual.append(min_actual)
             list_max_actual.append(max_actual)
 
-        # error_low = mean_squared_error(list_min_pred, list_min_actual)
-        # error_high = mean_squared_error(list_max_pred, list_max_actual)
         error_low = mean_absolute_error(list_min_pred, list_min_actual)
         error_high = mean_absolute_error(list_max_pred, list_max_actual)
         print("mean_absolute_error")
-
-        # wins = 0
-        # for i in res:
-        #     if i:
-        #         wins += 1
-
-        # return (wins / len(res)) * 100
 
         return error_high * 100, error_low * 100
 
@@ -495,23 +486,15 @@ class MyANN:
 
             res.append(win)
 
-        # TODOO:
-        # - pred be one high and low, rather than all 4
-        # - concentrate and what is actually required for making a decision
-        # make graph of envelope of min max of day. caompare pred vs actual
-
         x = [i + 1 for i in range(num_days)]
 
         list_pred_avg = [
             (list_min_pred[i] + list_max_pred[i]) / 2 for i in range(num_days)
         ]
 
-        # plt.scatter(x, list_min_actual, c="yellow")
-        # plt.scatter(x, list_max_actual, c="yellow")
-
-        fig = plt.figure()
-        fig.set_figwidth(16)
-        fig.set_figheight(9)
+        fig = plt.figure(figsize=(16, 9))
+        # fig.set_figwidth(16)
+        # fig.set_figheight(9)
 
         ax = fig.add_subplot(111)
 
@@ -530,15 +513,17 @@ class MyANN:
         ax.set_xlabel("days", fontsize=15)
         ax.set_ylabel("fraction of prev close", fontsize=15)
         y_min = min(min(list_min_actual), min(list_min_pred))
-        y_max = max(max(list_max_actual), max(list_min_pred))
+        y_max = max(max(list_max_actual), max(list_max_pred))
 
         wins = 0
+        all_days_pro = 1
         for i in range(len(res)):
             if res[i]:
+                all_days_pro *= list_max_pred[i] / list_min_pred[i]
                 wins += 1
                 plt.scatter(
                     x[i],
-                    y_min + (y_max - y_min) / 3,
+                    y_min - (y_max - y_min) / 100,
                     c="yellow",
                     linewidths=2,
                     marker="^",
@@ -547,9 +532,12 @@ class MyANN:
                 )
 
         win_percent = round((wins / len(res)) * 100, 2)
+        per_day = pow(all_days_pro, 1 / len(res))
+        cdgr = round((per_day - 1) * 100, 4)
 
         ax.set_title(
-            f"win percent: {win_percent}%   ||  {wins}/{len(res)}", fontsize=20
+            f"win percent: {win_percent}%   ||  {wins}/{len(res)}  || per_day = {cdgr}%",
+            fontsize=20,
         )
 
         plt.show()
