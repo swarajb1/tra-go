@@ -1,9 +1,12 @@
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 import pytz
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import webbrowser
+import os
 
 
 class MyANN:
@@ -93,7 +96,7 @@ class MyANN:
         df["high"] = df["High"].apply(lambda x: self.round_decimals_2(x))
         df["low"] = df["Low"].apply(lambda x: self.round_decimals_2(x))
 
-        new_2 = df[df["to_add"] == True].copy(deep=True)
+        new_2 = df[df["to_add"] is True].copy(deep=True)
         new_2.rename(columns={"Datetime": "datetime"}, inplace=True)
 
         return new_2[
@@ -266,7 +269,7 @@ class MyANN:
     def data_my_zone(self, df: pd.DataFrame) -> pd.DataFrame:
         df["to_add"] = df["datetime"].apply(lambda x: self.is_in_zone(x))
 
-        new_2 = df[df["to_add"] == True].copy(deep=True)
+        new_2 = df[df["to_add"]].copy(deep=True)
         new_2.reset_index(drop=True, inplace=True)
 
         return new_2[
@@ -290,12 +293,16 @@ class MyANN:
         training_dates = all_dates[: int(num_days * (1 - test_size))]
         testing_dates = all_dates[int(num_days * (1 - test_size)) :]
 
-        df["train"] = df["date"].apply(lambda x: self.is_same_date_2(x, training_dates))
+        df["is_train"] = df["date"].apply(
+            lambda x: self.is_same_date_2(x, training_dates)
+        )
 
-        df["test"] = df["date"].apply(lambda x: self.is_same_date_2(x, testing_dates))
+        df["is_test"] = df["date"].apply(
+            lambda x: self.is_same_date_2(x, testing_dates)
+        )
 
-        train_df = df[df["train"] == True].copy(deep=True)
-        test_df = df[df["test"] == True].copy(deep=True)
+        train_df = df[df["is_train"]].copy(deep=True)
+        test_df = df[df["is_test"]].copy(deep=True)
 
         train_df.reset_index(drop=True, inplace=True)
         test_df.reset_index(drop=True, inplace=True)
@@ -306,11 +313,15 @@ class MyANN:
         )
 
     def data_split_x_y(self, df) -> pd.DataFrame:
-        df["input"] = df["datetime"].apply(lambda x: self.is_in_half(x, which_half=0))
-        df["output"] = df["datetime"].apply(lambda x: self.is_in_half(x, which_half=1))
+        df["is_input"] = df["datetime"].apply(
+            lambda x: self.is_in_half(x, which_half=0)
+        )
+        df["is_output"] = df["datetime"].apply(
+            lambda x: self.is_in_half(x, which_half=1)
+        )
 
-        df_i = df[df["input"] == True].copy(deep=True)
-        df_o = df[df["output"] == True].copy(deep=True)
+        df_i = df[df["is_input"]].copy(deep=True)
+        df_o = df[df["is_output"]].copy(deep=True)
 
         df_i.reset_index(drop=True, inplace=True)
         df_o.reset_index(drop=True, inplace=True)
@@ -347,17 +358,37 @@ class MyANN:
         selected_columns_1 = ["open", "close", "high", "low"]
         selected_columns_2 = ["high", "low"]
 
-        arr_train_x = self.by_date_df_array(df_train_x[selected_columns_1])
-        arr_train_y = self.by_date_df_array(df_train_y[selected_columns_2])
-        arr_test_x = self.by_date_df_array(df_test_x[selected_columns_1])
-        arr_test_y = self.by_date_df_array(df_test_y[selected_columns_2])
+        train_x = self.by_date_df_array(df_train_x[selected_columns_1])
+        train_y = self.points_hl(df_train_y[selected_columns_2])
+        # train_y = self.by_date_df_array(df_train_y[selected_columns_2])
+        test_x = self.by_date_df_array(df_test_x[selected_columns_1])
+        test_y = self.points_hl(df_test_y[selected_columns_2])
+        # test_y = self.by_date_df_array(df_test_y[selected_columns_2])
 
         return (
-            arr_train_x,
-            arr_train_y,
-            arr_test_x,
-            arr_test_y,
+            (train_x, train_y),
+            (test_x, test_y),
         )
+
+    def points_hl(self, df):
+        res = np.array([])
+        full_rows = []
+        for index, row in df.iterrows():
+            x = row.values.tolist()
+            full_rows.append(x)
+
+        for i in range(len(full_rows) // 132):
+            high = max([x[0] for x in full_rows[i * 132 : (i + 1) * 132]])
+            low = min([x[1] for x in full_rows[i * 132 : (i + 1) * 132]])
+
+            if res.size == 0:
+                res = np.array([np.array([high, low])])
+            else:
+                res = np.append(res, [np.array([high, low])], axis=0)
+
+            print(round((high / low - 1) * 100, 2))
+
+        return res
 
     def by_date_df_array(self, df) -> [pd.DataFrame]:
         res = []
@@ -369,7 +400,9 @@ class MyANN:
         for i in range(len(full_rows) // 132):
             res.append(deepcopy(full_rows[i * 132 : (i + 1) * 132]))
 
-        return res
+        res_1 = np.array([np.array(xi) for xi in res])
+
+        return res_1
 
     def evaluate(self) -> float:
         # TODOO:
@@ -453,16 +486,15 @@ class MyANN:
         list_min_actual = []
         list_max_actual = []
         res = []
-        list_win_days = []
 
         for i in range(num_days):
             # i  -> day
             # for 1st day
             min_pred = y_pred[i][0][1]
-            max_pred = y_pred[i][0][1]
+            max_pred = y_pred[i][0][0]
 
             min_actual = Y_test[i][0][1]
-            max_actual = Y_test[i][0][1]
+            max_actual = Y_test[i][0][0]
 
             for j in range(y_pred.shape[1]):
                 # j -> time
@@ -541,5 +573,158 @@ class MyANN:
         )
 
         plt.show()
+
+        return win_percent
+
+    def custom_evaluate_safety_factor_2(self, model, X_test, Y_test, safety_factor=0.8):
+        """
+        Custom evaluation function for a regression model.
+
+        Args:
+        model (tf.keras.Model): The trained model.
+        X_test (numpy.ndarray): Input features for evaluation.
+        Y_test (numpy.ndarray): True target values for evaluation.
+
+        Returns: Boolean
+        whether inside envelope or not,
+        for each day.
+        """
+        y_pred = model.predict(X_test)
+
+        num_days = y_pred.shape[0]
+        # high is 3rd column, low is 4th column
+
+        list_min_pred = []
+        list_max_pred = []
+        list_min_actual = []
+        list_max_actual = []
+        list_pred_avg = []
+
+        res = []
+        valid_pred = []
+        valid_act = []
+        valid_max = []
+        valid_min = []
+
+        for i in range(num_days):
+            # i  -> day
+            # for 1st day
+            min_pred = y_pred[i, 1]
+            max_pred = y_pred[i, 0]
+
+            min_actual = Y_test[i, 1]
+            max_actual = Y_test[i, 0]
+
+            list_min_actual.append(min_actual)
+            list_max_actual.append(max_actual)
+
+            average_pred = (min_pred + max_pred) / 2
+            min_t = average_pred + (min_pred - average_pred) * safety_factor
+            max_t = average_pred + (max_pred - average_pred) * safety_factor
+
+            list_pred_avg.append(average_pred)
+            list_min_pred.append(min_t)
+            list_max_pred.append(max_t)
+
+            win = max_t < max_actual and min_t > min_actual and max_t > min_t
+            valid_pred.append(max_pred > min_pred)
+            valid_act.append(max_actual > min_actual)
+            valid_max.append(max_t < max_actual)
+            valid_min.append(min_t > min_actual)
+            print(max_pred - min_pred)
+
+            res.append(win)
+
+        pred_perc = 0
+        for i in valid_pred:
+            if i:
+                pred_perc += 1
+        print("pred_perc\t", round(pred_perc / len(valid_pred) * 100, 2), " %")
+
+        act_perc = 0
+        for i in valid_act:
+            if i:
+                act_perc += 1
+        print("act_perc\t", round(act_perc / len(valid_act) * 100, 2), " %")
+
+        max_perc = 0
+        for i in valid_max:
+            if i:
+                max_perc += 1
+        print("max_perc\t", round(max_perc / len(valid_max) * 100, 2), " %")
+
+        min_perc = 0
+        for i in valid_min:
+            if i:
+                min_perc += 1
+        print("min_perc\t", round(min_perc / len(valid_min) * 100, 2), " %")
+
+        x = [i + 1 for i in range(num_days)]
+
+        fig = plt.figure(figsize=(16, 9))
+
+        ax = fig.add_subplot(111)
+
+        plt.fill_between(x, list_min_actual, list_max_actual, color="yellow")
+
+        plt.plot(x, list_pred_avg, linestyle="dashed", c="red")
+
+        for i in range(len(list_min_pred)):
+            plt.vlines(
+                x=x[i],
+                ymin=list_min_pred[i],
+                ymax=list_max_pred[i],
+                colors="green",
+            )
+
+        ax.set_xlabel("days", fontsize=15)
+        ax.set_ylabel("fraction of prev close", fontsize=15)
+        y_min = min(min(list_min_actual), min(list_min_pred))
+        y_max = max(max(list_max_actual), max(list_max_pred))
+
+        wins = 0
+        total_capture = 0
+        pred_capture = 0
+        all_days_pro = 1
+        for i in range(len(res)):
+            total_capture += (
+                list_max_actual[i] / list_min_actual[i] - 1
+            ) * safety_factor
+            if res[i]:
+                all_days_pro *= list_max_pred[i] / list_min_pred[i]
+                pred_capture += list_max_pred[i] / list_min_pred[i] - 1
+
+                wins += 1
+                plt.scatter(
+                    x[i],
+                    y_min - (y_max - y_min) / 100,
+                    c="yellow",
+                    linewidths=2,
+                    marker="^",
+                    edgecolor="red",
+                    s=400,
+                )
+
+        win_percent = round((wins / len(res)) * 100, 2)
+        per_day = pow(all_days_pro, 1 / len(res))
+        cdgr = round((per_day - 1) * 100, 4)
+
+        pred_capture_percent = round((pred_capture / total_capture) * 100, 2)
+
+        ax.set_title(
+            f"win percent: {win_percent}%   ||  {wins}/{len(res)}  || per_day = {cdgr}%",
+            fontsize=20,
+        )
+
+        print("win_days_perc\t", win_percent, " %")
+        print("pred capture\t", pred_capture_percent, " %")
+        print("per_day\t\t", cdgr, " %")
+        print(f"250 days:\t {round(pow(cdgr/100+1, 250), 4)}")
+
+        plt.show()
+
+        # filename = f"graphs/{datetime.now()} - sample_plot.png"
+        # plt.savefig(filename, dpi=300, bbox_inches="tight")
+        # webbrowser.open_new_tab(os.path.join(os.getcwd(), filename))
 
         return win_percent
