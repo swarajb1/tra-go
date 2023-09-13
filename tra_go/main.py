@@ -1,146 +1,103 @@
-from training_yf import MyANN
+import training_yf as an
 from tensorflow import keras
-from keras.layers import Dense, SimpleRNN, Flatten, LSTM, Dropout, GRU
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from time import time
 from datetime import datetime
+import keras_model as km
 
 
 def main():
-    obj = MyANN(ticker="ADANIPORTS.NS", interval="1m")
-
-    (X_train, Y_train), (X_test, Y_test) = obj.train_test_split(test_size=0.2)
-
-    load_model = False
-    check_on_test = False
-
     NUMBER_OF_EPOCHS = 1000
     BATCH_SIZE = 32
     SAFETY_FACTOR = 0.8
-    LEARNING_RATE = 0.003
+    LEARNING_RATE = 0.0001
+    TEST_SIZE = 0.2
+    Y_TYPE = "hl"
 
-    print(X_train[0].shape)
+    TICKER = "ADANIPORTS.NS"
+    INTERVAL = "1m"
+
+    load_model_1 = 0
+    check_on_test_1 = 0
+
+    df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
+
+    (X_train, Y_train), (X_test, Y_test) = an.train_test_split(
+        data_df=df, test_size=TEST_SIZE, y_type=Y_TYPE, interval=INTERVAL
+    )
+
+    load_model = bool(load_model_1)
+    check_on_test = bool(check_on_test_1)
+    now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
 
     if load_model:
-        model = keras.models.load_model(
-            "models/model - 2023-08-20 15:05:47.670826.keras"
-        )
+        model = keras.models.load_model("models/model - band - 2023-09-06 20-52")
         print("\nmodel loaded.\n")
-
-    else:
-        model = keras.Sequential()
-
-        # model.add(
-        #     SimpleRNN(
-        #         9,
-        #         input_shape=(X_train[0].shape),
-        #         return_sequences=True,
-        #         activation="relu",
-        #     )
-        # )
-
-        model.add(
-            Dense(
-                50,
-                input_shape=(X_train[0].shape),
-                activation="relu",
-            )
-        )
-
-        model.add(Flatten())
-
-        model.add(
-            Dense(
-                30,
-                activation="relu",
-            )
-        )
-        model.add(
-            Dense(
-                1000,
-                activation="relu",
-            )
-        )
-
-        # model.add(
-        #     Dense(
-        #         300,
-        #         activation="relu",
-        #     )
-        # )
-
-        # model.add(Dropout(0.2))
-
-        model.add(Dense(2))
-
         model.summary()
 
-        print(model.output_shape)
+    else:
+        model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
-        log_dir = "logs/"  # Directory where you want to store the TensorBoard logs
+        print("training data shape\t", X_train.shape)
+        print("training elememt shape\t", X_train[0].shape)
+
+        print("model output shape\t", model.output_shape)
+
+        log_dir = f"logs/{now_datetime}"  # Directory where you want to store the TensorBoard logs
         tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
         # terminal command: tensorboard --logdir=logs/
         # log directory: logs/train/
 
-        optimizer = keras.optimizers.legacy.Adam(learning_rate=LEARNING_RATE)
+        optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
+
+        loss = keras.losses.MeanSquaredError()
 
         model.compile(
             optimizer=optimizer,
-            loss="mean_squared_error",
-            metrics=["accuracy", "mse", "mae"],
+            loss=loss,
+            metrics=["mae", "mse"],
         )
 
-        # filepath = (
-        #     f"models/{datetime.now()} - " + "RNN_Final-{epoch:02d}-{accuracy:.3f}"
-        # )
-        # # unique file name that will include the epoch and the validation acc for that epoch
-        # checkpoint = ModelCheckpoint(
-        #     "models/{}.model".format(
-        #         filepath, monitor="accuracy", verbose=1, save_best_only=True, mode="max"
-        #     )
-        # )  # saves only the best ones
-
-        model.fit(
-            X_train,
-            Y_train,
+        history = model.fit(
+            x=X_train,
+            y=Y_train,
             epochs=NUMBER_OF_EPOCHS,
-            # batch_size=BATCH_SIZE,
+            batch_size=BATCH_SIZE,
             validation_data=(X_test, Y_test),
             callbacks=[tensorboard_callback],
-            # callbacks=[tensorboard_callback, checkpoint],
         )
 
-        model.save(f"models/model - {datetime.now()}.keras")
+        model.save(f"models/model - {Y_TYPE} - {now_datetime}")
 
         print("\nmodel training done.\n")
 
     # if check_on_test:
     #     loss = model.evaluate(X_test, Y_test)
 
-    #     win_percent = obj.custom_evaluate_full_envelope(
+    #     win_percent = an.custom_evaluate_full_envelope(
     #         model=model, X_test=X_test, Y_test=Y_test
     #     )
     # else:
     #     loss = model.evaluate(X_train, Y_train)
 
-    #     win_percent = obj.custom_evaluate_full_envelope(
+    #     win_percent = an.custom_evaluate_full_envelope(
     #         model=model, X_test=X_train, Y_test=Y_train
     #     )
 
-    if check_on_test:
-        loss = model.evaluate(X_test, Y_test)
+    if not check_on_test:
+        X_test = X_train
+        Y_test = Y_train
 
-        win_percent = obj.custom_evaluate_safety_factor_2(
-            model=model, X_test=X_test, Y_test=Y_test, safety_factor=SAFETY_FACTOR
-        )
-    else:
-        loss = model.evaluate(X_train, Y_train)
+    win_percent = an.custom_evaluate_safety_factor(
+        model=model,
+        X_test=X_test,
+        Y_test=Y_test,
+        now_datetime=now_datetime,
+        y_type=Y_TYPE,
+        safety_factor=SAFETY_FACTOR,
+    )
 
-        win_percent = obj.custom_evaluate_safety_factor_2(
-            model=model, X_test=X_train, Y_test=Y_train, safety_factor=SAFETY_FACTOR
-        )
-
-    # print(f"\nloss: {loss}\n")
+    print("now_datetime: ", now_datetime)
     # print(f"win_percent: {win_percent}")
 
 
