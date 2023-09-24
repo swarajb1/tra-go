@@ -150,15 +150,18 @@ for INTERVAL in [
         # ['Datetime'], format='%Y-%m-%d %H:%M:%S%z'
         # ['Date'], format='%Y-%m-%d'
 
+        index_column = ""
         if INTERVAL == "1d":
+            index_column = "Date"
             # all_data.reset_index(inplace=True)
-            final_data = all_data.sort_values(by="Date", ascending=True).copy()
+            final_data = all_data.sort_values(by=index_column, ascending=True).copy()
             # final_data["Date"] = datetime.datetime.strptime(
             #     final_data["Date"].apply(str), "%Y-%m-%d"
             # ).strftime("%Y-%m-%d")
 
         else:
-            final_data = all_data.sort_values(by="Datetime", ascending=True)
+            index_column = "Datetime"
+            final_data = all_data.sort_values(by=index_column, ascending=True)
 
         folder_name = f"./data_stock_price_yf/{INTERVAL} data"
         if not os.path.exists(folder_name):
@@ -167,9 +170,14 @@ for INTERVAL in [
         filename = os.path.join(folder_name, f"{ticker} - {INTERVAL}.csv")
         if os.path.exists(filename):
             previous_data = pd.read_csv(filename, index_col=0)
-            # todoo: concat that data only that is after the last date in the alrady present data.
 
             final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
 
         final_data.to_csv(filename, index=True)
+
+        # repeating process to drop duplicates properly
+        d1 = pd.read_csv(filename, index_col=0)
+        d2 = d1.drop_duplicates(keep="first")
+        d2.to_csv(filename, index=True)
+
         print(filename)
