@@ -6,6 +6,10 @@ import pytz
 from copy import deepcopy
 import matplotlib.pyplot as plt
 
+from tensorflow import keras
+from keras.utils import custom_object_scope
+import keras_model as km
+
 
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
     # which_half = 0, means 1st half - input data
@@ -337,7 +341,7 @@ def train_test_split(
     # 6x(132,4)
 
     selected_columns_1 = ["open", "close", "high", "low"]
-    selected_columns_2 = ["high", "low"]
+    selected_columns_2 = ["low", "high"]
 
     train_x = by_date_df_array(df_train_x[selected_columns_1])
     test_x = by_date_df_array(df_test_x[selected_columns_1])
@@ -347,13 +351,56 @@ def train_test_split(
         test_y = points_hl(df_test_y[selected_columns_2])
 
     elif y_type == "band":
-        train_y = by_date_df_array_hl(df_train_y[selected_columns_2])
-        test_y = by_date_df_array_hl(df_test_y[selected_columns_2])
+        train_y = by_date_df_array(df_train_y[selected_columns_2])
+        test_y = by_date_df_array(df_test_y[selected_columns_2])
 
     return (
         (train_x, train_y),
         (test_x, test_y),
     )
+
+
+def train_test_split_2_mods(
+    data_df,
+    interval,
+    y_type,
+    test_size=0.2,
+) -> [pd.DataFrame]:
+    # y_type = "2_mods"
+
+    # separate into 132, 132 entries df. for train and test df.
+
+    # divide the price data of that day by the closing price of the previous day.
+    # for the very first day of the dataset - divide the prices by the opening price.
+
+    df = data_cleaning(data_df)
+    # getting clean and my zone data
+    df = data_scaling(df)
+    # getting scaled data according to previous day closing price, in percentages terms
+    df = data_my_zone(df, interval=interval)
+    # getting data is inside the full zone.
+
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+
+    df_train_x, df_train_y = data_split_x_y(df=df_train, interval=interval)
+    # 23x(132,4)
+
+    df_test_x, df_test_y = data_split_x_y(df=df_test, interval=interval)
+    # 6x(132,4)
+
+    res = {}
+    for column in ["high", "low"]:
+        train_x = by_date_np_array(df_train_x[column].values)
+        test_x = by_date_np_array(df_test_x[column].values)
+        train_y = by_date_np_array(df_train_y[column].values)
+        test_y = by_date_np_array(df_test_y[column].values)
+
+        res[column] = {}
+        res[column]["train_x"] = train_x
+        res[column]["test_x"] = test_x
+        res[column]["train_y"] = train_y
+        res[column]["test_y"] = test_y
+    return res
 
 
 def points_hl(df):
@@ -377,6 +424,10 @@ def points_hl(df):
     return res
 
 
+# TODOO: take a blanket mean of all high and use that as high of the day., same for low. to reduce effect of outlilers.
+# TODOO: sort of list of highs and take the 3/4th index of that as high if the day. and also note the time of that.
+
+
 def by_date_df_array(df) -> [pd.DataFrame]:
     res = []
     full_rows = []
@@ -392,19 +443,18 @@ def by_date_df_array(df) -> [pd.DataFrame]:
     return res_1
 
 
-def by_date_df_array_hl(df) -> [pd.DataFrame]:
+def by_date_np_array(np_array) -> [pd.DataFrame]:
     res = []
-    full_rows = []
-    for index, row in df.iterrows():
-        x = row[["high", "low"]].values.tolist()
-        full_rows.append(x)
+    full_rows = np_array.tolist()
 
     for i in range(len(full_rows) // 132):
         res.append(deepcopy(full_rows[i * 132 : (i + 1) * 132]))
 
     res_1 = np.array([np.array(xi) for xi in res])
 
-    return res_1
+    res_3d = np.expand_dims(res_1, axis=-1)
+
+    return res_3d
 
 
 def evaluate(self) -> float:
@@ -486,106 +536,6 @@ def custom_evaluate_safety_factor(
         )
 
 
-def custom_evaluate_safety_factor_band(
-    model,
-    X_test,
-    Y_test,
-    y_type,
-    now_datetime,
-    safety_factor,
-):
-    y_pred = model.predict(X_test)
-
-    list_min_pred = []
-    list_max_pred = []
-    list_min_actual = []
-    list_max_actual = []
-
-    for i in range(y_pred.shape[0]):
-        # i  -> day
-        # for 1st day
-        min_pred = y_pred[i, 0, 1]
-        max_pred = y_pred[i, 0, 0]
-
-        min_actual = Y_test[i, 0, 1]
-        max_actual = Y_test[i, 0, 0]
-
-        for j in range(int(y_pred.shape[1] * 0.25), int(y_pred.shape[1] * 0.75)):
-            # j -> time
-            min_pred = min(min_pred, y_pred[i, j, 1])
-            max_pred = max(max_pred, y_pred[i, j, 0])
-
-            min_actual = min(min_actual, Y_test[i, j, 1])
-            max_actual = max(max_actual, Y_test[i, j, 0])
-
-        list_min_actual.append(min_actual)
-        list_max_actual.append(max_actual)
-
-        average_pred = (min_pred + max_pred) / 2
-        min_t = average_pred + (min_pred - average_pred) * safety_factor
-        max_t = average_pred + (max_pred - average_pred) * safety_factor
-
-        list_min_pred.append(min_t)
-        list_max_pred.append(max_t)
-
-    win_percent = function_rest(
-        list_max_actual=list_max_actual,
-        list_min_actual=list_min_actual,
-        list_max_pred=list_max_pred,
-        list_min_pred=list_min_pred,
-        y_type=y_type,
-        safety_factor=safety_factor,
-        now_datetime=now_datetime,
-    )
-
-    function_2(y_pred=y_pred, y_test=Y_test)
-
-    return
-
-
-def function_2(y_pred, y_test):
-    error_a = np.abs(y_pred - y_test)
-
-    new_array = np.array([])
-
-    # average error np array
-    for i in range(error_a.shape[1]):
-        high = 0
-        low = 0
-        for j in range(error_a.shape[0]):
-            high += error_a[j, i, 0]
-            low += error_a[j, i, 1]
-
-        to_add_array = np.array([high / error_a.shape[0], low / error_a.shape[0]])
-
-        if new_array.size == 0:
-            new_array = np.array([to_add_array])
-        else:
-            new_array = np.append(new_array, [to_add_array], axis=0)
-
-    y1 = new_array[:, 0]
-    y2 = new_array[:, 1]
-
-    # Create x-axis values
-    x = np.arange(len(new_array))
-
-    plt.figure(figsize=(16, 9))
-
-    # Plot y1 and y2 against x
-    plt.plot(x, y1, label="high")
-    plt.plot(x, y2, label="low")
-
-    # Set labels and title
-    plt.xlabel("serial", fontsize=15)
-    plt.ylabel("perc", fontsize=15)
-    plt.legend(fontsize=15)
-
-    # plt.plot(new_array)
-    plt.show()
-
-    return
-
-
 def custom_evaluate_safety_factor_hl(
     model,
     X_test,
@@ -620,15 +570,314 @@ def custom_evaluate_safety_factor_hl(
         list_min_pred.append(min_t)
         list_max_pred.append(max_t)
 
-    win_percent = function_rest(
+    function_rest(
         list_max_actual=list_max_actual,
         list_min_actual=list_min_actual,
         list_max_pred=list_max_pred,
         list_min_pred=list_min_pred,
         y_type=y_type,
-        safety_factor=safety_factor,
         now_datetime=now_datetime,
     )
+    return
+
+
+def function_2_2_mods(y_pred_h, y_test_h, y_pred_l, y_test_l, now_datetime, y_type):
+    """
+    Plot the average error of the predicted values against the true values and save the plot as an image file.
+
+    Parameters:
+    - y_pred_h (array-like): The predicted values for the high range.
+    - y_test_h (array-like): The true values for the high range.
+    - y_pred_l (array-like): The predicted values for the low range.
+    - y_test_l (array-like): The true values for the low range.
+    - now_datetime (str): The current date and time.
+    - y_type (str): The type of values being predicted.
+
+    Returns:
+    - None
+    """
+    error_a_h = np.abs(y_pred_h - y_test_h)
+    error_a_l = np.abs(y_pred_l - y_test_l)
+
+    y1 = np.array([])
+    y2 = np.array([])
+
+    # average error np array
+    for i in range(
+        int(error_a_h.shape[1] * FIRST_TIME_INDEX_FRACTION), int(error_a_h.shape[1] * LAST_TIME_INDEX_FRACTION)
+    ):
+        high = 0
+        low = 0
+        for j in range(error_a_h.shape[0]):
+            high += error_a_h[j, i]
+            low += error_a_l[j, i]
+
+        to_add_point_h = low / error_a_h.shape[0]
+        to_add_point_l = high / error_a_h.shape[0]
+
+        if y1.size == 0:
+            y1 = np.array([to_add_point_h])
+            y2 = np.array([to_add_point_l])
+        else:
+            y1 = np.append(y1, [to_add_point_h], axis=0)
+            y2 = np.append(y2, [to_add_point_l], axis=0)
+
+    for _ in range(int(error_a_h.shape[1] * FIRST_TIME_INDEX_FRACTION)):
+        y1 = np.insert(y1, 0, y1[0])
+        y2 = np.insert(y2, 0, y2[0])
+
+    for _ in range(int(error_a_h.shape[1] * LAST_TIME_INDEX_FRACTION), error_a_h.shape[1]):
+        y1 = np.append(y1, y1[-1])
+        y2 = np.append(y2, y2[-1])
+
+    # Create x-axis values
+    x = np.arange(len(y1))
+
+    plt.figure(figsize=(16, 9))
+
+    # Plot y1 and y2 against x
+    plt.plot(x, y1, label="high")
+    plt.plot(x, y2, label="low")
+
+    plt.title(f" name: {now_datetime}\n\n", fontsize=20)
+
+    # Set labels and title
+    plt.xlabel("serial", fontsize=15)
+    plt.ylabel("perc", fontsize=15)
+    plt.legend(fontsize=15)
+    filename = f"training/graphs/{y_type} - {now_datetime} - band abs.png"
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+
+    # plt.plot(new_array)
+    plt.show()
+
+    return
+
+
+def custom_evaluate_safety_factor_band(
+    X_test,
+    Y_test,
+    y_type,
+    now_datetime,
+    safety_factor,
+):
+    with custom_object_scope({"custom_loss_band": km.custom_loss_band, "metric_msr": km.metric_msr}):
+        model = keras.models.load_model(f"training/models/model - {y_type} - {now_datetime}")
+        model.summary()
+
+    y_pred = model.predict(X_test)
+
+    list_min_pred = []
+    list_max_pred = []
+    list_min_actual = []
+    list_max_actual = []
+
+    first_minute = int(y_pred.shape[1] * FIRST_TIME_INDEX_FRACTION)
+    last_minute = int(y_pred.shape[1] * LAST_TIME_INDEX_FRACTION)
+
+    for i in range(y_pred.shape[0]):
+        # i -> day
+        all_y_pred_l = y_pred[i, first_minute:last_minute, 0].tolist()
+        all_y_pred_h = y_pred[i, first_minute:last_minute, 1].tolist()
+
+        all_y_pred_l.sort(reverse=True)
+        all_y_pred_h.sort()
+
+        min_pred = all_y_pred_l[int(len(all_y_pred_h) * PERCENTILE) - 1]
+        max_pred = all_y_pred_h[int(len(all_y_pred_h) * PERCENTILE) - 1]
+
+        min_actual = min(Y_test[i, :, 0])
+        max_actual = max(Y_test[i, :, 1])
+        list_min_actual.append(min_actual)
+        list_max_actual.append(max_actual)
+
+        average_pred = (min_pred + max_pred) / 2
+        min_t = average_pred + (min_pred - average_pred) * safety_factor
+        max_t = average_pred + (max_pred - average_pred) * safety_factor
+
+        list_min_pred.append(min_t)
+        list_max_pred.append(max_t)
+
+    function_2(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
+
+    function_rest(
+        list_max_actual=list_max_actual,
+        list_min_actual=list_min_actual,
+        list_max_pred=list_max_pred,
+        list_min_pred=list_min_pred,
+        y_type=y_type,
+        now_datetime=now_datetime,
+    )
+
+    return
+
+
+FIRST_TIME_INDEX_FRACTION = 0.01
+LAST_TIME_INDEX_FRACTION = 0.99
+PERCENTILE = 0.75
+
+
+def custom_evaluate_safety_factor_2_mods(
+    X_test_h,
+    Y_test_h,
+    X_test_l,
+    Y_test_l,
+    now_datetime,
+    y_type,
+    safety_factor,
+):
+    """
+    Evaluate the safety factor for two models.
+
+    Args:
+        X_test_h (numpy array): The input data for the high model.
+        Y_test_h (numpy array): The target data for the high model.
+        X_test_l (numpy array): The input data for the low model.
+        Y_test_l (numpy array): The target data for the low model.
+        now_datetime (str): The current date and time.
+        y_type (str): The type of the target variable.
+        safety_factor (float): The safety factor to apply.
+
+    Returns:
+        None
+    """
+    with custom_object_scope({"custom_loss_2_mods_high": km.custom_loss_2_mods_high, "metric_msr": km.metric_msr}):
+        model_h = keras.models.load_model(f"training/models/model - {y_type} - high - {now_datetime}")
+        model_h.summary()
+
+    with custom_object_scope({"custom_loss_2_mods_low": km.custom_loss_2_mods_low, "metric_msr": km.metric_msr}):
+        model_l = keras.models.load_model(f"training/models/model - {y_type} - low - {now_datetime}")
+
+    y_pred_h = model_h.predict(X_test_h)
+    y_pred_l = model_l.predict(X_test_l)
+
+    list_min_pred = []
+    list_max_pred = []
+    list_min_actual = []
+    list_max_actual = []
+
+    first_minute = int(y_pred_h.shape[1] * FIRST_TIME_INDEX_FRACTION)
+    last_minute = int(y_pred_h.shape[1] * LAST_TIME_INDEX_FRACTION)
+
+    for i in range(y_pred_h.shape[0]):
+        # i  -> day
+        all_y_pred_h = []
+        all_y_pred_l = []
+
+        min_actual = Y_test_l[i, first_minute, 0]
+        max_actual = Y_test_h[i, first_minute, 0]
+
+        for j in range(y_pred_h.shape[1]):
+            min_actual = min(min_actual, Y_test_l[i, j, 0])
+            max_actual = max(max_actual, Y_test_h[i, j, 0])
+
+        for j in range(first_minute, last_minute):
+            # j -> time
+            all_y_pred_l.append(y_pred_l[i, j, 0])
+            all_y_pred_h.append(y_pred_h[i, j, 0])
+
+        all_y_pred_l.sort(reverse=True)
+        all_y_pred_h.sort()
+
+        max_pred = all_y_pred_h[int(len(all_y_pred_h) * PERCENTILE) - 1]
+        min_pred = all_y_pred_l[int(len(all_y_pred_h) * PERCENTILE) - 1]
+
+        list_min_actual.append(min_actual)
+        list_max_actual.append(max_actual)
+        print("{:.4f}".format(max_actual - min_actual), "{:.4f}".format(max_pred - min_pred))
+
+        average_pred = (min_pred + max_pred) / 2
+        min_t = average_pred + (min_pred - average_pred) * safety_factor
+        max_t = average_pred + (max_pred - average_pred) * safety_factor
+
+        list_min_pred.append(min_t)
+        list_max_pred.append(max_t)
+
+    # array1 = np.reshape(y_pred_l, (-1, 1))
+    # array2 = np.reshape(y_pred_h, (-1, 1))
+
+    # array3 = np.reshape(Y_test_l, (-1, 1))
+    # array4 = np.reshape(Y_test_h, (-1, 1))
+
+    y_pred = np.concatenate((y_pred_l, y_pred_h), axis=-1)
+    Y_test = np.concatenate((Y_test_l, Y_test_h), axis=-1)
+
+    function_2(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
+
+    function_rest(
+        list_max_actual=list_max_actual,
+        list_min_actual=list_min_actual,
+        list_max_pred=list_max_pred,
+        list_min_pred=list_min_pred,
+        y_type=y_type,
+        now_datetime=now_datetime,
+    )
+
+    # function_2_2_mods(
+    #     y_pred_h=y_pred_h,
+    #     y_pred_l=y_pred_l,
+    #     y_test_h=Y_test_h,
+    #     y_test_l=Y_test_l,
+    #     now_datetime=now_datetime,
+    #     y_type=y_type,
+    # )
+
+    return
+
+
+def function_2(y_pred, y_test, now_datetime, y_type):
+    """
+    Generate the graph of high and low error percentages against the serial numbers.
+
+    Parameters:
+        y_pred (np.array): An array of predicted values.
+        y_test (np.array): An array of actual values.
+        now_datetime (str): The current date and time.
+        y_type (str): The type of the y values.
+
+    Returns:
+        None
+    """
+    error_a = np.abs(y_pred - y_test)
+
+    new_array = np.empty((0, 2))
+
+    # average error np array
+    for i in range(
+        int(error_a.shape[1] * FIRST_TIME_INDEX_FRACTION), int(error_a.shape[1] * LAST_TIME_INDEX_FRACTION)
+    ):
+        low = error_a[:, i, 0].sum()
+        high = error_a[:, i, 1].sum()
+
+        to_add_array = np.array([high / error_a.shape[0], low / error_a.shape[0]])
+
+        new_array = np.concatenate((new_array, np.array([to_add_array])), axis=0)
+
+    new_array = np.pad(new_array, ((int(error_a.shape[1] * FIRST_TIME_INDEX_FRACTION), 0), (0, 0)), mode="edge")
+    new_array = np.pad(new_array, ((0, int(error_a.shape[1] * (1 - LAST_TIME_INDEX_FRACTION))), (0, 0)), mode="edge")
+
+    y1 = new_array[:, 0]
+    y2 = new_array[:, 1]
+
+    # Create x-axis values
+    x = np.arange(len(new_array))
+
+    fig = plt.figure(figsize=(16, 9))
+
+    # Plot y1 and y2 against x
+    plt.plot(x, y1, label="high")
+    plt.plot(x, y2, label="low")
+
+    plt.title(f" name: {now_datetime}\n\n", fontsize=20)
+
+    # Set labels and title
+    plt.xlabel("serial", fontsize=15)
+    plt.ylabel("perc", fontsize=15)
+    plt.legend(fontsize=15)
+    filename = f"training/graphs/{y_type} - {now_datetime} - band abs.png"
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+
+    # plt.show()
 
     return
 
@@ -639,9 +888,23 @@ def function_rest(
     list_max_pred,
     list_min_pred,
     y_type,
-    safety_factor,
     now_datetime,
 ):
+    """
+    Calculates various statistics based on the given lists of actual and predicted values.
+
+    Parameters:
+    - list_max_actual (list): A list of maximum actual values.
+    - list_min_actual (list): A list of minimum actual values.
+    - list_max_pred (list): A list of maximum predicted values.
+    - list_min_pred (list): A list of minimum predicted values.
+    - y_type (str): The type of y values.
+    - safety_factor (float): A safety factor for the calculations.
+    - now_datetime (str): The current date and time.
+
+    Returns:
+    - float: The percentage of winning days.
+    """
     list_pred_avg = []
 
     res = []
@@ -665,8 +928,8 @@ def function_rest(
 
         valid_pred.append(max_pred > min_pred)
         valid_act.append(max_actual > min_actual)
-        valid_max.append(max_pred < max_actual)
-        valid_min.append(min_pred > min_actual)
+        valid_max.append(max_pred < max_actual and max_pred > min_actual)
+        valid_min.append(min_pred > min_actual and min_pred < max_actual)
         is_average_in.append(average_pred < max_actual and average_pred > min_actual)
 
         res.append(win)
@@ -696,11 +959,12 @@ def function_rest(
         if i:
             average_in_num += 1
 
+    average_in_perc = round(average_in_num / len(valid_min) * 100, 2)
     print("valid_act\t", round(act_num / len(valid_act) * 100, 2), " %")
     print("valid_pred\t", round(pred_num / len(valid_pred) * 100, 2), " %")
-    print("max_bound\t", round(max_num / len(valid_max) * 100, 2), " %")
-    print("min_bound\t", round(min_num / len(valid_min) * 100, 2), " %\n")
-    print("average_in\t", round(average_in_num / len(valid_min) * 100, 2), " %\n")
+    print("max_inside\t", round(max_num / len(valid_max) * 100, 2), " %")
+    print("min_inside\t", round(min_num / len(valid_min) * 100, 2), " %\n")
+    print("average_in\t", average_in_perc, " %\n")
 
     x = [i + 1 for i in range(len(list_max_actual))]
 
@@ -737,13 +1001,7 @@ def function_rest(
 
             wins += 1
             plt.scatter(
-                x[i],
-                y_min - (y_max - y_min) / 100,
-                c="yellow",
-                linewidths=2,
-                marker="^",
-                edgecolor="red",
-                s=400,
+                x[i], y_min - (y_max - y_min) / 100, c="yellow", linewidths=2, marker="^", edgecolor="red", s=300
             )
 
     win_percent = round((wins / len(res)) * 100, 2)
@@ -761,17 +1019,17 @@ def function_rest(
     print("pred capture\t", pred_capture_percent, " %")
     print("per_day\t\t", avg_captured, " %")
     print("250 days:\t", pro_250)
-    print("leverage:\t", pro_250_5)
+    print("\nleverage:\t", pro_250_5)
     print("datetime:\t", now_datetime)
 
     ax.set_title(
-        f" name: {now_datetime} \n\n win percent: {win_percent}%  || per_day = {avg_captured}% || pred_capture: {pred_capture_percent}%",
+        f" name: {now_datetime} \n\n wins: {win_percent}% || average_in: {average_in_perc}% || pred_capture: {pred_capture_percent}%",
         fontsize=20,
     )
 
-    filename = f"graphs/{y_type} - {now_datetime} - Splot.png"
+    filename = f"training/graphs/{y_type} - {now_datetime} - Splot.png"
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 
-    # plt.show()
+    plt.show()
 
     return win_percent
