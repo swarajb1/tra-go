@@ -127,41 +127,33 @@ for INTERVAL in [
             print(end_date)
             print(start_date)
 
-            #  when the days left are not saturday and sunday.
-            if start_date.weekday() == 5 and (end_date - start_date).days == 1:
-                pass
-            elif start_date.weekday() == 6 and (end_date - start_date).days == 0:
-                pass
-            else:
-                data = yf.download(
-                    ticker,
-                    start=start_date,
-                    end=end_date,
-                    interval=INTERVAL,
-                    progress=False,
-                )
-                all_data = pd.concat([all_data, data], axis=0)
+            data = yf.download(
+                ticker,
+                start=start_date,
+                end=end_date,
+                interval=INTERVAL,
+                progress=False,
+            )
+            all_data = pd.concat([all_data, data], axis=0)
             time.sleep(3)
-
-        print(all_data)
-        print(all_data.columns)
 
         # todoo: check what is the format of the datetime index, can it to desired format.
         # ['Datetime'], format='%Y-%m-%d %H:%M:%S%z'
         # ['Date'], format='%Y-%m-%d'
 
-        index_column = ""
-        if INTERVAL == "1d":
-            index_column = "Date"
-            # all_data.reset_index(inplace=True)
-            final_data = all_data.sort_values(by=index_column, ascending=True).copy()
-            # final_data["Date"] = datetime.datetime.strptime(
-            #     final_data["Date"].apply(str), "%Y-%m-%d"
-            # ).strftime("%Y-%m-%d")
+        all_data["Open"] = all_data["Open"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["Close"] = all_data["Close"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["High"] = all_data["High"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["Low"] = all_data["Low"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["Adj Close"] = all_data["Adj Close"].apply(lambda x: round(number=x, ndigits=2))
 
+        final_data = all_data.sort_index(ascending=True).copy()
+        if INTERVAL == "1d":
+            final_data.rename_axis("Date", inplace=True)
         else:
-            index_column = "Datetime"
-            final_data = all_data.sort_values(by=index_column, ascending=True)
+            final_data.rename_axis("Datetime", inplace=True)
+
+        print(final_data)
 
         folder_name = f"./data_stock_price_yf/{INTERVAL} data"
         if not os.path.exists(folder_name):
@@ -173,11 +165,13 @@ for INTERVAL in [
 
             final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
 
+        final_data = final_data.drop_duplicates(keep="first")
+
         final_data.to_csv(filename, index=True)
 
         # repeating process to drop duplicates properly
-        d1 = pd.read_csv(filename, index_col=0)
-        d2 = d1.drop_duplicates(keep="first")
-        d2.to_csv(filename, index=True)
+        # d1 = pd.read_csv(filename, index_col=0)
+        # d2 = d1.drop_duplicates(keep="first")
+        # d2.to_csv(filename, index=True)
 
         print(filename)
