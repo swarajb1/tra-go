@@ -165,13 +165,12 @@ for INTERVAL in [
 
             final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
 
-        final_data = final_data.drop_duplicates(keep="first")
-
         final_data.to_csv(filename, index=True)
 
         # repeating process to drop duplicates properly
-        # d1 = pd.read_csv(filename, index_col=0)
-        # d2 = d1.drop_duplicates(keep="first")
-        # d2.to_csv(filename, index=True)
+        # for some reason have to do this. to remove duplicates.
+        d1 = pd.read_csv(filename, index_col=0)
+        d2 = d1.drop_duplicates(keep="first")
+        d2.to_csv(filename, index=True)
 
         print(filename)
