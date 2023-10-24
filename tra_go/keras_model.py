@@ -1,9 +1,14 @@
 from tensorflow import keras
 from keras.layers import Dense, Flatten, LSTM, Dropout
 from keras import backend as K
-from keras.callbacks import TensorBoard
-import matplotlib.pyplot as plt
 import tensorflow as tf
+
+
+NUMBER_OF_NEURONS = 2000
+NUMBER_OF_LAYERS = 5
+INITIAL_DROPOUT = 20
+
+ERROR_AMPLIFICATION_FACTOR = 0.6
 
 
 def get_untrained_model(X_train, y_type):
@@ -11,40 +16,24 @@ def get_untrained_model(X_train, y_type):
 
     model.add(
         LSTM(
-            units=256,
+            units=NUMBER_OF_NEURONS,
             input_shape=(X_train[0].shape),
             return_sequences=True,
             activation="relu",
         )
     )
-    model.add(Dropout(0.20))
+    model.add(Dropout(INITIAL_DROPOUT / 100))
 
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
+    for i in range(NUMBER_OF_LAYERS - 1):
+        model.add(
+            LSTM(
+                units=NUMBER_OF_NEURONS,
+                return_sequences=True,
+                activation="relu",
+            )
         )
-    )
-    model.add(Dropout(0.10))
-
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(0.20))
-
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(0.10))
+        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
+        #  dropout value decreases in exponential fashion.
 
     if y_type == "hl":
         model.add(Flatten())
@@ -64,21 +53,57 @@ def get_optimiser(learning_rate: float):
     return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
-ERROR_AMPLIFICATION_FACTOR = 1
-
-
 def custom_loss_2_mods_high(y_true, y_pred):
+    """
+    Calculates a custom loss function for high predictions.
+
+    Args:
+        y_true (tensor): The true values.
+        y_pred (tensor): The predicted values.
+
+    Returns:
+        tensor: The calculated loss value.
+
+    Notes:
+        - The predicted values (y_pred) should be higher than the true values (y_true).
+        - The predicted values should approach the true values from above.
+
+    """
     error = y_true - y_pred
+    # y_pred should be higher that y_true
+    # y_pred to approach to y_true from up
+
     negative_error = K.maximum(-error, 0)
     positive_error = K.maximum(error, 0)
-    return K.sqrt(K.mean(K.square(error) + positive_error * ERROR_AMPLIFICATION_FACTOR))
+
+    return K.sqrt(K.mean(K.square(error) + K.square(positive_error) * ERROR_AMPLIFICATION_FACTOR))
 
 
 def custom_loss_2_mods_low(y_true, y_pred):
+    """
+    Calculates a custom loss function for a regression model with 2 modifications.
+
+    Parameters:
+        y_true (tensor): The true values of the target variable.
+        y_pred (tensor): The predicted values of the target variable.
+
+    Returns:
+        tensor: The custom loss value.
+
+    Notes:
+        - The custom loss is calculated as the square root of the mean of the sum of squares of the difference between y_true and y_pred, and the square of the maximum of -error and 0 multiplied by the error amplification factor.
+        - The error amplification factor determines the weight of the negative error in the loss calculation.
+        - The y_pred values should be lower than the y_true values.
+        - The y_pred values should approach the y_true values from below.
+    """
     error = y_true - y_pred
+    # y_pred should be lower that y_true
+    # y_pred to approach to y_true from down
+
     negative_error = K.maximum(-error, 0)
     positive_error = K.maximum(error, 0)
-    return K.sqrt(K.mean(K.square(error) + negative_error * ERROR_AMPLIFICATION_FACTOR))
+
+    return K.sqrt(K.mean(K.square(error) + K.square(negative_error) * ERROR_AMPLIFICATION_FACTOR))
 
 
 def custom_loss_band(y_true, y_pred):
@@ -89,14 +114,23 @@ def custom_loss_band(y_true, y_pred):
     positive_error_h = K.maximum(error_h, 0)
     negative_error_l = K.maximum(-error_l, 0)
 
-    squared_error = K.square(error)
     error_amplified = (positive_error_h + negative_error_l) * ERROR_AMPLIFICATION_FACTOR
     error_amplified = K.expand_dims(error_amplified, axis=-1)  # Reshape error_amplified
 
-    return K.sqrt(K.mean(squared_error + error_amplified))
+    return K.sqrt(K.mean(K.square(error) + error_amplified))
 
 
-def metric_msr(y_true, y_pred):
+def metric_rmse(y_true, y_pred):
+    """
+    Calculate the root mean squared error (RMSE) between the true values and the predicted values.
+
+    Parameters:
+        y_true (array-like): The true values.
+        y_pred (array-like): The predicted values.
+
+    Returns:
+        float: The root mean squared error.
+    """
     error = y_true - y_pred
     return K.sqrt(K.mean(K.square(error)))
 
