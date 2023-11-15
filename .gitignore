@@ -7,3 +7,4 @@ models_saved
 __pycache__
 training/logs
 training/past_logs
+data_stock_price_yf copy
