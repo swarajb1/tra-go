@@ -650,7 +650,6 @@ def custom_evaluate_safety_factor_2_mods(
     Y_test_l,
     testsize,
     now_datetime,
-    safety_factor,
 ):
     """
     Evaluate the safety factor for two models.
@@ -994,7 +993,7 @@ def function_make_win_graph(
         print("average_in\t", average_in_perc, " %\n")
 
         print("win_days_perc\t", win_percent, " %")
-        print("pred capture\t", pred_capture_percent, " %")
+        print("pred_capture\t", pred_capture_percent, " %")
         print("per_day\t\t", avg_captured, " %")
         print("250 days:\t", pro_250_str)
         print("\nleverage:\t", pro_250_5)
@@ -1010,5 +1009,11 @@ def function_make_win_graph(
         plt.savefig(filename, dpi=300, bbox_inches="tight")
 
         plt.show()  # temp_now
+
+        print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
+        print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
+        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+
+        print("ERROR_AMPLIFICATION_FACTOR\t", km.ERROR_AMPLIFICATION_FACTOR, end="\n\n")
 
     return pro_250
