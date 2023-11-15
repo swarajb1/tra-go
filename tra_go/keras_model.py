@@ -3,12 +3,15 @@ from keras.layers import Dense, Flatten, LSTM, Dropout
 from keras import backend as K
 import tensorflow as tf
 
+# PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
 
-NUMBER_OF_NEURONS = 2000
-NUMBER_OF_LAYERS = 5
+# keep total neurons below 2700 (700 * 3)
+
+NUMBER_OF_NEURONS = 850
+NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 20
 
-ERROR_AMPLIFICATION_FACTOR = 0.6
+ERROR_AMPLIFICATION_FACTOR = 0
 
 
 def get_untrained_model(X_train, y_type):
