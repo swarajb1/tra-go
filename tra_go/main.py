@@ -2,24 +2,33 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint
-from time import time
+import time
 from datetime import datetime
 import multiprocessing
 import numpy as np
 from keras.utils import custom_object_scope
 from sklearn.model_selection import train_test_split
+import os
+import shutil
 
 import keras_model as km
 import training_yf as an
+
+
+# nice -n 19 python file.py
+
+# /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python /Users/bisane.s/my_files/my_codes/tra-go/tra_go/main.py
+
+# nice -n 19 /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python tra_go/main.py
+
 
 # 2_mods = 2 hl models
 # commands
 # terminal command: tensorboard --logdir=training/logs/
 
 
-NUMBER_OF_EPOCHS: int = 400
+NUMBER_OF_EPOCHS: int = 1000
 BATCH_SIZE: int = 128
-SAFETY_FACTOR: float = 0.8
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
@@ -49,6 +58,14 @@ def main():
             now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
         else:
             now_datetime = prev_model
+
+        # # get previous log folders
+        # parent_folder_path = os.getcwd()
+        # for item in os.listdir(os.path.join(parent_folder_path, "training/logs")):
+        #     item_path = os.path.join(parent_folder_path, "training/logs", item)
+        #     if os.path.isdir(item_path):
+        #         shutil.rmtree(item_path)
+        #         time.sleep(31)
 
         for key in ["high", "low"]:
             data_x, data_y = an.get_x_y_individual_data(data_df=df, interval=INTERVAL, columns=[key])
@@ -135,7 +152,6 @@ def main():
             Y_test_l=Y_test_l,
             testsize=TEST_SIZE,
             now_datetime=now_datetime,
-            safety_factor=SAFETY_FACTOR,
         )
 
     elif Y_TYPE == "band":
@@ -190,11 +206,11 @@ def main():
             Y_test=Y_test,
             now_datetime=now_datetime,
             y_type=Y_TYPE,
-            safety_factor=SAFETY_FACTOR,
+            safety_factor=0.8,
         )
 
 
 if __name__ == "__main__":
-    time_1 = time()
+    time_1 = time.time()
     main()
-    print(f"\ntime taken = {round(time() - time_1, 2)} sec\n")
+    print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
