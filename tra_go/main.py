@@ -27,12 +27,16 @@ import training_yf as an
 # terminal command: tensorboard --logdir=training/logs/
 
 
-NUMBER_OF_EPOCHS: int = 1000
+NUMBER_OF_EPOCHS: int = 2000
 BATCH_SIZE: int = 128
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
-Y_TYPE: str = "2_mods"
+Y_TYPE: str = "band"
+# Y_TYPE: str = "2_mods"
+
+# Y_TYPE = "2_mods" / "band"
+
 
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
@@ -45,7 +49,7 @@ PREV_MODEL_TRAINING: bool = False
 def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
-    prev_model: str = "2023-10-22 23-48"
+    prev_model: str = "2023-11-16 16-48"
 
     num_cores: int = multiprocessing.cpu_count()
     # total cores = 8 in this mac.
@@ -159,9 +163,12 @@ def main():
             data_df=df, test_size=TEST_SIZE, y_type=Y_TYPE, interval=INTERVAL
         )
 
-        if IS_TRAINING_MODEL:
+        if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
             now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
+        else:
+            now_datetime = prev_model
 
+        if IS_TRAINING_MODEL:
             model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
@@ -170,13 +177,14 @@ def main():
             print("model output shape\t", model.output_shape)
 
             # Directory where you want to store the TensorBoard logs
-            log_dir = f"training/logs/{Y_TYPE} - {now_datetime}"
+            log_dir = f"training/logs/{now_datetime} - {Y_TYPE}"
+
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
             loss_diff_callback = km.LossDifferenceCallback(log_dir=log_dir)
 
             optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
 
-            loss = km.custom_loss_band
+            loss = km.custom_loss_band_2
 
             model.compile(
                 optimizer=optimizer,
@@ -184,9 +192,10 @@ def main():
                 metrics=["mae", km.metric_rmse],
             )
 
-            callbacks = [tensorboard_callback, loss_diff_callback]
+            # callbacks = [tensorboard_callback, loss_diff_callback]
+            callbacks = [tensorboard_callback]
 
-            history = model.fit(
+            model.fit(
                 x=X_train,
                 y=Y_train,
                 epochs=NUMBER_OF_EPOCHS,
@@ -197,16 +206,29 @@ def main():
                 callbacks=callbacks,
             )
 
-            model.save(f"training/models/model - {Y_TYPE} - {now_datetime}")
+            model.save(f"training/models/model - {now_datetime} - {Y_TYPE}")
 
             print("\nmodel : training done. \n")
 
-        an.custom_evaluate_safety_factor_band(
+        print(X_train.shape, X_test.shape)
+        print(Y_train.shape, Y_test.shape)
+
+        X_test = np.append(X_train, X_test, axis=0)
+        Y_test = np.append(Y_train, Y_test, axis=0)
+        print(Y_test)
+        zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
+        Y_test = np.concatenate((Y_test, zeros), axis=2)
+        print(Y_test)
+        print(Y_test.shape)
+
+        print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+        print("-" * 30)
+
+        an.custom_evaluate_safety_factor_band_2(
             X_test=X_test,
             Y_test=Y_test,
+            testsize=TEST_SIZE,
             now_datetime=now_datetime,
-            y_type=Y_TYPE,
-            safety_factor=0.8,
         )
 
 
