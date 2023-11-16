@@ -7,7 +7,7 @@ import tensorflow as tf
 
 # keep total neurons below 2700 (700 * 3)
 
-NUMBER_OF_NEURONS = 256
+NUMBER_OF_NEURONS = 128
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
@@ -131,16 +131,16 @@ def custom_loss_band_2(y_true, y_pred):
     # pred_low to approach true_low from below = l_less_than_ture_error
     # making sure that pred_high is always greater than pred_low = error_hl_correction
 
-    # approach - 1:
-    raw_error = y_true - y_pred
-    error_rsme = K.sqrt(K.mean(K.square(raw_error)))
+    return (
+        metric_rmse(y_true, y_pred)
+        + metric_band_inside_range(y_true, y_pred) * 4
+        + metric_band_error_average(y_true, y_pred) * 5
+        + metric_band_hl_correction(y_true, y_pred) * 5
+    ) / 10
 
-    # approach - :
+
+def metric_band_inside_range(y_true, y_pred):
     average_true = (y_true[..., 0] + y_true[..., 1]) / 2
-    average_pred = (y_pred[..., 0] + y_pred[..., 1]) / 2
-    average_error = average_true - average_pred
-
-    error_avg = K.sqrt(K.mean(K.square(average_error)))
 
     # approach - :
     h_error_1 = y_true[..., 1] - y_pred[..., 1]
@@ -162,17 +162,34 @@ def custom_loss_band_2(y_true, y_pred):
     # approach - :
     error_inside_range = (
         h_more_than_ture_error + l_less_than_ture_error + h_less_than_ture_avg_error + l_less_than_ture_avg_error
-    ) / 2
+    )
 
-    # approach - high should always be greater than low
+    return error_inside_range
+
+
+def metric_band_error_average(y_true, y_pred):
+    # list of all approaches:
+    # approach pred_average to true_average = average_error
+    # pred_high to approach true_high from below = h_more_than_ture_error
+    # pred_low to approach true_low from below = l_less_than_ture_error
+    # making sure that pred_high is always greater than pred_low = error_hl_correction
+
+    # approach - :
+    average_true = (y_true[..., 0] + y_true[..., 1]) / 2
+    average_pred = (y_pred[..., 0] + y_pred[..., 1]) / 2
+    average_error = average_true - average_pred
+
+    error_avg = K.sqrt(K.mean(K.square(average_error)))
+
+    return error_avg
+
+
+def metric_band_hl_correction(y_true, y_pred):
     hl_correction_error_val = y_pred[..., 1] - y_pred[..., 0]
     error_hl_correction = K.sqrt(K.mean(K.square(K.maximum(-hl_correction_error_val, 0))))
 
-    # as error_hl_correction is supposed to be zero in the end
-    # main approach is error_avg
-
     # at starting : error_rsme=1, error_inside_range=1, error_avg=1, error_hl_correction=0
-    return (error_rsme + error_inside_range * 4 + error_avg * 5 + error_hl_correction * 10) / 10
+    return error_hl_correction
 
 
 def metric_rmse(y_true, y_pred):
