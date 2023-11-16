@@ -566,7 +566,15 @@ def custom_evaluate_safety_factor_band(
     now_datetime,
     safety_factor,
 ):
-    with custom_object_scope({"custom_loss_band": km.custom_loss_band, "metric_rmse": km.metric_rmse}):
+    with custom_object_scope(
+        {
+            "custom_loss_band": km.custom_loss_band,
+            "metric_rmse": km.metric_rmse,
+            "metric_band_error_average": km.metric_band_error_average,
+            "metric_band_hl_correction": km.metric_band_hl_correction,
+            "metric_band_inside_range": km.metric_band_inside_range,
+        }
+    ):
         model = keras.models.load_model(f"training/models/model - {y_type} - {now_datetime}")
         model.summary()
 
@@ -1093,7 +1101,7 @@ def function_make_win_graph(
 
         filename = f"training/graphs/{y_type} - {now_datetime} - Splot.png"
 
-        plt.savefig(filename, dpi=1500, bbox_inches="tight")
+        plt.savefig(filename, dpi=700, bbox_inches="tight")
 
         plt.show()  # temp_now
 
