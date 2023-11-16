@@ -570,9 +570,6 @@ def custom_evaluate_safety_factor_band(
         {
             "custom_loss_band": km.custom_loss_band,
             "metric_rmse": km.metric_rmse,
-            "metric_band_error_average": km.metric_band_error_average,
-            "metric_band_hl_correction": km.metric_band_hl_correction,
-            "metric_band_inside_range": km.metric_band_inside_range,
         }
     ):
         model = keras.models.load_model(f"training/models/model - {y_type} - {now_datetime}")
@@ -645,7 +642,15 @@ def custom_evaluate_safety_factor_band_2(
     safety_factor: float = 0.8
     y_type: str = "band"
 
-    with custom_object_scope({"custom_loss_band_2": km.custom_loss_band_2, "metric_rmse": km.metric_rmse}):
+    with custom_object_scope(
+        {
+            "custom_loss_band_2": km.custom_loss_band_2,
+            "metric_rmse": km.metric_rmse,
+            "metric_band_error_average": km.metric_band_error_average,
+            "metric_band_hl_correction": km.metric_band_hl_correction,
+            "metric_band_inside_range": km.metric_band_inside_range,
+        }
+    ):
         model = keras.models.load_model(f"training/models/model - {now_datetime} - band")
         model.summary()
 
