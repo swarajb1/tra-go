@@ -41,7 +41,7 @@ def get_untrained_model(X_train, y_type):
     if y_type == "hl":
         model.add(Flatten())
 
-    if y_type in ["band", "hl"]:
+    if y_type in ["band", "hl", "band_2"]:
         model.add(Dense(NUMBER_OF_NEURONS))
         model.add(Dense(2))
 
@@ -157,14 +157,21 @@ def metric_band_inside_range(y_true, y_pred):
     # h should be more than true_avg
     h_less_than_ture_avg_error = K.sqrt(K.mean(K.square(K.maximum(-h_error_2, 0))))
     # l should be less than true_avg
-    l_less_than_ture_avg_error = K.sqrt(K.mean(K.square(K.maximum(l_error_2, 0))))
+    l_more_than_ture_avg_error = K.sqrt(K.mean(K.square(K.maximum(l_error_2, 0))))
 
     # approach - :
     error_inside_range = (
-        h_more_than_ture_error + l_less_than_ture_error + h_less_than_ture_avg_error + l_less_than_ture_avg_error
+        h_more_than_ture_error + l_less_than_ture_error + h_less_than_ture_avg_error + l_more_than_ture_avg_error
     )
 
-    return error_inside_range
+    error_inside_range_2 = (
+        h_more_than_ture_error
+        + l_less_than_ture_error
+        + h_less_than_ture_avg_error * 4
+        + l_more_than_ture_avg_error * 4
+    ) / 10
+
+    return error_inside_range_2
 
 
 def metric_band_error_average(y_true, y_pred):
@@ -205,6 +212,45 @@ def metric_rmse(y_true, y_pred):
     """
     error = y_true - y_pred
     return K.sqrt(K.mean(K.square(error)))
+
+
+def custom_loss_band_2_2(y_true, y_pred):
+    # list of all approaches:
+    # approach pred_average to true_average = average_error
+    # band to be inside true band
+    # band cannot be negative
+
+    return (
+        metric_rmse(y_true, y_pred)
+        + metric_band_inside_range_2(y_true, y_pred) * 4
+        + metric_band_error_average_2(y_true, y_pred) * 2
+        + metric_band_hl_correction_2(y_true, y_pred) * 5
+    ) / 6
+
+
+def metric_band_inside_range_2(y_true, y_pred):
+    # band height cannot be more than true band height
+    error = y_true[..., 1] - y_pred[..., 1]
+
+    return K.sqrt(K.mean(K.square(K.maximum(-error, 0))))
+
+
+def metric_band_error_average_2(y_true, y_pred):
+    # average should approach true average
+    average_error = y_true[..., 0] - y_pred[..., 0]
+
+    error_avg = K.sqrt(K.mean(K.square(average_error)))
+
+    return error_avg
+
+
+def metric_band_hl_correction_2(y_true, y_pred):
+    # band height cannot be negative
+    hl_correction_error_val = y_pred[..., 1]
+
+    error_hl_correction = K.sqrt(K.mean(K.square(K.maximum(-hl_correction_error_val, 0))))
+
+    return error_hl_correction
 
 
 class LossDifferenceCallback(tf.keras.callbacks.Callback):
