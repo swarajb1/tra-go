@@ -137,10 +137,6 @@ for INTERVAL in [
             all_data = pd.concat([all_data, data], axis=0)
             time.sleep(3)
 
-        # todoo: check what is the format of the datetime index, can it to desired format.
-        # ['Datetime'], format='%Y-%m-%d %H:%M:%S%z'
-        # ['Date'], format='%Y-%m-%d'
-
         all_data["Open"] = all_data["Open"].apply(lambda x: round(number=x, ndigits=2))
         all_data["Close"] = all_data["Close"].apply(lambda x: round(number=x, ndigits=2))
         all_data["High"] = all_data["High"].apply(lambda x: round(number=x, ndigits=2))
