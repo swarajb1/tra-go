@@ -221,11 +221,17 @@ def custom_loss_band_2_2(y_true, y_pred):
     # band cannot be negative
 
     return (
-        metric_rmse(y_true, y_pred)
-        + metric_band_inside_range_2(y_true, y_pred) * 4
-        + metric_band_error_average_2(y_true, y_pred) * 2
-        + metric_band_hl_correction_2(y_true, y_pred) * 5
-    ) / 6
+        metric_band_average(y_true, y_pred)
+        + metric_band_height(y_true, y_pred)
+        + metric_band_hl_wrongs_percent(y_true, y_pred) / 10
+    )
+
+
+def metric_band_height(y_true, y_pred):
+    # band height to approach true band height
+    error = y_true[..., 1] - y_pred[..., 1]
+
+    return K.sqrt(K.mean(K.square(error)))
 
 
 def metric_band_inside_range_2(y_true, y_pred):
@@ -235,7 +241,7 @@ def metric_band_inside_range_2(y_true, y_pred):
     return K.sqrt(K.mean(K.square(K.maximum(-error, 0))))
 
 
-def metric_band_error_average_2(y_true, y_pred):
+def metric_band_average(y_true, y_pred):
     # average should approach true average
     average_error = y_true[..., 0] - y_pred[..., 0]
 
@@ -246,11 +252,24 @@ def metric_band_error_average_2(y_true, y_pred):
 
 def metric_band_hl_correction_2(y_true, y_pred):
     # band height cannot be negative
-    hl_correction_error_val = y_pred[..., 1]
+    bandwidth_array = y_pred[..., 1]
 
-    error_hl_correction = K.sqrt(K.mean(K.square(K.maximum(-hl_correction_error_val, 0))))
+    error_hl_correction = K.sqrt(K.mean(K.square(K.maximum(-bandwidth_array, 0))))
 
     return error_hl_correction
+
+
+def metric_band_hl_wrongs_percent(y_true, y_pred):
+    bandwidth_array = y_pred[..., 1]
+
+    negative_hl_count = tf.reduce_sum(tf.cast(tf.less(bandwidth_array, 0), tf.float32))
+    total_count = K.cast(K.shape(bandwidth_array)[1], dtype=K.floatx()) * K.cast(
+        K.shape(bandwidth_array)[0], dtype=K.floatx()
+    )
+
+    percent_wrong_hl = negative_hl_count / total_count
+
+    return percent_wrong_hl
 
 
 class LossDifferenceCallback(tf.keras.callbacks.Callback):
