@@ -38,7 +38,7 @@ PREV_MODEL_TRAINING: bool = False
 def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
-    prev_model: str = "2023-11-19 10-18"
+    prev_model: str = "2023-11-20 14-04"
 
     num_cores: int = multiprocessing.cpu_count()
     # total cores = 8 in this mac.
@@ -81,6 +81,8 @@ def main():
                     km.metric_band_average,
                     km.metric_band_height,
                     km.metric_band_hl_wrongs_percent,
+                    km.metric_loss_band_3,
+                    km.metric_band_hl_correction_2,
                 ],
             )
 

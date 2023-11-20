@@ -7,7 +7,7 @@ import tensorflow as tf
 
 # keep total neurons below 2700 (700 * 3)
 
-NUMBER_OF_NEURONS = 128
+NUMBER_OF_NEURONS = 256
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
@@ -124,21 +124,6 @@ def custom_loss_band(y_true, y_pred):
     return K.sqrt(K.mean(K.square(error) + error_amplified))
 
 
-def custom_loss_band_2(y_true, y_pred):
-    # list of all approaches:
-    # approach pred_average to true_average = average_error
-    # pred_high to approach true_high from below = h_more_than_ture_error
-    # pred_low to approach true_low from below = l_less_than_ture_error
-    # making sure that pred_high is always greater than pred_low = error_hl_correction
-
-    return (
-        metric_rmse(y_true, y_pred)
-        + metric_band_inside_range(y_true, y_pred) * 4
-        + metric_band_error_average(y_true, y_pred) * 5
-        + metric_band_hl_correction(y_true, y_pred) * 5
-    ) / 10
-
-
 def metric_band_inside_range(y_true, y_pred):
     average_true = (y_true[..., 0] + y_true[..., 1]) / 2
 
@@ -220,11 +205,7 @@ def custom_loss_band_2_2(y_true, y_pred):
     # band to be inside true band
     # band cannot be negative
 
-    return (
-        metric_band_average(y_true, y_pred)
-        + metric_band_height(y_true, y_pred)
-        + metric_band_hl_wrongs_percent(y_true, y_pred) / 10
-    )
+    return metric_band_average(y_true, y_pred) + metric_band_height(y_true, y_pred)
 
 
 def metric_band_height(y_true, y_pred):
@@ -234,20 +215,24 @@ def metric_band_height(y_true, y_pred):
     return K.sqrt(K.mean(K.square(error)))
 
 
+def metric_band_average(y_true, y_pred):
+    # average should approach true average
+    error = y_true[..., 0] - y_pred[..., 0]
+
+    error_avg = K.sqrt(K.mean(K.square(error)))
+
+    return error_avg
+
+
+def metric_loss_band_3(y_true, y_pred):
+    return metric_band_average(y_true, y_pred) + metric_band_height(y_true, y_pred)
+
+
 def metric_band_inside_range_2(y_true, y_pred):
     # band height cannot be more than true band height
     error = y_true[..., 1] - y_pred[..., 1]
 
     return K.sqrt(K.mean(K.square(K.maximum(-error, 0))))
-
-
-def metric_band_average(y_true, y_pred):
-    # average should approach true average
-    average_error = y_true[..., 0] - y_pred[..., 0]
-
-    error_avg = K.sqrt(K.mean(K.square(average_error)))
-
-    return error_avg
 
 
 def metric_band_hl_correction_2(y_true, y_pred):
