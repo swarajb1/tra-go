@@ -550,70 +550,82 @@ def custom_evaluate_safety_factor_band_2_2(
             "metric_band_average": km.metric_band_average,
             "metric_band_height": km.metric_band_height,
             "metric_band_hl_wrongs_percent": km.metric_band_hl_wrongs_percent,
+            "metric_loss_band_3": km.metric_loss_band_3,
+            "metric_band_hl_correction_2": km.metric_band_hl_correction_2,
         }
     ):
         model = keras.models.load_model(f"training/models/model - {now_datetime} - {y_type}")
         model.summary()
 
     y_pred = model.predict(X_test)
-    # transform y data from (0, 1) = (avg, band) to (low, high)
 
-    y_pred_temp = np.zeros_like(y_pred)
-    y_pred_temp[:, :, 0] = y_pred[:, :, 0] - y_pred[:, :, 1]
-    y_pred_temp[:, :, 1] = y_pred[:, :, 0] + y_pred[:, :, 1]
-    y_pred = y_pred_temp
+    # # transform y data from (0, 1) = (avg, band) to (low, high)
+    # y_pred_temp = np.zeros_like(y_pred)
+    # y_pred_temp[:, :, 0] = y_pred[:, :, 0] - y_pred[:, :, 1]
+    # y_pred_temp[:, :, 1] = y_pred[:, :, 0] + y_pred[:, :, 1]
+    # y_pred = y_pred_temp
 
-    Y_test_temp = np.zeros_like(Y_test)
-    Y_test_temp[:, :, 0] = Y_test[:, :, 0] - Y_test[:, :, 1] / 2
-    Y_test_temp[:, :, 1] = Y_test[:, :, 0] + Y_test[:, :, 1] / 2
-    Y_test = Y_test_temp
+    # Y_test_temp = np.zeros_like(Y_test)
+    # Y_test_temp[:, :, 0] = Y_test[:, :, 0] - Y_test[:, :, 1] / 2
+    # Y_test_temp[:, :, 1] = Y_test[:, :, 0] + Y_test[:, :, 1] / 2
+    # Y_test = Y_test_temp
 
     # [0] is low, [1] is high
     # y_pred shape is (days, minutes, features)
 
-    first_percentile_exclude: float = 0.01
-    first_point_taken: int = int(y_pred.shape[0] * first_percentile_exclude)
-    # make the y_pred, such that we first percentile array elements is same as the first precentile value
-    for i in range(y_pred.shape[0]):
-        for j in range(first_point_taken):
-            y_pred[i, j, 0] = y_pred[i, first_point_taken, 0]
-            y_pred[i, j, 1] = y_pred[i, first_point_taken, 1]
+    # first_percentile_exclude: float = 0.01
+    # first_point_taken: int = int(y_pred.shape[0] * first_percentile_exclude)
+    # # make the y_pred, such that we first percentile array elements is same as the first precentile value
+    # for i in range(y_pred.shape[0]):
+    #     for j in range(first_point_taken):
+    #         y_pred[i, j, 0] = y_pred[i, first_point_taken, 0]
+    #         y_pred[i, j, 1] = y_pred[i, first_point_taken, 1]
+
+    #  making y_pred, of (,,2) to (,,4)
     zeros = np.zeros((y_pred.shape[0], y_pred.shape[1], 2))
     y_pred = np.concatenate((y_pred, zeros), axis=2)
 
-    list_min_pred = []
-    list_max_pred = []
-    list_min_actual = []
-    list_max_actual = []
+    list_min_pred: list[float] = []
+    list_max_pred: list[float] = []
+    list_min_actual: list[float] = []
+    list_max_actual: list[float] = []
 
     for i in range(y_pred.shape[0]):
         # i -> day
-        min_actual = min(Y_test[i, :, 0])
-        max_actual = max(Y_test[i, :, 1])
+        # min_actual = min(Y_test[i, :, 0])
+        # max_actual = max(Y_test[i, :, 1])
+
+        min_actual = min(Y_test[i, :, 0] - Y_test[i, :, 1] / 2)
+        max_actual = max(Y_test[i, :, 0] + Y_test[i, :, 1] / 2)
 
         list_min_actual.append(min_actual)
         list_max_actual.append(max_actual)
 
-    prev_val = -1
-    for safety_factor_i in [j / 20 for j in range(5, 21)]:
-        # safety_factor_i ranges from 0.25 to 0.95
+    prev_val: float = -1
+    max_band_percentile_sorted: float = 0.5
 
+    for band_percentile in [j / 20 for j in range(21)]:
         for i in range(y_pred.shape[0]):
-            # i  -> day
+            # trying all band_height s in that day. given the average for that day is remains the same.
+            band_heights: list[float] = y_pred[i, :, 1]
 
-            # removing pairs that have hl error
+            sorted_band_heights = sorted(band_heights)
 
-            all_y_pred_l, all_y_pred_h = get_hl_list(y_pred=y_pred, i=i)
+            # all_y_pred_l, all_y_pred_h = get_hl_list_2(
+            #     y_pred=y_pred,
+            #     day=i,
+            #     band_height=np.percentile(sorted_band_heights, band_percentile * 100),
+            # )
+            # list_min_pred.append(min(all_y_pred_l))
+            # list_max_pred.append(max(all_y_pred_h))
 
-            min_pred = min(all_y_pred_l)
-            max_pred = max(all_y_pred_h)
-
-            average_pred = (min_pred + max_pred) / 2
-            min_t = average_pred + (min_pred - average_pred) * safety_factor_i
-            max_t = average_pred + (max_pred - average_pred) * safety_factor_i
-
-            list_min_pred.append(min_t)
-            list_max_pred.append(max_t)
+            min_pred_val, max_pred_val = get_hl_list_3(
+                y_pred=y_pred,
+                day=i,
+                band_height=np.percentile(sorted_band_heights, band_percentile * 100),
+            )
+            list_min_pred.append(min_pred_val)
+            list_max_pred.append(max_pred_val)
 
         val = function_make_win_graph(
             list_max_actual=list_max_actual,
@@ -626,42 +638,101 @@ def custom_evaluate_safety_factor_band_2_2(
             now_datetime=now_datetime,
         )
         if val > 0:
-            print("sf:\t", safety_factor_i, "{:0.6f}".format(val))
+            print("band_percentile:\t", band_percentile, "{:0.6f}".format(val))
             if val > prev_val:
-                safety_factor = safety_factor_i
+                max_band_percentile_sorted = band_percentile
                 prev_val = val
 
         list_min_pred.clear()
         list_max_pred.clear()
 
-    # safety factor found
-    if prev_val == 0:
-        safety_factor = 1
-
     for i in range(y_pred.shape[0]):
-        # i  -> day
+        band_heights: list[float] = y_pred[i, :, 1]
 
-        # all_y_pred_l = y_pred[i, :, 0]
-        # all_y_pred_h = y_pred[i, :, 1]
+        sorted_band_heights = sorted(band_heights)
 
-        # removing pairs that have hl error
-        all_y_pred_l, all_y_pred_h = get_hl_list(y_pred=y_pred, i=i)
+        # all_y_pred_l, all_y_pred_h = get_hl_list_2(
+        #     y_pred=y_pred,
+        #     day=i,
+        #     band_height=np.percentile(sorted_band_heights, max_band_percentile_sorted * 100),
+        # )
+        # list_min_pred.append(min(all_y_pred_l))
+        # list_max_pred.append(max(all_y_pred_h))
 
-        min_pred = min(all_y_pred_l)
-        max_pred = max(all_y_pred_h)
+        # min, max for that day _pred
+        min_pred_val, max_pred_val = get_hl_list_3(
+            y_pred=y_pred,
+            day=i,
+            band_height=np.percentile(sorted_band_heights, max_band_percentile_sorted * 100),
+        )
+        list_min_pred.append(min_pred_val)
+        list_max_pred.append(max_pred_val)
 
-        average_pred = (min_pred + max_pred) / 2
-        min_t = average_pred + (min_pred - average_pred) * safety_factor
-        max_t = average_pred + (max_pred - average_pred) * safety_factor
+    # prev_val = -1
+    # for safety_factor_i in [j / 20 for j in range(5, 21)]:
+    #     # safety_factor_i ranges from 0.25 to 0.95
 
-        list_min_pred.append(min_t)
-        list_max_pred.append(max_t)
+    #     for i in range(y_pred.shape[0]):
+    #         # i  -> day
+    #         all_y_pred_l, all_y_pred_h = get_hl_list(y_pred=y_pred, i=i)
+
+    #         min_pred = min(all_y_pred_l)
+    #         max_pred = max(all_y_pred_h)
+
+    #         average_pred = (min_pred + max_pred) / 2
+    #         min_t = average_pred + (min_pred - average_pred) * safety_factor_i
+    #         max_t = average_pred + (max_pred - average_pred) * safety_factor_i
+
+    #         list_min_pred.append(min_t)
+    #         list_max_pred.append(max_t)
+
+    #     val = function_make_win_graph(
+    #         list_max_actual=list_max_actual,
+    #         list_min_actual=list_min_actual,
+    #         list_max_pred=list_max_pred,
+    #         list_min_pred=list_min_pred,
+    #         testsize=testsize,
+    #         y_type=y_type,
+    #         max_percentile_found=False,
+    #         now_datetime=now_datetime,
+    #     )
+    #     if val > 0:
+    #         print("sf:\t", safety_factor_i, "{:0.6f}".format(val))
+    #         if val > prev_val:
+    #             safety_factor = safety_factor_i
+    #             prev_val = val
+
+    #     list_min_pred.clear()
+    #     list_max_pred.clear()
+
+    # # safety factor found
+    # if prev_val == 0:
+    #     safety_factor = 1
+
+    # for i in range(y_pred.shape[0]):
+    #     # i  -> day
+
+    #     # all_y_pred_l = y_pred[i, :, 0]
+    #     # all_y_pred_h = y_pred[i, :, 1]
+
+    #     # removing pairs that have hl error
+    #     all_y_pred_l, all_y_pred_h = get_hl_list(y_pred=y_pred, i=i)
+
+    #     min_pred = min(all_y_pred_l)
+    #     max_pred = max(all_y_pred_h)
+
+    #     average_pred = (min_pred + max_pred) / 2
+    #     min_t = average_pred + (min_pred - average_pred) * safety_factor
+    #     max_t = average_pred + (max_pred - average_pred) * safety_factor
+
+    #     list_min_pred.append(min_t)
+    #     list_max_pred.append(max_t)
 
     function_error_132_graph(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
 
     print("\nmax_safety_factor\t", safety_factor, "\n")
 
-    function_make_win_graph(
+    return function_make_win_graph(
         list_max_actual=list_max_actual,
         list_min_actual=list_min_actual,
         list_max_pred=list_max_pred,
@@ -672,40 +743,66 @@ def custom_evaluate_safety_factor_band_2_2(
         now_datetime=now_datetime,
     )
 
-    return
-
 
 def get_hl_list(y_pred: np.ndarray, i: int) -> Tuple[List[float], List[float]]:
     all_y_pred_l: List[float] = []
     all_y_pred_h: List[float] = []
 
     for j in range(y_pred.shape[1]):
-        if y_pred[i, j, 0] > y_pred[i, j, 1]:
-            all_y_pred_l.append(y_pred[i, j, 0])
-            all_y_pred_h.append(y_pred[i, j, 1])
+        all_y_pred_l.append(y_pred[i, j, 0])
+        all_y_pred_h.append(y_pred[i, j, 1])
 
-    if len(all_y_pred_l) < y_pred.shape[1]:
-        for _ in range(y_pred.shape[1] - len(all_y_pred_l)):
-            all_y_pred_l.append(y_pred[i, -1, 0])
-            all_y_pred_h.append(y_pred[i, -1, 1])
+    # for j in range(y_pred.shape[1]):
+    #     if y_pred[i, j, 0] > y_pred[i, j, 1]:
+    #         all_y_pred_l.append(y_pred[i, j, 0])
+    #         all_y_pred_h.append(y_pred[i, j, 1])
+
+    # if len(all_y_pred_l) < y_pred.shape[1]:
+    #     for _ in range(y_pred.shape[1] - len(all_y_pred_l)):
+    #         all_y_pred_l.append(y_pred[i, -1, 0])
+    #         all_y_pred_h.append(y_pred[i, -1, 1])
+
+    # for j in range(y_pred.shape[1]):
+    #     temp = [y_pred[i, j, 0], y_pred[i, j, 1]]
+    #     all_y_pred_l.append(min(temp))
+    #     all_y_pred_h.append(max(temp))
 
     return all_y_pred_l, all_y_pred_h
 
 
+def get_hl_list_2(y_pred: np.ndarray, day: int, band_height: float) -> Tuple[List[float], List[float]]:
+    all_y_pred_l: List[float] = []
+    all_y_pred_h: List[float] = []
+
+    for minute in range(y_pred.shape[1]):
+        all_y_pred_l.append(y_pred[day, minute, 0] - abs(band_height) / 2)
+        all_y_pred_h.append(y_pred[day, minute, 0] + abs(band_height) / 2)
+    return all_y_pred_l, all_y_pred_h
+
+
+def get_hl_list_3(y_pred: np.ndarray, day: int, band_height: float) -> Tuple[float, float]:
+    # min_val: float = min(y_pred[day, :, 0]) - abs(band_height)/2
+    # max_val: float = max(y_pred[day, :, 0]) + abs(band_height)/2
+
+    min_val: float = min(y_pred[day, :, 0]) - 0
+    max_val: float = max(y_pred[day, :, 0]) + 0
+    return min_val, max_val
+
+
 def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
-    """
-    Generate the graph of high and low error percentages against the serial numbers.
+    if y_type == "band_2":
+        # y_pred = (avg, band_height)
+        y_pred_lh = y_pred
+        y_test_lh = y_test
 
-    Parameters:
-        y_pred (np.array): An array of predicted values.
-        y_test (np.array): An array of actual values.
-        now_datetime (str): The current date and time.
-        y_type (str): The type of the y values.
+        y_pred_lh[:, :, 0] = y_pred[:, :, 0] - y_pred[:, :, 1] / 2
+        y_pred_lh[:, :, 1] = y_pred[:, :, 0] + y_pred[:, :, 1] / 2
+        y_test_lh[:, :, 0] = y_test[:, :, 0] - y_test[:, :, 1] / 2
+        y_test_lh[:, :, 1] = y_test[:, :, 0] + y_test[:, :, 1] / 2
 
-    Returns:
-        None
-    """
-    error_a = np.abs(y_pred - y_test)
+        error_a = np.abs(y_pred_lh - y_test)
+    else:
+        error_a = np.abs(y_pred - y_test)
 
     new_array = np.empty((0, 2))
 
@@ -714,7 +811,7 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
         low = error_a[:, i, 0].sum()
         high = error_a[:, i, 1].sum()
 
-        to_add_array = np.array([high / error_a.shape[0], low / error_a.shape[0]])
+        to_add_array = np.array([low / error_a.shape[0], high / error_a.shape[0]])
 
         new_array = np.concatenate((new_array, np.array([to_add_array])), axis=0)
 
@@ -726,8 +823,8 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
 
     fig = plt.figure(figsize=(16, 9))
 
-    plt.plot(x, y1, label="high")
-    plt.plot(x, y2, label="low")
+    plt.plot(x, y1, label="low Δ")
+    plt.plot(x, y2, label="high Δ")
 
     plt.title(f" name: {now_datetime}\n\n", fontsize=20)
 
@@ -735,7 +832,7 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
     plt.xlabel("serial", fontsize=15)
     plt.ylabel("perc", fontsize=15)
     plt.legend(fontsize=15)
-    filename = f"training/graphs/{y_type} - {now_datetime} - band abs.png"
+    filename = f"training/graphs/{y_type} - {now_datetime} - band_2 abs.png"
     plt.savefig(filename, dpi=1800, bbox_inches="tight")
 
     # plt.show()
@@ -748,8 +845,8 @@ def function_make_win_graph(
     list_min_actual: list[float],
     list_max_pred: list[float],
     list_min_pred: list[float],
-    testsize,
-    max_percentile_found,
+    testsize: float,
+    max_percentile_found: bool,
     y_type: str,
     now_datetime: str,
 ):
