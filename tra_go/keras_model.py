@@ -8,7 +8,7 @@ import tensorflow as tf
 
 # keep total neurons below 2700 (700 * 3)
 
-NUMBER_OF_NEURONS = 360
+NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
@@ -41,6 +41,7 @@ def get_untrained_model(X_train, y_type):
         model.add(Flatten())
 
     if y_type in ["band", "hl", "band_2"]:
+        model.add(Dense(NUMBER_OF_NEURONS))
         model.add(Dense(2))
 
     if y_type == "2_mods":
@@ -79,6 +80,20 @@ class LossDifferenceCallback(tf.keras.callbacks.Callback):
             tf.summary.scalar("Loss Difference", loss_difference, step=epoch)
 
 
+class CustomLossCallback(tf.keras.callbacks.Callback):
+    def __init__(self, first_loss, second_loss, switch_epoch):
+        super().__init__()
+        self.first_loss = first_loss
+        self.second_loss = second_loss
+        self.switch_epoch = switch_epoch
+
+    def on_epoch_begin(self, epoch, logs=None):
+        if epoch < self.switch_epoch:
+            self.model.loss = self.first_loss
+        else:
+            self.model.loss = self.second_loss
+
+
 def metric_rmse(y_true, y_pred):
     # Calculate the root mean squared error (RMSE) between the true values and the predicted values.
 
@@ -105,7 +120,7 @@ def metric_band_hl_wrongs_percent(y_true, y_pred):
         K.shape(bandwidth_array)[0], dtype=K.floatx()
     )
 
-    return negative_hl_count / total_count
+    return negative_hl_count / total_count * 100
 
 
 def metric_band_height(y_true, y_pred):
@@ -116,9 +131,7 @@ def metric_band_height(y_true, y_pred):
 
 
 def metric_band_height_percent(y_true, y_pred):
-    # band height to approach true band height
-
-    return metric_band_height(y_true, y_pred) / K.mean(y_true[..., 1])
+    return metric_band_height(y_true, y_pred) / K.mean(y_true[..., 1]) * 100
 
 
 def metric_band_average(y_true, y_pred):
@@ -128,6 +141,10 @@ def metric_band_average(y_true, y_pred):
     error_avg = K.sqrt(K.mean(K.square(error)))
 
     return error_avg
+
+
+def metric_band_average_percent(y_true, y_pred):
+    return metric_band_average(y_true, y_pred) / K.mean(y_true[..., 0]) * 100
 
 
 def support_new_idea_1(y_true, y_pred):
@@ -175,15 +192,14 @@ def metric_new_idea_2(y_true, y_pred):
     total_capture_possible = K.sum((max_true / min_true - 1))
 
     return (
-        metric_band_average(y_true, y_pred)
+        metric_band_average(y_true, y_pred) * 3
         + (metric_band_height(y_true, y_pred) + metric_band_hl_correction_2(y_true, y_pred)) * 100
+        + (metric_band_height_percent(y_true, y_pred) + metric_band_hl_wrongs_percent(y_true, y_pred)) / 10
         + (
-            z_1
-            + z_2
-            + z_3
-            + win_amt_true
-            + (1 - pred_capture / total_capture_possible) * K.mean(K.abs(max_pred - min_pred))
+            (z_1 + z_2 + z_3 + win_amt_true)
+            + (1 - pred_capture / total_capture_possible) * K.mean(K.abs(max_true - min_true))
         )
+        * 100
     )
 
 
@@ -202,7 +218,7 @@ def metric_pred_capture_percent(y_true, y_pred):
 
     total_capture_possible = K.sum((max_true / min_true - 1))
 
-    return pred_capture / total_capture_possible
+    return pred_capture / total_capture_possible * 100
 
 
 def metric_win_percent(y_true, y_pred):
@@ -210,4 +226,4 @@ def metric_win_percent(y_true, y_pred):
 
     win_percent = K.mean((K.cast(wins, dtype=K.floatx())))
 
-    return win_percent
+    return win_percent * 100

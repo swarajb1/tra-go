@@ -12,7 +12,7 @@ import training_yf as an
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
 
-NUMBER_OF_EPOCHS: int = 2000
+NUMBER_OF_EPOCHS: int = 1500
 BATCH_SIZE: int = 128
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -64,9 +64,13 @@ def main():
 
             loss = km.metric_new_idea_2
 
+            callback_loss_switch = km.CustomLossCallback(
+                first_loss=km.metric_band_average, second_loss=km.metric_new_idea_2, switch_epoch=400
+            )
+
             model.compile(
                 optimizer=optimizer,
-                loss=loss,
+                # loss=loss,
                 metrics=[
                     "mae",
                     km.metric_rmse,
@@ -74,15 +78,22 @@ def main():
                     km.metric_band_height,
                     km.metric_band_hl_correction_2,
                     km.metric_loss_comp_2,
-                    km.metric_band_hl_wrongs_percent,
+                    km.metric_band_average_percent,
                     km.metric_band_height_percent,
-                    km.metric_pred_capture_percent,
+                    km.metric_band_hl_wrongs_percent,
                     km.metric_win_percent,
+                    km.metric_pred_capture_percent,
                 ],
             )
 
             # callbacks = [tensorboard_callback, loss_diff_callback]
-            callbacks = [tensorboard_callback]
+
+            callback_learning_rate = TensorBoard(
+                log_dir=f"training/logs/{now_datetime} - learning_rate", histogram_freq=1
+            )
+            callback_learning_rate.on_train_begin = lambda logs: logs.update({"learning_rate": LEARNING_RATE})
+
+            callbacks = [tensorboard_callback, callback_loss_switch, callback_learning_rate]
 
             model.fit(
                 x=X_train,
