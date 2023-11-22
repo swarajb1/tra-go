@@ -1,21 +1,16 @@
-import tensorflow as tf
 from tensorflow import keras
-from keras import backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint
 import time
 from datetime import datetime
 import multiprocessing
 import numpy as np
 from keras.utils import custom_object_scope
-from sklearn.model_selection import train_test_split
 
 import keras_model as km
 import training_yf as an
 
-
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
-
 
 NUMBER_OF_EPOCHS: int = 2000
 BATCH_SIZE: int = 128
@@ -23,22 +18,19 @@ LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
 Y_TYPE: str = "band_2"
-
 # Y_TYPE = "2_mods" / "band" / band_2
-
 
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
 
 IS_TRAINING_MODEL: bool = True
-
 PREV_MODEL_TRAINING: bool = False
 
 
 def main():
-    df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
+    prev_model: str = "2023-11-22 11-01"
 
-    prev_model: str = "2023-11-20 14-04"
+    df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
     num_cores: int = multiprocessing.cpu_count()
     # total cores = 8 in this mac.
@@ -70,7 +62,7 @@ def main():
 
             optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
 
-            loss = km.custom_loss_band_2_2
+            loss = km.metric_new_idea_2
 
             model.compile(
                 optimizer=optimizer,
@@ -80,9 +72,12 @@ def main():
                     km.metric_rmse,
                     km.metric_band_average,
                     km.metric_band_height,
-                    km.metric_band_hl_wrongs_percent,
-                    km.metric_loss_band_3,
                     km.metric_band_hl_correction_2,
+                    km.metric_loss_comp_2,
+                    km.metric_band_hl_wrongs_percent,
+                    km.metric_band_height_percent,
+                    km.metric_pred_capture_percent,
+                    km.metric_win_percent,
                 ],
             )
 
@@ -113,7 +108,7 @@ def main():
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        an.custom_evaluate_safety_factor_band_2_2(
+        an.custom_evaluate_safety_factor_band_2_3(
             X_test=X_test,
             Y_test=Y_test,
             y_type=Y_TYPE,
