@@ -2,7 +2,7 @@ from tensorflow import keras
 from keras.layers import Dense, Flatten, LSTM, Dropout
 from keras import backend as K
 import tensorflow as tf
-
+from main import LEARNING_RATE
 
 # PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
 
@@ -11,6 +11,8 @@ import tensorflow as tf
 NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
+
+WEIGHT_FOR_MEA = 0
 
 
 def get_untrained_model(X_train, y_type):
@@ -21,7 +23,6 @@ def get_untrained_model(X_train, y_type):
             units=NUMBER_OF_NEURONS,
             input_shape=(X_train[0].shape),
             return_sequences=True,
-            activation="relu",
         )
     )
     model.add(Dropout(INITIAL_DROPOUT / 100))
@@ -31,21 +32,12 @@ def get_untrained_model(X_train, y_type):
             LSTM(
                 units=NUMBER_OF_NEURONS,
                 return_sequences=True,
-                activation="relu",
             )
         )
-        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
         #  dropout value decreases in exponential fashion.
+        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
 
-    if y_type == "hl":
-        model.add(Flatten())
-
-    if y_type in ["band", "hl", "band_2"]:
-        model.add(Dense(NUMBER_OF_NEURONS))
-        model.add(Dense(2))
-
-    if y_type == "2_mods":
-        model.add(Dense(1))
+    model.add(Dense(2))
 
     model.summary()
 
@@ -56,68 +48,57 @@ def get_optimiser(learning_rate: float):
     return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
-class LossDifferenceCallback(tf.keras.callbacks.Callback):
-    def __init__(self, log_dir):
-        super(LossDifferenceCallback, self).__init__()
-        self.previous_loss = None
-        self.log_dir = log_dir
-        self.writer = tf.summary.create_file_writer(self.log_dir)
-
-    def on_train_begin(self, logs=None):
-        self.loss_difference_values = []
-
-    def on_epoch_end(self, epoch, logs=None):
-        current_loss = logs.get("loss")
-        if self.previous_loss is not None:
-            loss_difference = current_loss - self.previous_loss
-            self.loss_difference_values.append(loss_difference)
-            self.update_tensorboard(epoch, loss_difference)
-
-        self.previous_loss = current_loss
-
-    def update_tensorboard(self, epoch, loss_difference):
-        with self.writer.as_default():
-            tf.summary.scalar("Loss Difference", loss_difference, step=epoch)
-
-
-class CustomLossCallback(tf.keras.callbacks.Callback):
-    def __init__(self, first_loss, second_loss, switch_epoch):
-        super().__init__()
-        self.first_loss = first_loss
-        self.second_loss = second_loss
-        self.switch_epoch = switch_epoch
-
-    def on_epoch_begin(self, epoch, logs=None):
-        if epoch < self.switch_epoch:
-            self.model.loss = self.first_loss
-        else:
-            self.model.loss = self.second_loss
-
-
 def metric_rmse(y_true, y_pred):
-    # Calculate the root mean squared error (RMSE) between the true values and the predicted values.
+    # Calculate the root mean squared error (RMSE)
 
     error = y_true - y_pred
 
     return K.sqrt(K.mean(K.square(error)))
 
 
+def metric_abs(y_true, y_pred):
+    # Calculate the absolute mean error (MAE)
+
+    error = y_true - y_pred
+
+    return K.mean(K.abs(error))
+
+
+def weighted_average(array):
+    # weight average of an array with mea and rmse
+    return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(K.mean(K.square(array)))
+
+
+def metric_band_base_percent(y_true, y_pred):
+    error_avg = y_true[..., 0] - y_pred[..., 0]
+
+    error_height = y_true[..., 1] - y_pred[..., 1]
+
+    error_avg_mean = K.mean(K.abs(error_avg))
+
+    error_height_mean = K.mean(K.abs(error_height))
+
+    return ((error_avg_mean + error_height_mean / 2) / (K.mean(y_true[..., 0]) + K.mean(y_true[..., 1]) / 2)) * 100
+
+
 def metric_band_hl_correction_2(y_true, y_pred):
     # band height cannot be negative
-    bandwidth_array = y_pred[..., 1]
+    band_height_array = y_pred[..., 1]
 
-    error_hl_correction = K.sqrt(K.mean(K.square(K.maximum(-bandwidth_array, 0))))
+    error_1 = K.maximum(-band_height_array, 0)
+
+    error_hl_correction = weighted_average(error_1)
 
     return error_hl_correction
 
 
 def metric_band_hl_wrongs_percent(y_true, y_pred):
-    bandwidth_array = y_pred[..., 1]
+    band_height_array = y_pred[..., 1]
 
-    negative_hl_count = tf.reduce_sum(tf.cast(tf.less(bandwidth_array, 0), tf.float32))
+    negative_hl_count = tf.reduce_sum(tf.cast(tf.less(band_height_array, 0), tf.float32))
 
-    total_count = K.cast(K.shape(bandwidth_array)[1], dtype=K.floatx()) * K.cast(
-        K.shape(bandwidth_array)[0], dtype=K.floatx()
+    total_count = K.cast(K.shape(band_height_array)[1], dtype=K.floatx()) * K.cast(
+        K.shape(band_height_array)[0], dtype=K.floatx()
     )
 
     return negative_hl_count / total_count * 100
@@ -127,7 +108,9 @@ def metric_band_height(y_true, y_pred):
     # band height to approach true band height
     error = y_true[..., 1] - y_pred[..., 1]
 
-    return K.sqrt(K.mean(K.square(error)))
+    error_band_height = weighted_average(error)
+
+    return error_band_height
 
 
 def metric_band_height_percent(y_true, y_pred):
@@ -138,7 +121,7 @@ def metric_band_average(y_true, y_pred):
     # average should approach true average
     error = y_true[..., 0] - y_pred[..., 0]
 
-    error_avg = K.sqrt(K.mean(K.square(error)))
+    error_avg = weighted_average(error)
 
     return error_avg
 
@@ -177,7 +160,7 @@ def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
 
     z_3 = K.mean((1 - K.cast(cond_3, dtype=K.floatx())) * K.abs(min_pred - min_true))
 
-    win_amt_true = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+    win_amt_true = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_pred - min_pred))
 
     return z_1, z_2, z_3, win_amt_true
 
@@ -191,16 +174,22 @@ def metric_new_idea_2(y_true, y_pred):
 
     total_capture_possible = K.sum((max_true / min_true - 1))
 
-    return (
-        metric_band_average(y_true, y_pred) * 3
-        + (metric_band_height(y_true, y_pred) + metric_band_hl_correction_2(y_true, y_pred)) * 100
-        + (metric_band_height_percent(y_true, y_pred) + metric_band_hl_wrongs_percent(y_true, y_pred)) / 10
-        + (
-            (z_1 + z_2 + z_3 + win_amt_true)
-            + (1 - pred_capture / total_capture_possible) * K.mean(K.abs(max_true - min_true))
-        )
-        * 100
+    pred_capture_fraction = pred_capture / total_capture_possible
+
+    loss_amt = (
+        metric_band_average(y_true, y_pred) * 10
+        + (metric_band_height(y_true, y_pred) + metric_band_hl_correction_2(y_true, y_pred) * 3) * 100
     )
+
+    loss_percent = (
+        metric_band_average_percent(y_true, y_pred) * 10
+        + metric_band_height_percent(y_true, y_pred)
+        + metric_band_hl_wrongs_percent(y_true, y_pred)
+    )
+
+    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true + (1 - pred_capture_fraction) * 2 * K.abs(max_true - min_true)
+
+    return loss_amt * 5 + loss_comp_1 + loss_percent / 100
 
 
 def metric_loss_comp_2(y_true, y_pred):
@@ -209,6 +198,20 @@ def metric_loss_comp_2(y_true, y_pred):
     z_1, z_2, z_3, win_amt_true = support_new_idea_2(min_pred, max_pred, min_true, max_true, wins)
 
     return z_1 + z_2 + z_3 + win_amt_true
+
+
+def metric_win_pred_capture_percent(y_true, y_pred):
+    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+
+    pred_capture = K.sum(((max_pred / min_pred - 1)) * K.cast(wins, dtype=K.floatx()))
+
+    total_win_pred_capture_possible = K.sum(((max_true / min_true - 1)) * K.cast(wins, dtype=K.floatx()))
+
+    x = pred_capture / total_win_pred_capture_possible
+
+    metric = tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
+
+    return metric * 100
 
 
 def metric_pred_capture_percent(y_true, y_pred):
@@ -224,6 +227,6 @@ def metric_pred_capture_percent(y_true, y_pred):
 def metric_win_percent(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
 
-    win_percent = K.mean((K.cast(wins, dtype=K.floatx())))
+    win_fraction = K.mean((K.cast(wins, dtype=K.floatx())))
 
-    return win_percent * 100
+    return win_fraction * 100
