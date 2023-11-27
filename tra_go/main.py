@@ -1,18 +1,14 @@
 from tensorflow import keras
-from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.callbacks import TensorBoard, ModelCheckpoint, TerminateOnNaN
 import time
 from datetime import datetime
 import multiprocessing
 import numpy as np
-from keras.utils import custom_object_scope
-
 import keras_model as km
 import training_yf as an
 
-# 2_mods = 2 hl models
-# terminal command: tensorboard --logdir=training/logs/
 
-NUMBER_OF_EPOCHS: int = 1500
+NUMBER_OF_EPOCHS: int = 3600
 BATCH_SIZE: int = 128
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -25,15 +21,17 @@ INTERVAL: str = "1m"
 
 IS_TRAINING_MODEL: bool = True
 PREV_MODEL_TRAINING: bool = False
+prev_model: str = "2023-11-25 19-10"
+
+# 2_mods = 2 hl models
+# terminal command: tensorboard --logdir=training/logs/
 
 
 def main():
-    prev_model: str = "2023-11-22 11-01"
-
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
-    num_cores: int = multiprocessing.cpu_count()
     # total cores = 8 in this mac.
+    num_cores: int = multiprocessing.cpu_count()
     num_workers: int = 1
 
     if Y_TYPE == "band_2":
@@ -54,48 +52,41 @@ def main():
 
             print("model output shape\t", model.output_shape)
 
-            # Directory where you want to store the TensorBoard logs
-            log_dir = f"training/logs/{now_datetime} - {Y_TYPE}"
-
-            tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-            loss_diff_callback = km.LossDifferenceCallback(log_dir=log_dir)
-
             optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
 
             loss = km.metric_new_idea_2
 
-            callback_loss_switch = km.CustomLossCallback(
-                first_loss=km.metric_band_average, second_loss=km.metric_new_idea_2, switch_epoch=400
-            )
-
             model.compile(
                 optimizer=optimizer,
-                # loss=loss,
+                loss=loss,
                 metrics=[
-                    "mae",
-                    km.metric_rmse,
-                    km.metric_band_average,
-                    km.metric_band_height,
-                    km.metric_band_hl_correction_2,
+                    km.metric_band_base_percent,
                     km.metric_loss_comp_2,
+                    km.metric_band_hl_wrongs_percent,
                     km.metric_band_average_percent,
                     km.metric_band_height_percent,
-                    km.metric_band_hl_wrongs_percent,
                     km.metric_win_percent,
                     km.metric_pred_capture_percent,
+                    km.metric_win_pred_capture_percent,
                 ],
             )
 
-            # callbacks = [tensorboard_callback, loss_diff_callback]
+            def my_function():
+                print("Hello, World!")
 
-            callback_learning_rate = TensorBoard(
-                log_dir=f"training/logs/{now_datetime} - learning_rate", histogram_freq=1
-            )
-            callback_learning_rate.on_train_begin = lambda logs: logs.update({"learning_rate": LEARNING_RATE})
+            function_name = my_function.__name__
+            print(function_name)  # Output: "my_function"
 
-            callbacks = [tensorboard_callback, callback_loss_switch, callback_learning_rate]
+            # TODOO: make metrics list from here and pass to to traning_yf file in custom scope for loading model
 
-            model.fit(
+            log_dir: str = f"training/logs/{now_datetime} - {Y_TYPE}"
+
+            tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+            terNan = TerminateOnNaN()
+
+            callbacks = [tensorboard_callback, terNan]
+
+            history = model.fit(
                 x=X_train,
                 y=Y_train,
                 epochs=NUMBER_OF_EPOCHS,
