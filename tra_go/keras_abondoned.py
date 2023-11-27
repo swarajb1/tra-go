@@ -2,6 +2,70 @@ from tensorflow import keras
 from keras.layers import Dense, Flatten, LSTM, Dropout
 from keras import backend as K
 import tensorflow as tf
+from main import LEARNING_RATE
+
+# PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
+
+# keep total neurons below 2700 (700 * 3)
+
+NUMBER_OF_NEURONS = 512
+NUMBER_OF_LAYERS = 3
+INITIAL_DROPOUT = 0
+
+
+def get_untrained_model(X_train, y_type):
+    model = keras.Sequential()
+
+    model.add(
+        LSTM(
+            units=NUMBER_OF_NEURONS,
+            input_shape=(X_train[0].shape),
+            return_sequences=True,
+            activation="relu",
+        )
+    )
+    model.add(Dropout(INITIAL_DROPOUT / 100))
+
+    for i in range(NUMBER_OF_LAYERS - 1):
+        model.add(
+            LSTM(
+                units=NUMBER_OF_NEURONS,
+                return_sequences=True,
+                activation="relu",
+            )
+        )
+        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
+        #  dropout value decreases in exponential fashion.
+
+    if y_type == "hl":
+        model.add(Flatten())
+
+    if y_type == "2_mods":
+        model.add(Dense(1))
+
+    model.summary()
+
+    return model
+
+
+def get_optimiser(learning_rate: float):
+    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+
+
+def metric_rmse(y_true, y_pred):
+    # Calculate the root mean squared error (RMSE)
+
+    error = y_true - y_pred
+
+    return K.sqrt(K.mean(K.square(error)))
+
+
+def metric_abs(y_true, y_pred):
+    # Calculate the absolute mean error (MAE)
+
+    error = y_true - y_pred
+
+    return K.mean(K.abs(error))
 
 
 ERROR_AMPLIFICATION_FACTOR = 0.6
@@ -132,3 +196,27 @@ def metric_band_error_average(y_true, y_pred):
     error_avg = K.sqrt(K.mean(K.square(average_error)))
 
     return error_avg
+
+
+class LossDifferenceCallback(tf.keras.callbacks.Callback):
+    def __init__(self, log_dir):
+        super(LossDifferenceCallback, self).__init__()
+        self.previous_loss = None
+        self.log_dir = log_dir + "/loss_diff"
+        self.writer = tf.summary.create_file_writer(self.log_dir)
+
+    def on_train_begin(self, logs=None):
+        self.loss_difference_values = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        current_loss = logs.get("loss")
+        if self.previous_loss is not None:
+            loss_difference = current_loss - self.previous_loss
+            self.loss_difference_values.append(loss_difference)
+            self.update_tensorboard(epoch, loss_difference)
+
+        self.previous_loss = current_loss
+
+    def update_tensorboard(self, epoch, loss_difference):
+        with self.writer.as_default():
+            tf.summary.scalar("Loss Difference", loss_difference, step=epoch)
