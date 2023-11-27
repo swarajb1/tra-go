@@ -23,6 +23,7 @@ def get_untrained_model(X_train, y_type):
             units=NUMBER_OF_NEURONS,
             input_shape=(X_train[0].shape),
             return_sequences=True,
+            activation="relu",
         )
     )
     model.add(Dropout(INITIAL_DROPOUT / 100))
@@ -32,6 +33,7 @@ def get_untrained_model(X_train, y_type):
             LSTM(
                 units=NUMBER_OF_NEURONS,
                 return_sequences=True,
+                activation="relu",
             )
         )
         #  dropout value decreases in exponential fashion.
@@ -81,7 +83,7 @@ def metric_band_base_percent(y_true, y_pred):
     return ((error_avg_mean + error_height_mean / 2) / (K.mean(y_true[..., 0]) + K.mean(y_true[..., 1]) / 2)) * 100
 
 
-def metric_band_hl_correction_2(y_true, y_pred):
+def metric_band_hl_correction(y_true, y_pred):
     # band height cannot be negative
     band_height_array = y_pred[..., 1]
 
@@ -90,6 +92,17 @@ def metric_band_hl_correction_2(y_true, y_pred):
     error_hl_correction = weighted_average(error_1)
 
     return error_hl_correction
+
+
+def metric_band_hl_correction_percent(y_true, y_pred):
+    # band height cannot be negative
+    band_height_array = y_pred[..., 1]
+
+    error_1 = K.maximum(-band_height_array, 0)
+
+    error_hl_correction = weighted_average(error_1)
+
+    return error_hl_correction / K.mean(y_true[..., 1]) * 100
 
 
 def metric_band_hl_wrongs_percent(y_true, y_pred):
@@ -177,19 +190,19 @@ def metric_new_idea_2(y_true, y_pred):
     pred_capture_fraction = pred_capture / total_capture_possible
 
     loss_amt = (
-        metric_band_average(y_true, y_pred) * 10
-        + (metric_band_height(y_true, y_pred) + metric_band_hl_correction_2(y_true, y_pred) * 3) * 100
+        metric_band_average(y_true, y_pred)
+        + (metric_band_height(y_true, y_pred) + metric_band_hl_correction(y_true, y_pred) * 3) * 100
     )
 
     loss_percent = (
-        metric_band_average_percent(y_true, y_pred) * 10
+        metric_band_average_percent(y_true, y_pred)
         + metric_band_height_percent(y_true, y_pred)
-        + metric_band_hl_wrongs_percent(y_true, y_pred)
+        + metric_band_hl_correction_percent(y_true, y_pred)
     )
 
-    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true + (1 - pred_capture_fraction) * 2 * K.abs(max_true - min_true)
+    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true + (1 - pred_capture_fraction) * K.abs(max_true - min_true) * 3
 
-    return loss_amt * 5 + loss_comp_1 + loss_percent / 100
+    return loss_amt + loss_comp_1 + loss_percent / 100
 
 
 def metric_loss_comp_2(y_true, y_pred):
