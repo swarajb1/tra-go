@@ -144,10 +144,13 @@ for INTERVAL in [
         all_data["Adj Close"] = all_data["Adj Close"].apply(lambda x: round(number=x, ndigits=2))
 
         final_data = all_data.sort_index(ascending=True).copy()
+        index_column_name: str = ""
         if INTERVAL == "1d":
-            final_data.rename_axis("Date", inplace=True)
+            index_column_name = "Date"
         else:
-            final_data.rename_axis("Datetime", inplace=True)
+            index_column_name = "Datetime"
+
+        final_data.rename_axis(index_column_name, inplace=True)
 
         print(final_data)
 
@@ -167,6 +170,7 @@ for INTERVAL in [
         # for some reason have to do this. to remove duplicates.
         d1 = pd.read_csv(filename, index_col=0)
         d2 = d1.drop_duplicates(keep="first")
+        d2 = d2.sort_values(by="Datetime", ascending=True)
         d2.to_csv(filename, index=True)
 
         print(filename)
