@@ -2,12 +2,12 @@
 # NOTE:
 # Valid intervals: 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
 
-import yfinance as yf
-import pandas as pd
-import time
 import datetime
 import os
+import time
 
+import pandas as pd
+import yfinance as yf
 
 other_config = {
     "1m": {"number of days": 30, "batch days": 7},
@@ -138,10 +138,14 @@ for INTERVAL in [
             time.sleep(3)
 
         all_data["Open"] = all_data["Open"].apply(lambda x: round(number=x, ndigits=2))
-        all_data["Close"] = all_data["Close"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["Close"] = all_data["Close"].apply(
+            lambda x: round(number=x, ndigits=2),
+        )
         all_data["High"] = all_data["High"].apply(lambda x: round(number=x, ndigits=2))
         all_data["Low"] = all_data["Low"].apply(lambda x: round(number=x, ndigits=2))
-        all_data["Adj Close"] = all_data["Adj Close"].apply(lambda x: round(number=x, ndigits=2))
+        all_data["Adj Close"] = all_data["Adj Close"].apply(
+            lambda x: round(number=x, ndigits=2),
+        )
 
         final_data = all_data.sort_index(ascending=True).copy()
         index_column_name: str = ""
@@ -162,7 +166,9 @@ for INTERVAL in [
         if os.path.exists(filename):
             previous_data = pd.read_csv(filename, index_col=0)
 
-            final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
+            final_data = pd.concat([previous_data, final_data]).drop_duplicates(
+                keep="first",
+            )
 
         final_data.to_csv(filename, index=True)
 
@@ -170,7 +176,7 @@ for INTERVAL in [
         # for some reason have to do this. to remove duplicates.
         d1 = pd.read_csv(filename, index_col=0)
         d2 = d1.drop_duplicates(keep="first")
-        d2 = d2.sort_values(by="Datetime", ascending=True)
+        d2 = d2.sort_values(by=index_column_name, ascending=True)
         d2.to_csv(filename, index=True)
 
         print(filename)
