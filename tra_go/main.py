@@ -1,27 +1,25 @@
-from tensorflow import keras
-from keras.callbacks import TensorBoard, ModelCheckpoint, TerminateOnNaN
+import multiprocessing
 import time
 from datetime import datetime
-import multiprocessing
-import numpy as np
+
 import keras_model as km
+import numpy as np
 import training_yf as an
+from keras.callbacks import TensorBoard, TerminateOnNaN
 
-
-NUMBER_OF_EPOCHS: int = 3600
-BATCH_SIZE: int = 128
+NUMBER_OF_EPOCHS: int = 4000
+BATCH_SIZE: int = 256
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
 Y_TYPE: str = "band_2"
-# Y_TYPE = "2_mods" / "band" / band_2
 
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
 
-IS_TRAINING_MODEL: bool = True
+IS_TRAINING_MODEL: bool = False
 PREV_MODEL_TRAINING: bool = False
-prev_model: str = "2023-11-25 19-10"
+prev_model: str = "2023-12-25 18-05"
 
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
@@ -35,8 +33,11 @@ def main():
     num_workers: int = 1
 
     if Y_TYPE == "band_2":
-        (X_train, Y_train), (X_test, Y_test) = an.train_test_split(
-            data_df=df, test_size=TEST_SIZE, y_type=Y_TYPE, interval=INTERVAL
+        (X_train, Y_train), (X_test, Y_test), x_close = an.train_test_split(
+            data_df=df,
+            test_size=TEST_SIZE,
+            y_type=Y_TYPE,
+            interval=INTERVAL,
         )
 
         if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
@@ -63,6 +64,7 @@ def main():
                     km.metric_band_base_percent,
                     km.metric_loss_comp_2,
                     km.metric_band_hl_wrongs_percent,
+                    km.metric_band_avg_correction_percent,
                     km.metric_band_average_percent,
                     km.metric_band_height_percent,
                     km.metric_win_percent,
@@ -113,6 +115,7 @@ def main():
         an.custom_evaluate_safety_factor_band_2_3(
             X_test=X_test,
             Y_test=Y_test,
+            x_close=x_close,
             y_type=Y_TYPE,
             testsize=TEST_SIZE,
             now_datetime=now_datetime,
