@@ -1,14 +1,14 @@
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import pytz
 from copy import deepcopy
-import matplotlib.pyplot as plt
-from typing import List, Tuple
-from tensorflow import keras
-from keras.utils import custom_object_scope
+from datetime import datetime, timedelta
+
 import keras_model as km
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pytz
+from keras.utils import custom_object_scope
+from main import NUMBER_OF_EPOCHS
+from tensorflow import keras
 
 
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
@@ -155,12 +155,16 @@ def data_cleaning(df) -> pd.DataFrame:
         )
         first_datetime = timezone.localize(date_obj)
         for i in range(375):
-            all_datetimes_required.append((first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z"))
+            all_datetimes_required.append(
+                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z"),
+            )
 
     all_datetimes_in_data = []
     for index, row in df.iterrows():
         all_datetimes_in_data.append(
-            datetime.strptime(row["datetime"], "%Y-%m-%d %H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S%z")
+            datetime.strptime(row["datetime"], "%Y-%m-%d %H:%M:%S%z").strftime(
+                "%Y-%m-%d %H:%M:%S%z",
+            ),
         )
 
     # make a set of all datetime to be there
@@ -302,8 +306,12 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
 
 
 def data_split_x_y(df, interval) -> pd.DataFrame:
-    df["is_input"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=0, interval=interval))
-    df["is_output"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=1, interval=interval))
+    df["is_input"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=0, interval=interval),
+    )
+    df["is_output"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=1, interval=interval),
+    )
 
     df_i = df[df["is_input"]].copy(deep=True)
     df_o = df[df["is_output"]].copy(deep=True)
@@ -318,11 +326,16 @@ def data_split_x_y(df, interval) -> pd.DataFrame:
 
 
 def data_split_x_y_new(df, interval) -> pd.DataFrame:
-    """ "split the whole dataframe into 2 parts = input and output"""
+    # split the whole dataframe into 2 parts = input and output
+
     df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
 
-    df["is_input"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=0, interval=interval))
-    df["is_output"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=1, interval=interval))
+    df["is_input"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=0, interval=interval),
+    )
+    df["is_output"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=1, interval=interval),
+    )
 
     df_i = df[df["is_input"]].copy(deep=True)
     df_o = df[df["is_output"]].copy(deep=True)
@@ -362,6 +375,8 @@ def train_test_split(
     df_test_x, df_test_y = data_split_x_y(df=df_test, interval=interval)
     # 6x(132,4)
 
+    df_x, df_y = data_split_x_y(df=df, interval=interval)
+
     selected_columns_1 = ["low", "high", "open", "close"]
     selected_columns_2 = ["low", "high"]
 
@@ -384,10 +399,18 @@ def train_test_split(
         train_y = array_transform_avg_band(train_y_temp)
         test_y = array_transform_avg_band(test_y_temp)
 
-    return (
-        (train_x, train_y),
-        (test_x, test_y),
-    )
+        x_close = last_close_value(df_x)
+
+    return ((train_x, train_y), (test_x, test_y), x_close)
+
+
+def last_close_value(df: pd.DataFrame) -> np.array:
+    res = np.array([])
+
+    for i in range(len(df) // 132):
+        res = np.append(res, df.iloc[i * 132 + 131]["close"])
+
+    return res
 
 
 def train_test_split_2_mods(
@@ -469,7 +492,7 @@ def by_date_df_array(df: pd.DataFrame) -> np.array:
     return res_1
 
 
-def array_transform_avg_band(array: np.array) -> np.array:
+def array_transform_avg_band(array: np.ndarray) -> np.array:
     res = np.zeros_like(array)
     # index 0 is low, 1 is high
 
@@ -496,14 +519,13 @@ def by_date_np_array(np_array) -> list[pd.DataFrame]:
     return res_3d
 
 
-def split_by_date(data_df: pd.DataFrame, interval: str, columns: List[str]):
-    """
-    assumes that the number of data points is divisible by 132."""
+def split_by_date(data_df: pd.DataFrame, interval: str, columns: list[str]):
+    """Assumes that the number of data points is divisible by 132."""
 
     if interval == "1m":
         number_of_points: int = 132
 
-    res: np.array = np.empty((0, number_of_points, len(columns)))
+    res: np.ndarray = np.empty((0, number_of_points, len(columns)))
 
     temp = np.empty((0, len(columns)))
     for index, row in data_df.iterrows():
@@ -517,7 +539,11 @@ def split_by_date(data_df: pd.DataFrame, interval: str, columns: List[str]):
     return res
 
 
-def get_x_y_individual_data(data_df: pd.DataFrame, interval: str, columns: List[str]) -> np.array:
+def get_x_y_individual_data(
+    data_df: pd.DataFrame,
+    interval: str,
+    columns: list[str],
+) -> np.array:
     df = data_cleaning(data_df)
     # getting clean and my zone data
     df = data_scaling(df)
@@ -538,6 +564,7 @@ def get_x_y_individual_data(data_df: pd.DataFrame, interval: str, columns: List[
 def custom_evaluate_safety_factor_band_2_3(
     X_test,
     Y_test,
+    x_close: np.ndarray,
     y_type: str,
     testsize: float = 0,
     now_datetime: str = "2020-01-01 00-00",
@@ -549,19 +576,18 @@ def custom_evaluate_safety_factor_band_2_3(
             "metric_band_base_percent": km.metric_band_base_percent,
             "metric_loss_comp_2": km.metric_loss_comp_2,
             "metric_band_hl_wrongs_percent": km.metric_band_hl_wrongs_percent,
+            "metric_band_avg_correction_percent": km.metric_band_avg_correction_percent,
             "metric_band_average_percent": km.metric_band_average_percent,
             "metric_band_height_percent": km.metric_band_height_percent,
             "metric_win_percent": km.metric_win_percent,
             "metric_pred_capture_percent": km.metric_pred_capture_percent,
             "metric_win_pred_capture_percent": km.metric_win_pred_capture_percent,
-        }
+        },
     ):
-        model = keras.models.load_model(f"training/models/model - {now_datetime} - {y_type}")
+        model = keras.models.load_model(
+            f"training/models/model - {now_datetime} - {y_type}",
+        )
         model.summary()
-
-    # here
-    # y_test is (l,h)
-    # y_pred is (avg, band)
 
     y_pred = model.predict(X_test)
 
@@ -571,38 +597,52 @@ def custom_evaluate_safety_factor_band_2_3(
     SKIP_FIRST_PERCENTILE = 0.2
 
     # now both y arrays transformed to (l,h) type
-    y_pred = transform_y_array(y_pred, safety_factor=0.8, skip_first_percentile=SKIP_FIRST_PERCENTILE)
+    # sf = 0.4, 0.5, 0.6
+    y_pred = transform_y_array(
+        y_pred,
+        safety_factor=0.8,
+        skip_first_percentile=SKIP_FIRST_PERCENTILE,
+    )
 
-    Y_test = transform_y_array(Y_test, skip_first_percentile=SKIP_FIRST_PERCENTILE)
+    Y_test = transform_y_array(
+        Y_test,
+        safety_factor=1,
+        skip_first_percentile=SKIP_FIRST_PERCENTILE,
+    )
 
     function_make_win_graph_2(
         y_true=Y_test,
+        x_close=x_close,
         y_pred=y_pred,
         testsize=testsize,
         y_type=y_type,
         now_datetime=now_datetime,
     )
 
-    function_error_132_graph(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
+    # function_error_132_graph(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
 
     return
 
 
 def transform_y_array(
-    y_arr: np.ndarray, use_band_height: bool = True, safety_factor: float = 1, skip_first_percentile: float = 0
+    y_arr: np.ndarray,
+    use_band_height: bool = True,
+    safety_factor: float = 1,
+    skip_first_percentile: float = 0,
 ) -> np.ndarray:
     first_non_eiminated_element: int = int(skip_first_percentile * y_arr.shape[1])
 
-    temp_arr: np.ndarray = y_arr[:, first_non_eiminated_element:, :]
-
-    res: np.ndarray = np.zeros((y_arr.shape[0], y_arr.shape[1] - first_non_eiminated_element, y_arr.shape[2]))
+    res: np.ndarray = np.zeros(y_arr.shape)
 
     if use_band_height:
-        res[:, :, 0] = temp_arr[:, :, 0] - temp_arr[:, :, 1] * safety_factor / 2
-        res[:, :, 1] = temp_arr[:, :, 0] + temp_arr[:, :, 1] * safety_factor / 2
+        res[:, :, 0] = y_arr[:, :, 0] - y_arr[:, :, 1] * safety_factor / 2
+        res[:, :, 1] = y_arr[:, :, 0] + y_arr[:, :, 1] * safety_factor / 2
     else:
-        res[:, :, 0] = temp_arr[:, :, 0]
-        res[:, :, 1] = temp_arr[:, :, 0]
+        res[:, :, 0] = y_arr[:, :, 0]
+        res[:, :, 1] = y_arr[:, :, 0]
+
+    for i in range(first_non_eiminated_element):
+        res[:, i, :] = y_arr[:, first_non_eiminated_element, :]
 
     return res
 
@@ -632,14 +672,22 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
     plt.plot(x, y1, label="low Δ")
     plt.plot(x, y2, label="high Δ")
 
-    plt.title(f" name: {now_datetime}\n\n", fontsize=20)
+    plt.title(
+        f" name: {now_datetime}\n"
+        + f"NUMBER_OF_NEURONS = {km.NUMBER_OF_NEURONS}  "
+        + f"NUMBER_OF_LAYERS = {km.NUMBER_OF_LAYERS}\n"
+        + f"NUMBER_OF_EPOCHS = {NUMBER_OF_EPOCHS} | "
+        + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT} | "
+        + f"WEIGHT_FOR_MEA = {km.WEIGHT_FOR_MEA}",
+        fontsize=20,
+    )
 
     # Set labels and title
     plt.xlabel("serial", fontsize=15)
     plt.ylabel("perc", fontsize=15)
     plt.legend(fontsize=15)
     filename = f"training/graphs/{y_type} - {now_datetime} - band_2 abs.png"
-    plt.savefig(filename, dpi=2000, bbox_inches="tight")
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
 
     plt.show()
     return
@@ -648,9 +696,10 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
 def function_make_win_graph_2(
     y_true: np.ndarray,
     y_pred: np.ndarray,
-    testsize: float = 0.2,
-    y_type: str = "",
-    now_datetime: str = "",
+    x_close: np.ndarray,
+    y_type: str,
+    now_datetime: str,
+    testsize: float,
 ):
     min_pred: np.ndarray = np.min(y_pred[:, :, 0], axis=1)
     max_pred: np.ndarray = np.max(y_pred[:, :, 1], axis=1)
@@ -658,121 +707,453 @@ def function_make_win_graph_2(
     min_true: np.ndarray = np.min(y_true[:, :, 0], axis=1)
     max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
 
-    pred_average: np.ndarray = (max_pred + min_pred) / 2
+    min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 0], axis=1)
+    max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
+
+    buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+
+    min_true_index: np.ndarray = np.argmin(y_true[:, :, 0], axis=1)
+    max_true_index: np.ndarray = np.argmax(y_true[:, :, 1], axis=1)
+
+    buy_order_true: np.ndarray = np.all([max_true_index > min_true_index], axis=0)
 
     valid_actual: np.ndarray = np.all([max_true > min_true], axis=0)
 
     valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
 
+    close_below_band: np.ndarray = np.all(
+        [
+            x_close < min_pred,
+            valid_pred,
+        ],
+        axis=0,
+    )
+
+    close_above_band: np.ndarray = np.all(
+        [
+            x_close > max_pred,
+            valid_pred,
+        ],
+        axis=0,
+    )
+
+    close_in_band: np.ndarray = np.all(
+        [
+            x_close > min_pred,
+            x_close < max_pred,
+            valid_pred,
+        ],
+        axis=0,
+    )
+
+    for i in range(len(min_pred)):
+        if not close_in_band[i]:
+            band_val: float = max_pred[i] - min_pred[i]
+
+            if close_below_band[i]:
+                # print(i, "below")
+                buy_order_pred[i] = True
+                min_pred[i] = x_close[i]
+                max_pred[i] = x_close[i] + band_val
+
+            elif close_above_band[i]:
+                # print(i)
+                buy_order_pred[i] = False
+                max_pred[i] = x_close[i]
+                min_pred[i] = x_close[i] - band_val
+
+    pred_average: np.ndarray = (max_pred + min_pred) / 2
+
     valid_min: np.ndarray = np.all([min_pred > min_true], axis=0)
 
     valid_max: np.ndarray = np.all([max_true > max_pred], axis=0)
 
-    min_inside: np.ndarray = np.all([max_true > min_pred, valid_min], axis=0)
-
-    max_inside: np.ndarray = np.all([valid_max, max_pred > min_true], axis=0)
-
-    wins: np.ndarray = np.all([max_inside, min_inside, valid_pred], axis=0)
-
-    average_in: np.ndarray = np.all([max_true > pred_average, pred_average > min_true], axis=0)
-
-    # wins = np.all([max_true > max_pred, max_pred > min_pred, min_pred > min_true], axis=0)
-
-    fraction_valid_actual = np.mean(valid_actual.astype(np.float32))
-
-    fraction_valid_pred = np.mean(valid_pred.astype(np.float32))
-
-    fraction_valid_max = np.mean(valid_max.astype(np.float32))
-
-    fraction_valid_min = np.mean(valid_min.astype(np.float32))
-
-    fraction_max_inside = np.mean(max_inside.astype(np.float32))
-
-    fraction_min_inside = np.mean(min_inside.astype(np.float32))
-
-    fraction_average_in = np.mean(average_in.astype(np.float32))
-
-    fraction_win = np.mean(wins.astype(np.float32))
-
-    all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
-    all_days_pro_arr_non_zero = all_days_pro_arr[all_days_pro_arr != 0]
-
-    all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
-
-    pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(np.float32)
-
-    total_capture_possible_arr: np.ndarray = max_true / min_true - 1
-
-    pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
-
-    cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
-    pro_250 = pow(cdgr + 1, 250) - 1
-    pro_250_5 = pow(cdgr * 5 + 1, 250) - 1
-    pro_250_str = "{:.4f}".format(pro_250)
-    pro_250_5_str = "{:.4f}".format(pro_250_5)
-
-    y_min = min(np.min(min_pred), np.min(min_true))
-    y_max = max(np.max(max_pred), np.max(max_true))
-
-    x: list[int] = [i + 1 for i in range(len(max_pred))]
-
-    fig = plt.figure(figsize=(16, 9))
-
-    ax = fig.add_subplot(111)
-
-    plt.axvline(x=int(len(max_true) * (1 - testsize)) - 0.5, color="blue")
-
-    plt.fill_between(x, min_true, max_true, color="yellow")
-
-    # plt.scatter(x, list_min_actual, color="orange", s=50)
-    # plt.scatter(x, list_max_actual, color="orange", s=50)
-
-    plt.plot(x, pred_average, linestyle="dashed", c="red")
-
-    for i in range(len(wins)):
-        if wins[i]:
-            plt.scatter(
-                x[i], y_min - (y_max - y_min) / 100, c="yellow", linewidths=2, marker="^", edgecolor="red", s=125
-            )
-        if valid_pred[i]:
-            plt.vlines(
-                x=x[i],
-                ymin=min_pred[i],
-                ymax=max_pred[i],
-                colors="green",
-            )
-            ax.set_xlabel("days", fontsize=15)
-
-    ax.set_ylabel("fraction of prev close", fontsize=15)
-
-    print("\n\n")
-    print("valid_act\t", round(fraction_valid_actual * 100, 2), " %")
-    print("valid_pred\t", round(fraction_valid_pred * 100, 2), " %")
-    print("max_inside\t", round(fraction_max_inside * 100, 2), " %")
-    print("min_inside\t", round(fraction_min_inside * 100, 2), " %\n")
-    print("average_in\t", round(fraction_average_in * 100, 2), " %\n")
-
-    print("win_days_perc\t", round(fraction_win * 100, 2), " %")
-    print("pred_capture\t", round(pred_capture_ratio * 100, 2), " %")
-    print("per_day\t\t", round(cdgr * 100, 4), " %")
-    print("250 days:\t", pro_250_str)
-    print("\nleverage:\t", pro_250_5_str)
-    print("datetime:\t", now_datetime)
-
-    ax.set_title(
-        f" name: {now_datetime} \n\n wins: {round(fraction_win * 100, 2)}% || average_in: {round(fraction_average_in * 100, 2)}% || pred_capture: {round(pred_capture_ratio * 100, 2)}% || 250 days: {round(pro_250 * 100, 2)}",
-        fontsize=20,
+    min_inside: np.ndarray = np.all(
+        [
+            max_true > min_pred,
+            valid_min,
+        ],
+        axis=0,
     )
 
-    filename = f"training/graphs/{y_type} - {now_datetime} - Splot.png"
+    max_inside: np.ndarray = np.all(
+        [
+            max_pred > min_true,
+            valid_max,
+        ],
+        axis=0,
+    )
 
-    plt.savefig(filename, dpi=2000, bbox_inches="tight")
+    wins: np.ndarray = np.all(
+        [
+            min_inside,
+            max_inside,
+            valid_pred,
+        ],
+        axis=0,
+    )
+
+    real_wins: np.ndarray = np.all(
+        [
+            wins,
+            buy_order_pred == buy_order_true,
+        ],
+        axis=0,
+    )
+
+    correct_orders: np.ndarray = np.all(
+        [
+            buy_order_pred == buy_order_true,
+        ],
+        axis=0,
+    )
+
+    average_in: np.ndarray = np.all(
+        [
+            max_true > pred_average,
+            pred_average > min_true,
+        ],
+        axis=0,
+    )
+
+    simulation(min_pred, max_pred, buy_order_pred, y_true)
+
+    # fraction_correct_orders = np.mean(correct_orders.astype(np.float32))
+
+    # fraction_valid_actual = np.mean(valid_actual.astype(np.float32))
+
+    # fraction_valid_pred = np.mean(valid_pred.astype(np.float32))
+
+    # fraction_valid_max = np.mean(valid_max.astype(np.float32))
+
+    # fraction_valid_min = np.mean(valid_min.astype(np.float32))
+
+    # fraction_max_inside = np.mean(max_inside.astype(np.float32))
+
+    # fraction_min_inside = np.mean(min_inside.astype(np.float32))
+
+    # fraction_average_in = np.mean(average_in.astype(np.float32))
+
+    # fraction_win = np.mean(wins.astype(np.float32))
+
+    # fraction_real_win = np.mean(real_wins.astype(np.float32))
+
+    # all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
+    # all_days_pro_arr_non_zero = all_days_pro_arr[all_days_pro_arr != 0]
+
+    # all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
+
+    # all_days_pro_arr_real: np.ndarray = (max_pred / min_pred) * real_wins.astype(np.float32)
+    # all_days_pro_arr_non_zero_real = all_days_pro_arr[all_days_pro_arr_real != 0]
+
+    # all_days_pro_cummulative_val_real: float = np.prod(all_days_pro_arr_non_zero_real)
+
+    # pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(np.float32)
+
+    # total_capture_possible_arr: np.ndarray = max_true / min_true - 1
+
+    # pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
+
+    # pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+
+    # win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+
+    # real_win_percent_str: str = "{:.2f}".format(fraction_real_win * 100)
+
+    # average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+
+    # cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
+
+    # pro_250: float = pow(cdgr + 1, 250) - 1
+    # pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
+    # pro_250_str: str = "{:.2f}".format(pro_250 * 100)
+    # pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+
+    # cdgr_real: float = pow(all_days_pro_cummulative_val_real, 1 / len(real_wins)) - 1
+    # pro_250_real: float = pow(cdgr_real + 1, 250) - 1
+    # pro_250_str_real: str = "{:.2f}".format(pro_250_real * 100)
+
+    # y_min = min(np.min(min_pred), np.min(min_true))
+    # y_max = max(np.max(max_pred), np.max(max_true))
+
+    # x: list[int] = [i + 1 for i in range(len(max_pred))]
+
+    # fig = plt.figure(figsize=(16, 9))
+
+    # ax = fig.add_subplot(111)
+
+    # plt.axvline(x=int(len(max_true) * (1 - testsize)) - 0.5, color="blue")
+
+    # plt.fill_between(x, min_true, max_true, color="yellow")
+
+    # # plt.scatter(x, list_min_actual, color="orange", s=50)
+    # # plt.scatter(x, list_max_actual, color="orange", s=50)
+
+    # plt.plot(x, pred_average, linestyle="dashed", c="red")
+
+    # for i in range(len(wins)):
+    #     if wins[i]:
+    #         plt.scatter(
+    #             x=x[i],
+    #             y=y_min - (y_max - y_min) / 100,
+    #             c="yellow",
+    #             linewidths=2,
+    #             marker="^",
+    #             edgecolor="red",
+    #             s=125,
+    #         )
+
+    #     if real_wins[i]:
+    #         plt.scatter(
+    #             x=x[i],
+    #             y=y_min - (y_max - y_min) / 20,
+    #             c="green",
+    #             linewidths=2,
+    #             marker="^",
+    #             edgecolor="green",
+    #             s=125,
+    #         )
+
+    #     if correct_orders[i]:
+    #         plt.scatter(
+    #             x=x[i],
+    #             y=y_min - (y_max - y_min) / 10,
+    #             c="blue",
+    #             linewidths=2,
+    #             marker="^",
+    #             edgecolor="blue",
+    #             s=125,
+    #         )
+
+    #     if valid_pred[i]:
+    #         plt.vlines(
+    #             x=x[i],
+    #             ymin=min_pred[i],
+    #             ymax=max_pred[i],
+    #             colors="green",
+    #         )
+    #         ax.set_xlabel("days", fontsize=15)
+
+    # ax.set_ylabel("fraction of prev close", fontsize=15)
+
+    # print("\n\n")
+    # print("valid_act\t", round(fraction_valid_actual * 100, 2), " %")
+    # print("valid_pred\t", round(fraction_valid_pred * 100, 2), " %")
+    # print("max_inside\t", round(fraction_max_inside * 100, 2), " %")
+    # print("min_inside\t", round(fraction_min_inside * 100, 2), " %\n")
+    # print("average_in\t", average_in_percent_str, " %\n")
+
+    # print("win_days_perc\t", win_percent_str, " %")
+    # print("real_win_days_perc\t", real_win_percent_str, " %")
+    # print("pred_capture\t", pred_capture_percent_str, " %")
+
+    # print("per_day\t\t", round(cdgr * 100, 4), " %")
+    # print("250 days:\t", pro_250_str)
+    # print("\nleverage:\t", pro_250_5_str)
+    # print("datetime:\t", now_datetime)
+
+    # ax.set_title(
+    #     f" name: {now_datetime} \n\n"
+    #     + f" real_wins: {real_win_percent_str}% || "
+    #     + f" wins: {win_percent_str}% || "
+    #     + f" average_in: {average_in_percent_str}% || "
+    #     + f" 250 days: {pro_250_str} ||"
+    #     + f" 250 days_real: {pro_250_str_real}",
+    #     fontsize=20,
+    # )
+
+    # filename = f"training/graphs/{y_type} - {now_datetime} - Splot.png"
+
+    # plt.savefig(filename, dpi=300, bbox_inches="tight")
+
+    # print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
+    # print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
+    # print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)
+    # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+    # print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
 
     # plt.show()
 
-    print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
-    print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
-    print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
-    print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
+    return
+
+
+def simulation(
+    min_pred: np.ndarray,
+    max_pred: np.ndarray,
+    buy_order_pred: list[bool],
+    y_true: np.ndarray,
+) -> None:
+    REWARD_TO_RISK_RATIO = 5
+
+    # 3 order are placed when the similation starts
+    #   buy order
+    #   sell order
+    #   stop_loss_order based on what type of whole order this is - buy/sell
+    #       or trend whether max comes first or the min.
+    #
+    #   when the last tick happends. any pending order is executed that that time.
+    #       it will be either partial reward or partial stop_loss
+    #
+    #
+
+    count_trade_taken: int = 0
+    count_trade_taken_and_out: int = 0
+    count_stop_loss_hit: int = 0
+    count_completed_at_closing: int = 0
+    count_expected_trades: int = 0
+
+    total_winings: float = 0
+
+    number_of_days: int = y_true.shape[0]
+
+    for i_day in range(y_true.shape[0]):
+        trade_taken: bool = False
+        trade_taken_and_out: bool = False
+        stop_loss_hit: bool = False
+
+        is_trade_type_buy: bool = buy_order_pred[i_day]
+
+        buy_price: float = min_pred[i_day]
+        sell_price: float = max_pred[i_day]
+        stop_loss: float = 0
+
+        expected_reward: float = sell_price - buy_price
+
+        net_day_reward: float = 0
+
+        if is_trade_type_buy:
+            # pred is up
+            stop_loss = buy_price - expected_reward / REWARD_TO_RISK_RATIO
+        else:
+            # pred is down
+            stop_loss = sell_price + expected_reward / REWARD_TO_RISK_RATIO
+
+        for i_tick in range(y_true.shape[1]):
+            if is_trade_type_buy:
+                # buy trade
+                if not trade_taken:
+                    if (
+                        y_true[i_day, i_tick, 0] < buy_price
+                        and buy_price < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken = True
+
+                if trade_taken and not trade_taken_and_out:
+                    if (
+                        y_true[i_day, i_tick, 0] < sell_price
+                        and sell_price < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken_and_out = True
+                        net_day_reward = expected_reward
+
+                    elif (
+                        y_true[i_day, i_tick, 0] < stop_loss
+                        and stop_loss < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken_and_out = True
+                        stop_loss_hit = True
+
+                        net_day_reward = -expected_reward / REWARD_TO_RISK_RATIO
+
+            else:
+                # sell trade
+                if not trade_taken:
+                    if (
+                        y_true[i_day, i_tick, 0] < sell_price
+                        and sell_price < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken = True
+
+                if trade_taken and not trade_taken_and_out:
+                    if (
+                        y_true[i_day, i_tick, 0] < buy_price
+                        and buy_price < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken_and_out = True
+                        net_day_reward = expected_reward
+
+                    elif (
+                        y_true[i_day, i_tick, 0] < stop_loss
+                        and stop_loss < y_true[i_day, i_tick, 1]
+                    ):
+                        trade_taken_and_out = True
+                        stop_loss_hit = True
+
+                        net_day_reward = -expected_reward / REWARD_TO_RISK_RATIO
+
+        if not trade_taken_and_out:
+            if is_trade_type_buy:
+                # buy trade
+                avg_close = (y_true[i_day, -1, 0] + y_true[i_day, -1, 1]) / 2
+                net_day_reward = avg_close - buy_price
+
+            else:
+                # sell trade
+                avg_close = (y_true[i_day, -1, 0] + y_true[i_day, -1, 1]) / 2
+                net_day_reward = sell_price - avg_close
+
+        if trade_taken:
+            count_trade_taken += 1
+
+        if trade_taken_and_out:
+            count_trade_taken_and_out += 1
+
+        if stop_loss_hit:
+            count_stop_loss_hit += 1
+
+        if trade_taken and not trade_taken_and_out:
+            count_completed_at_closing += 1
+
+        if trade_taken_and_out and not stop_loss_hit:
+            count_expected_trades += 1
+
+        total_winings += net_day_reward
+
+        print("{:.6f}".format(net_day_reward))
+
+    print("\n\n")
+    print("-" * 30)
+    print("\n\n")
+
+    print("number_of_days\t\t", number_of_days, "\n")
+
+    print(
+        "percent_trade_taken\t\t",
+        "{:.2f}".format(count_trade_taken / number_of_days * 100),
+        " %",
+    )
+    print(
+        "percent_trade_taken_and_out\t",
+        "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
+        " %",
+    )
+    print(
+        "percent_stop_loss_hit\t\t",
+        "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
+        " %",
+    )
+    print(
+        "percent_completed_at_closing\t",
+        "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
+        " %",
+    )
+
+    print(
+        "percent_expected_trades\t\t",
+        "{:.2f}".format(count_expected_trades / number_of_days * 100),
+        " %",
+    )
+
+    total_winings_per_day: float = total_winings / number_of_days
+    print("\n\ntotal_winings_per_day\t\t", round(total_winings_per_day, 6))
+    print("total_winings_per_day_leverage\t", round(total_winings_per_day * 5, 6))
+
+    print("\n\n250_days\t\t\t", round(pow(1 + total_winings_per_day, 250) - 1, 6))
+    print(
+        "250_days_leverage\t\t",
+        round(pow(1 + total_winings_per_day * 5, 250) - 1, 6),
+    )
+
+    print("\n\n")
 
     return
