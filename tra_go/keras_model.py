@@ -11,7 +11,7 @@ NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
-WEIGHT_FOR_MEA = 0
+WEIGHT_FOR_MEA = 1
 
 
 def get_untrained_model(X_train, y_type):
@@ -81,10 +81,7 @@ def metric_band_base_percent(y_true, y_pred):
 
     error_height_mean = K.mean(K.abs(error_height))
 
-    return (
-        (error_avg_mean + error_height_mean / 2)
-        / (K.mean(y_true[..., 0]) + K.mean(y_true[..., 1]) / 2)
-    ) * 100
+    return ((error_avg_mean + error_height_mean / 2) / (K.mean(y_true[..., 0]) + K.mean(y_true[..., 1]) / 2)) * 100
 
 
 def metric_band_hl_correction(y_true, y_pred):
@@ -242,58 +239,9 @@ def metric_new_idea_2(y_true, y_pred):
         + metric_band_hl_correction_percent(y_true, y_pred)
     )
 
-    loss_comp_1 = (
-        z_1
-        + z_2
-        + z_3
-        + win_amt_true * 5
-        + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
-    )
+    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true * 5 + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
 
     return loss_amt + loss_percent / 100 + loss_comp_1
-
-
-def metric_new_idea_2_good(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
-
-    z_1, z_2, z_3, win_amt_true = support_new_idea_2(
-        min_pred,
-        max_pred,
-        min_true,
-        max_true,
-        wins,
-    )
-
-    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
-
-    total_capture_possible = K.sum(max_true / min_true - 1)
-
-    pred_capture_fraction = pred_capture / total_capture_possible
-
-    loss_amt = (
-        metric_band_average(y_true, y_pred) * 5
-        + (
-            metric_band_height(y_true, y_pred)
-            + metric_band_hl_correction(y_true, y_pred) * 3
-        )
-        * 100
-    )
-
-    loss_percent = (
-        metric_band_average_percent(y_true, y_pred) * 5
-        + metric_band_height_percent(y_true, y_pred)
-        + metric_band_hl_correction_percent(y_true, y_pred)
-    )
-
-    loss_comp_1 = (
-        z_1
-        + z_2
-        + z_3
-        + win_amt_true * 5
-        + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
-    )
-
-    return loss_amt + loss_comp_1 + loss_percent / 100
 
 
 def metric_loss_comp_2(y_true, y_pred):

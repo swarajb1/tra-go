@@ -17,9 +17,9 @@ Y_TYPE: str = "band_2"
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
 
-IS_TRAINING_MODEL: bool = False
+IS_TRAINING_MODEL: bool = True
 PREV_MODEL_TRAINING: bool = False
-prev_model: str = "2023-12-25 18-05"
+prev_model: str = "2023-12-28 23-35"
 
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
