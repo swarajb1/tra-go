@@ -19,59 +19,7 @@ other_config = {
     "1d": {"number of days": 9000, "batch days": 9000},
 }
 
-nifty50_tickers = [
-    "ADANIPORTS.NS",
-    "APOLLOHOSP.NS",
-    "ASIANPAINT.NS",
-    "AXISBANK.NS",
-    "BAJAJ-AUTO.NS",
-    "BAJFINANCE.NS",
-    "BAJAJFINSV.NS",
-    "BHARTIARTL.NS",
-    "BPCL.NS",
-    "BRITANNIA.NS",
-    "CIPLA.NS",
-    "COALINDIA.NS",
-    "DIVISLAB.NS",
-    "DRREDDY.NS",
-    "EICHERMOT.NS",
-    "GAIL.NS",
-    "GRASIM.NS",
-    "HCLTECH.NS",
-    "LTIM.NS",
-    "HDFCBANK.NS",
-    "HDFCLIFE.NS",
-    "HEROMOTOCO.NS",
-    "HINDALCO.NS",
-    "HINDUNILVR.NS",
-    "ICICIBANK.NS",
-    "INDUSINDBK.NS",
-    "INFY.NS",
-    "IOC.NS",
-    "ITC.NS",
-    "JSWSTEEL.NS",
-    "KOTAKBANK.NS",
-    "LT.NS",
-    "M&M.NS",
-    "MARUTI.NS",
-    "NESTLEIND.NS",
-    "NTPC.NS",
-    "ONGC.NS",
-    "POWERGRID.NS",
-    "RELIANCE.NS",
-    "SBILIFE.NS",
-    "SBIN.NS",
-    "SUNPHARMA.NS",
-    "TATAMOTORS.NS",
-    "TATASTEEL.NS",
-    "TCS.NS",
-    "TECHM.NS",
-    "TITAN.NS",
-    "ULTRACEMCO.NS",
-    "UPL.NS",
-    "WIPRO.NS",
-    r"%5ENSEI",
-]
+list_tickers = [r"%5ENSEI"]
 
 
 for INTERVAL in [
@@ -86,7 +34,7 @@ for INTERVAL in [
     print(BATCH_DAYS)
     print(NUMBER_OF_DAYS)
 
-    for ticker in nifty50_tickers:
+    for ticker in list_tickers:
         print(ticker)
         last_date = datetime.date.today()
         first_date = last_date - datetime.timedelta(days=NUMBER_OF_DAYS - 1)
@@ -163,8 +111,7 @@ for INTERVAL in [
         if not os.path.exists(folder_name):
             os.mkdir(folder_name)
 
-        if ticker == r"%5ENSEI":
-            ticker = "z_Nifty_50.NS"
+        ticker = "z_Nifty_50.NS"
 
         filename = os.path.join(folder_name, f"{ticker} - {INTERVAL}.csv")
         if os.path.exists(filename):
