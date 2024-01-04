@@ -136,7 +136,7 @@ def get_data_all_df(ticker, interval) -> pd.DataFrame:
 
 
 def get_csv_file_path(ticker, interval) -> str:
-    file_path = f"./data_stock_price_yf/{interval} data/{ticker} - {interval}.csv"
+    file_path = f"./data_stock_price_yf/{interval}_data/{ticker} - {interval}.csv"
     return file_path
 
 

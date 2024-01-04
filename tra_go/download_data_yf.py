@@ -159,7 +159,7 @@ for INTERVAL in [
 
         print(final_data)
 
-        folder_name = f"./data_stock_price_yf/{INTERVAL} data"
+        folder_name = f"./data_stock_price_yf/{INTERVAL}_data"
         if not os.path.exists(folder_name):
             os.mkdir(folder_name)
 
