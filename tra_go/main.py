@@ -6,9 +6,14 @@ import keras_model as km
 import keras_model_band_3 as km_3
 import numpy as np
 import training_yf as an
+import training_yf_band_3 as an_3
 from keras.callbacks import TensorBoard, TerminateOnNaN
 
-NUMBER_OF_EPOCHS: int = 4000
+IS_TRAINING_MODEL: bool = False
+prev_model: str = "2024-01-05 02-17"
+
+
+NUMBER_OF_EPOCHS: int = 6000
 BATCH_SIZE: int = 256
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -18,9 +23,7 @@ Y_TYPE: str = "band_3"
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
 
-IS_TRAINING_MODEL: bool = True
 PREV_MODEL_TRAINING: bool = False
-prev_model: str = "2024-01-04 10-29"
 
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
@@ -183,7 +186,7 @@ def main():
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        an.custom_evaluate_safety_factor_band_3(
+        an_3.custom_evaluate_safety_factor_band_3(
             X_test=X_test,
             Y_test=Y_test,
             y_type=Y_TYPE,
