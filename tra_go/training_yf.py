@@ -401,7 +401,7 @@ def train_test_split(
 
         return ((train_x, train_y), (test_x, test_y), x_close)
 
-    elif y_type == "band_3":
+    elif y_type == "band_4":
         train_y = by_date_df_array(df_train_y[selected_columns_1])
         test_y = by_date_df_array(df_test_y[selected_columns_1])
 

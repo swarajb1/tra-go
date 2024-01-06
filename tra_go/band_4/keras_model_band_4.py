@@ -60,7 +60,7 @@ def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
     return z_1, z_2, z_3, win_amt_true
 
 
-def metric_new_idea_2(y_true, y_pred):
+def metric_new_idea(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
 
     z_1, z_2, z_3, win_amt_true = support_new_idea_2(min_pred, max_pred, min_true, max_true, wins)
@@ -72,9 +72,9 @@ def metric_new_idea_2(y_true, y_pred):
     pred_capture_fraction = pred_capture / total_capture_possible
 
     loss_amt = (
-        metric_rmse(y_true, y_pred)
+        metric_rmse(y_true, y_pred) * 5
         # + metric_all_candle_in(y_true, y_pred)
-        # + metric_average_in(y_true, y_pred) * 5
+        + metric_average_in(y_true, y_pred) * 5
         # + metric_band_height(y_true, y_pred) * 10
     )
 

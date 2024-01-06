@@ -40,7 +40,7 @@ def get_untrained_model(X_train, y_type):
     if y_type == "band_2":
         model.add(Dense(2))
 
-    elif y_type == "band_3":
+    elif y_type == "band_4" or y_type == "band_5":
         model.add(Dense(4))
 
     model.summary()
