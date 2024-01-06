@@ -10,7 +10,7 @@ import numpy as np
 import training_yf as an
 from keras.callbacks import TensorBoard, TerminateOnNaN
 
-IS_TRAINING_MODEL: bool = False
+IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-01-05 02-17"
 
 
@@ -141,7 +141,7 @@ def main():
 
             optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
 
-            loss = km_4.metric_new_idea_2
+            loss = km_4.metric_new_idea
 
             model.compile(
                 optimizer=optimizer,
@@ -179,16 +179,27 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        X_test, Y_test = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
+        X_all, Y_all = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
 
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
         an_4.custom_evaluate_safety_factor(
-            X_test=X_test,
-            Y_test=Y_test,
+            X_data=X_all,
+            Y_data=Y_all,
             y_type=Y_TYPE,
             testsize=TEST_SIZE,
+            now_datetime=now_datetime,
+        )
+
+        print("\n" * 4, "*" * 2000, "\n" * 4)
+        print("only validation data now")
+
+        an_4.custom_evaluate_safety_factor(
+            X_data=X_test,
+            Y_data=Y_test,
+            y_type=Y_TYPE,
+            testsize=0,
             now_datetime=now_datetime,
         )
 
