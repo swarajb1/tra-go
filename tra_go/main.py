@@ -2,11 +2,12 @@ import multiprocessing
 import time
 from datetime import datetime
 
+import band_2.training_yf_band_2 as an_2
+import band_4.keras_model_band_4 as km_4
+import band_4.training_yf_band_4 as an_4
 import keras_model as km
-import keras_model_band_3 as km_3
 import numpy as np
 import training_yf as an
-import training_yf_band_3 as an_3
 from keras.callbacks import TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = False
@@ -18,14 +19,13 @@ BATCH_SIZE: int = 256
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
-Y_TYPE: str = "band_3"
+Y_TYPE: str = "band_4"
 
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
 
-# 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
 
 
@@ -101,8 +101,7 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        X_test = np.append(X_train, X_test, axis=0)
-        Y_test = np.append(Y_train, Y_test, axis=0)
+        X_test, Y_test = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
 
         zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
         Y_test = np.concatenate((Y_test, zeros), axis=2)
@@ -110,7 +109,7 @@ def main():
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        an.custom_evaluate_safety_factor_band_2(
+        an_2.custom_evaluate_safety_factor(
             X_test=X_test,
             Y_test=Y_test,
             x_close=x_close,
@@ -119,7 +118,7 @@ def main():
             now_datetime=now_datetime,
         )
 
-    elif Y_TYPE == "band_3":
+    elif Y_TYPE == "band_4":
         (X_train, Y_train), (X_test, Y_test) = an.train_test_split(
             data_df=df,
             test_size=TEST_SIZE,
@@ -142,7 +141,7 @@ def main():
 
             optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
 
-            loss = km_3.metric_new_idea_2
+            loss = km_4.metric_new_idea_2
 
             model.compile(
                 optimizer=optimizer,
@@ -150,11 +149,11 @@ def main():
                 metrics=[
                     km.metric_abs_percent,
                     km.metric_rmse_percent,
-                    km_3.metric_loss_comp_2,
-                    km_3.metric_win_percent,
-                    km_3.metric_pred_capture_percent,
-                    km_3.metric_win_pred_capture_percent,
-                    km_3.metric_all_candle_in,
+                    km_4.metric_loss_comp_2,
+                    km_4.metric_win_percent,
+                    km_4.metric_pred_capture_percent,
+                    km_4.metric_win_pred_capture_percent,
+                    km_4.metric_all_candle_in,
                 ],
             )
 
@@ -180,13 +179,12 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        X_test = np.append(X_train, X_test, axis=0)
-        Y_test = np.append(Y_train, Y_test, axis=0)
+        X_test, Y_test = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
 
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        an_3.custom_evaluate_safety_factor_band_3(
+        an_4.custom_evaluate_safety_factor(
             X_test=X_test,
             Y_test=Y_test,
             y_type=Y_TYPE,
