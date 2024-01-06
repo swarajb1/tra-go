@@ -52,15 +52,6 @@ def metric_band_hl_wrongs_percent(y_true, y_pred):
     return negative_hl_count / total_count * 100
 
 
-def metric_band_height(y_true, y_pred):
-    # band height to approach true band height
-    error = y_true[..., 1] - y_pred[..., 1]
-
-    error_band_height = weighted_average(error)
-
-    return error_band_height
-
-
 def metric_band_height_percent(y_true, y_pred):
     return metric_band_height(y_true, y_pred) / K.mean(y_true[..., 1]) * 100
 
@@ -143,42 +134,6 @@ def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
     return z_1, z_2, z_3, win_amt_true
 
 
-def metric_new_idea_2(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
-
-    z_1, z_2, z_3, win_amt_true = support_new_idea_2(
-        min_pred,
-        max_pred,
-        min_true,
-        max_true,
-        wins,
-    )
-
-    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
-
-    total_capture_possible = K.sum(max_true / min_true - 1)
-
-    pred_capture_fraction = pred_capture / total_capture_possible
-
-    loss_amt = (
-        metric_band_average(y_true, y_pred)
-        + metric_band_avg_correction(y_true, y_pred) * 50
-        + metric_band_height(y_true, y_pred) * 100
-        + metric_band_hl_correction(y_true, y_pred) * 100
-    )
-
-    loss_percent = (
-        metric_band_average_percent(y_true, y_pred)
-        + metric_band_avg_correction_percent(y_true, y_pred) * 10
-        + metric_band_height_percent(y_true, y_pred)
-        + metric_band_hl_correction_percent(y_true, y_pred)
-    )
-
-    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true * 5 + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
-
-    return loss_amt + loss_percent / 100 + loss_comp_1
-
-
 def metric_loss_comp_2(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
 
@@ -229,3 +184,39 @@ def metric_win_percent(y_true, y_pred):
     win_fraction = K.mean(K.cast(wins, dtype=K.floatx()))
 
     return win_fraction * 100
+
+
+def metric_new_idea_2(y_true, y_pred):
+    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+
+    z_1, z_2, z_3, win_amt_true = support_new_idea_2(
+        min_pred,
+        max_pred,
+        min_true,
+        max_true,
+        wins,
+    )
+
+    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
+
+    total_capture_possible = K.sum(max_true / min_true - 1)
+
+    pred_capture_fraction = pred_capture / total_capture_possible
+
+    loss_amt = (
+        metric_band_average(y_true, y_pred)
+        + metric_band_avg_correction(y_true, y_pred) * 50
+        + metric_band_height(y_true, y_pred) * 100
+        + metric_band_hl_correction(y_true, y_pred) * 100
+    )
+
+    loss_percent = (
+        metric_band_average_percent(y_true, y_pred)
+        + metric_band_avg_correction_percent(y_true, y_pred) * 10
+        + metric_band_height_percent(y_true, y_pred)
+        + metric_band_hl_correction_percent(y_true, y_pred)
+    )
+
+    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true * 5 + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
+
+    return loss_amt + loss_percent / 100 + loss_comp_1
