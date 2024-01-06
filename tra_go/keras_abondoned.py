@@ -1,79 +1,15 @@
-from tensorflow import keras
-from keras.layers import Dense, Flatten, LSTM, Dropout
-from keras import backend as K
 import tensorflow as tf
-from main import LEARNING_RATE
+from keras import backend as K
 
 # PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
 
 # keep total neurons below 2700 (700 * 3)
 
-NUMBER_OF_NEURONS = 512
-NUMBER_OF_LAYERS = 3
-INITIAL_DROPOUT = 0
-
-
-def get_untrained_model(X_train, y_type):
-    model = keras.Sequential()
-
-    model.add(
-        LSTM(
-            units=NUMBER_OF_NEURONS,
-            input_shape=(X_train[0].shape),
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(INITIAL_DROPOUT / 100))
-
-    for i in range(NUMBER_OF_LAYERS - 1):
-        model.add(
-            LSTM(
-                units=NUMBER_OF_NEURONS,
-                return_sequences=True,
-                activation="relu",
-            )
-        )
-        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
-        #  dropout value decreases in exponential fashion.
-
-    if y_type == "hl":
-        model.add(Flatten())
-
-    if y_type == "2_mods":
-        model.add(Dense(1))
-
-    model.summary()
-
-    return model
-
-
-def get_optimiser(learning_rate: float):
-    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-
-
-def metric_rmse(y_true, y_pred):
-    # Calculate the root mean squared error (RMSE)
-
-    error = y_true - y_pred
-
-    return K.sqrt(K.mean(K.square(error)))
-
-
-def metric_abs(y_true, y_pred):
-    # Calculate the absolute mean error (MAE)
-
-    error = y_true - y_pred
-
-    return K.mean(K.abs(error))
-
-
 ERROR_AMPLIFICATION_FACTOR = 0.6
 
 
 def custom_loss_2_mods_high(y_true, y_pred):
-    """
-    Calculates a custom loss function for high predictions.
+    """Calculates a custom loss function for high predictions.
 
     Args:
         y_true (tensor): The true values.
@@ -85,21 +21,20 @@ def custom_loss_2_mods_high(y_true, y_pred):
     Notes:
         - The predicted values (y_pred) should be higher than the true values (y_true).
         - The predicted values should approach the true values from above.
-
     """
     error = y_true - y_pred
     # y_pred should be higher that y_true
     # y_pred to approach to y_true from up
 
-    negative_error = K.maximum(-error, 0)
+    K.maximum(-error, 0)
     positive_error = K.maximum(error, 0)
 
     return K.sqrt(K.mean(K.square(error) + K.square(positive_error) * ERROR_AMPLIFICATION_FACTOR))
 
 
 def custom_loss_2_mods_low(y_true, y_pred):
-    """
-    Calculates a custom loss function for a regression model with 2 modifications.
+    """Calculates a custom loss function for a regression model with 2
+    modifications.
 
     Parameters:
         y_true (tensor): The true values of the target variable.
@@ -119,7 +54,7 @@ def custom_loss_2_mods_low(y_true, y_pred):
     # y_pred to approach to y_true from down
 
     negative_error = K.maximum(-error, 0)
-    positive_error = K.maximum(error, 0)
+    K.maximum(error, 0)
 
     return K.sqrt(K.mean(K.square(error) + K.square(negative_error) * ERROR_AMPLIFICATION_FACTOR))
 
@@ -200,7 +135,7 @@ def metric_band_error_average(y_true, y_pred):
 
 class LossDifferenceCallback(tf.keras.callbacks.Callback):
     def __init__(self, log_dir):
-        super(LossDifferenceCallback, self).__init__()
+        super().__init__()
         self.previous_loss = None
         self.log_dir = log_dir + "/loss_diff"
         self.writer = tf.summary.create_file_writer(self.log_dir)
