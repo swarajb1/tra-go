@@ -1,9 +1,10 @@
 import keras_model as km
-import keras_model_band_3 as km_3
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.utils import custom_object_scope
 from tensorflow import keras
+
+import tra_go.band_2.keras_model_band_2 as km_2
 
 
 def get_number_of_epochs():
@@ -12,9 +13,10 @@ def get_number_of_epochs():
     return NUMBER_OF_EPOCHS
 
 
-def custom_evaluate_safety_factor_band_3(
+def custom_evaluate_safety_factor(
     X_test,
     Y_test,
+    x_close: np.ndarray,
     y_type: str,
     testsize: float,
     now_datetime: str,
@@ -22,14 +24,16 @@ def custom_evaluate_safety_factor_band_3(
     # convert y_test to same format as y_pred
     with custom_object_scope(
         {
-            "metric_rmse_percent": km.metric_rmse_percent,
-            "metric_abs_percent": km.metric_abs_percent,
-            "metric_new_idea_2": km_3.metric_new_idea_2,
-            "metric_loss_comp_2": km_3.metric_loss_comp_2,
-            "metric_win_percent": km_3.metric_win_percent,
-            "metric_pred_capture_percent": km_3.metric_pred_capture_percent,
-            "metric_win_pred_capture_percent": km_3.metric_win_pred_capture_percent,
-            "metric_all_candle_in": km_3.metric_all_candle_in,
+            "metric_new_idea_2": km_2.metric_new_idea_2,
+            "metric_band_base_percent": km_2.metric_band_base_percent,
+            "metric_loss_comp_2": km_2.metric_loss_comp_2,
+            "metric_band_hl_wrongs_percent": km_2.metric_band_hl_wrongs_percent,
+            "metric_band_avg_correction_percent": km_2.metric_band_avg_correction_percent,
+            "metric_band_average_percent": km_2.metric_band_average_percent,
+            "metric_band_height_percent": km_2.metric_band_height_percent,
+            "metric_win_percent": km_2.metric_win_percent,
+            "metric_pred_capture_percent": km_2.metric_pred_capture_percent,
+            "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
         },
     ):
         model = keras.models.load_model(
@@ -39,106 +43,74 @@ def custom_evaluate_safety_factor_band_3(
 
     y_pred = model.predict(X_test)
 
+    # only 2 columns are needed
+    Y_test = Y_test[:, :, :2]
+
     SKIP_FIRST_PERCENTILE = 0.2
+    SAFETY_FACTOR = 0.8
 
-    # low, high, open, close
+    # now both y arrays transformed to (l,h) type
+    # sf = 0.4, 0.5, 0.6
+    y_pred = transform_y_array(
+        y_pred,
+        safety_factor=SAFETY_FACTOR,
+        skip_first_percentile=SKIP_FIRST_PERCENTILE,
+    )
 
-    y_pred = transform_y_array_band_3(y_arr=y_pred, skip_first_percentile=SKIP_FIRST_PERCENTILE, safety_factor=1)
+    Y_test = transform_y_array(
+        Y_test,
+        safety_factor=1,
+        skip_first_percentile=SKIP_FIRST_PERCENTILE,
+    )
 
-    Y_test = transform_y_array_band_3(y_arr=Y_test)
-
-    y_pred = correct_pred_values(y_pred)
-
-    function_make_win_graph_band_3(
+    function_make_win_graph(
         y_true=Y_test,
+        x_close=x_close,
         y_pred=y_pred,
         testsize=testsize,
         y_type=y_type,
         now_datetime=now_datetime,
     )
 
-    function_error_132_graph_band_3(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
+    function_error_132_graph(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
 
     return
 
 
-def transform_y_array_band_3(
+def transform_y_array(
     y_arr: np.ndarray,
-    skip_first_percentile: float = 0,
     safety_factor: float = 1,
+    skip_first_percentile: float = 0,
 ) -> np.ndarray:
     first_non_eiminated_element_index: int = int(skip_first_percentile * y_arr.shape[1])
 
-    res: np.ndarray = y_arr.copy()
+    res: np.ndarray = np.zeros(y_arr.shape)
+
+    res[:, :, 0] = y_arr[:, :, 0] - y_arr[:, :, 1] * safety_factor / 2
+    res[:, :, 1] = y_arr[:, :, 0] + y_arr[:, :, 1] * safety_factor / 2
 
     for i in range(first_non_eiminated_element_index):
         res[:, i, :] = y_arr[:, first_non_eiminated_element_index, :]
 
-    if safety_factor < 1:
-        res[:, :, 0] = (res[:, :, 0] + res[:, :, 1]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * safety_factor
-        res[:, :, 1] = (res[:, :, 0] + res[:, :, 1]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * safety_factor
-
     return res
 
 
-def correct_pred_values(y_arr: np.ndarray) -> np.ndarray:
-    res = y_arr.copy()
-    # step 1 - correct /exchange low/high values if needed., for each candle
-
-    for i_day in range(res.shape[0]):
-        for i_tick in range(res.shape[1]):
-            if res[i_day, i_tick, 0] > res[i_day, i_tick, 1]:
-                res[i_day, i_tick, 0], res[i_day, i_tick, 1] = res[i_day, i_tick, 1], res[i_day, i_tick, 0]
-
-    # step 2 - correct values of open/close so that they are inside the low/high
-    # for i_day in range(res.shape[0]):
-    #     for i_tick in range(res.shape[1]):
-    #         min_val_index: int = np.argmin(res[i_day, i_tick, :])
-    #         max_val_index: int = np.argmax(res[i_day, i_tick, :])
-
-    #         # swapping min/max values
-    #         if min_val_index != 0:
-    #             (res[i_day, i_tick, 0], res[i_day, i_tick, min_val_index]) = (
-    #                 res[i_day, i_tick, min_val_index],
-    #                 res[i_day, i_tick, 0],
-    #             )
-
-    #         if max_val_index != 1:
-    #             (res[i_day, i_tick, 1], res[i_day, i_tick, max_val_index]) = (
-    #                 res[i_day, i_tick, max_val_index],
-    #                 res[i_day, i_tick, 1],
-    #             )
-
-    return res
-
-
-def function_error_132_graph_band_3(y_pred, y_test, now_datetime, y_type):
+def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
     error_a = np.abs(y_pred - y_test)
 
-    new_array = np.empty(shape=(0, 4))
+    new_array = np.empty((0, 2))
 
     # average error np array
-    for i_tick in range(error_a.shape[1]):
-        low = error_a[:, i_tick, 0].sum()
-        high = error_a[:, i_tick, 1].sum()
-        open = error_a[:, i_tick, 2].sum()
-        close = error_a[:, i_tick, 3].sum()
+    for i in range(error_a.shape[1]):
+        low = error_a[:, i, 0].sum()
+        high = error_a[:, i, 1].sum()
 
-        to_add_array = np.array(
-            [
-                low / error_a.shape[0],
-                high / error_a.shape[0],
-                open / error_a.shape[0],
-                close / error_a.shape[0],
-            ],
-        )
+        to_add_array = np.array([low / error_a.shape[0], high / error_a.shape[0]])
 
         new_array = np.concatenate((new_array, np.array([to_add_array])), axis=0)
 
     y1 = new_array[:, 0] * 100
     y2 = new_array[:, 1] * 100
-    y3 = new_array[:, 2] * 100
-    y4 = new_array[:, 3] * 100
 
     # Create x-axis values
     x = np.arange(len(new_array))
@@ -147,8 +119,6 @@ def function_error_132_graph_band_3(y_pred, y_test, now_datetime, y_type):
 
     plt.plot(x, y1, label="low Δ")
     plt.plot(x, y2, label="high Δ")
-    plt.plot(x, y3, label="open Δ")
-    plt.plot(x, y4, label="close Δ")
 
     plt.title(
         f" name: {now_datetime}\n"
@@ -164,7 +134,6 @@ def function_error_132_graph_band_3(y_pred, y_test, now_datetime, y_type):
     plt.xlabel("serial", fontsize=15)
     plt.ylabel("perc", fontsize=15)
     plt.legend(fontsize=15)
-
     filename = f"training/graphs/{y_type} - {now_datetime} - abs.png"
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 
@@ -173,9 +142,10 @@ def function_error_132_graph_band_3(y_pred, y_test, now_datetime, y_type):
     return
 
 
-def function_make_win_graph_band_3(
+def function_make_win_graph(
     y_true: np.ndarray,
     y_pred: np.ndarray,
+    x_close: np.ndarray,
     y_type: str,
     now_datetime: str,
     testsize: float,
@@ -191,9 +161,40 @@ def function_make_win_graph_band_3(
 
     buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
 
+    # min_true_index: np.ndarray = np.argmin(y_true[:, :, 0], axis=1)
+    # max_true_index: np.ndarray = np.argmax(y_true[:, :, 1], axis=1)
+
+    # buy_order_true: np.ndarray = np.all([max_true_index > min_true_index], axis=0)
+
     valid_actual: np.ndarray = np.all([max_true > min_true], axis=0)
 
     valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
+
+    close_below_band: np.ndarray = np.all([x_close < min_pred], axis=0)
+
+    close_above_band: np.ndarray = np.all([x_close > max_pred], axis=0)
+
+    close_in_band: np.ndarray = np.all(
+        [
+            x_close > min_pred,
+            x_close < max_pred,
+        ],
+        axis=0,
+    )
+
+    for i in range(len(min_pred)):
+        if not close_in_band[i] and valid_pred[i]:
+            band_val: float = max_pred[i] - min_pred[i]
+
+            if close_below_band[i]:
+                buy_order_pred[i] = True
+                min_pred[i] = x_close[i]
+                max_pred[i] = x_close[i] + band_val
+
+            elif close_above_band[i]:
+                buy_order_pred[i] = False
+                max_pred[i] = x_close[i]
+                min_pred[i] = x_close[i] - band_val
 
     pred_average: np.ndarray = (max_pred + min_pred) / 2
 
@@ -234,7 +235,7 @@ def function_make_win_graph_band_3(
         axis=0,
     )
 
-    simulation_3(min_pred, max_pred, buy_order_pred, y_true)
+    simulation(min_pred, max_pred, buy_order_pred, y_true)
 
     fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 
@@ -351,11 +352,11 @@ def function_make_win_graph_band_3(
     return
 
 
-def simulation_3(
-    buy_price_arr: np.ndarray,
-    sell_price_arr: np.ndarray,
-    order_type_buy_arr: list[bool],
-    real_price_arr: np.ndarray,
+def simulation(
+    min_pred: np.ndarray,
+    max_pred: np.ndarray,
+    buy_order_pred: list[bool],
+    y_true: np.ndarray,
 ) -> None:
     RISK_TO_REWARD_RATIO = 0.32
     # 1.48
@@ -371,12 +372,10 @@ def simulation_3(
     #
     #
 
-    is_more_than_5: bool = False
-
-    for RISK_TO_REWARD_RATIO in np.arange(0, 1.55, 0.05):
+    for RISK_TO_REWARD_RATIO in np.arange(0, 0.51, 0.01):
         wins_day_wise_list: list[float] = []
 
-        number_of_days: int = real_price_arr.shape[0]
+        number_of_days: int = y_true.shape[0]
 
         trade_taken_list: np.array = np.zeros(number_of_days, dtype=bool)
         trade_taken_and_out_list: np.array = np.zeros(number_of_days, dtype=bool)
@@ -384,15 +383,15 @@ def simulation_3(
         completed_at_closing_list: np.array = np.zeros(number_of_days, dtype=bool)
         expected_trades_list: np.array = np.zeros(number_of_days, dtype=bool)
 
-        for i_day in range(real_price_arr.shape[0]):
+        for i_day in range(y_true.shape[0]):
             trade_taken: bool = False
             trade_taken_and_out: bool = False
             stop_loss_hit: bool = False
 
-            is_trade_type_buy: bool = order_type_buy_arr[i_day]
+            is_trade_type_buy: bool = buy_order_pred[i_day]
 
-            buy_price: float = buy_price_arr[i_day]
-            sell_price: float = sell_price_arr[i_day]
+            buy_price: float = min_pred[i_day]
+            sell_price: float = max_pred[i_day]
             stop_loss: float = 0
 
             expected_reward: float = sell_price - buy_price
@@ -408,9 +407,9 @@ def simulation_3(
                 stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
 
             # step 2 - similated each tick
-            for i_tick in range(real_price_arr.shape[1]):
-                tick_min = real_price_arr[i_day, i_tick, 0]
-                tick_max = real_price_arr[i_day, i_tick, 1]
+            for i_tick in range(y_true.shape[1]):
+                tick_min = y_true[i_day, i_tick, 0]
+                tick_max = y_true[i_day, i_tick, 1]
 
                 if is_trade_type_buy:
                     # buy trade
@@ -451,12 +450,12 @@ def simulation_3(
             if trade_taken and not trade_taken_and_out:
                 if is_trade_type_buy:
                     # buy trade
-                    avg_close = (real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]) / 2
+                    avg_close = (y_true[i_day, -1, 0] + y_true[i_day, -1, 1]) / 2
                     net_day_reward = avg_close - buy_price
 
                 else:
                     # sell trade
-                    avg_close = (real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]) / 2
+                    avg_close = (y_true[i_day, -1, 0] + y_true[i_day, -1, 1]) / 2
                     net_day_reward = sell_price - avg_close
 
             if trade_taken:
@@ -524,20 +523,14 @@ def simulation_3(
 
         total_winings: float = sum(wins_day_wise_list)
         total_winings_per_day: float = total_winings / number_of_days
-
         z = pow(1 + total_winings_per_day, 250) - 1
-
-        if z > 0.03:
+        if z > 0.01:
             print(
                 "{:.2f}".format(RISK_TO_REWARD_RATIO),
                 "\t250_days\t\t",
-                "{:.4f}".format(z * 100),
+                "{:.6f}".format(z),
                 "\t\t",
-                "{:.4f}".format((pow(1 + total_winings_per_day * 5, 250) - 1) * 100),
+                "{:.6f}".format(pow(1 + total_winings_per_day * 5, 250) - 1),
             )
 
-            is_more_than_5 = True
-
-    if not is_more_than_5:
-        print("not iteration more than 1 perc")
     return
