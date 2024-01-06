@@ -14,8 +14,8 @@ def get_number_of_epochs():
 
 
 def custom_evaluate_safety_factor(
-    X_test,
-    Y_test,
+    X_data,
+    Y_data,
     y_type: str,
     testsize: float,
     now_datetime: str,
@@ -25,7 +25,7 @@ def custom_evaluate_safety_factor(
         {
             "metric_rmse_percent": km.metric_rmse_percent,
             "metric_abs_percent": km.metric_abs_percent,
-            "metric_new_idea_2": km_4.metric_new_idea_2,
+            "metric_new_idea_2": km_4.metric_new_idea,
             "metric_loss_comp_2": km_4.metric_loss_comp_2,
             "metric_win_percent": km_4.metric_win_percent,
             "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
@@ -38,7 +38,7 @@ def custom_evaluate_safety_factor(
         )
         model.summary()
 
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(X_data)
 
     SKIP_FIRST_PERCENTILE = 0.2
 
@@ -46,19 +46,22 @@ def custom_evaluate_safety_factor(
 
     y_pred = transform_y_array(y_arr=y_pred, skip_first_percentile=SKIP_FIRST_PERCENTILE, safety_factor=1)
 
-    Y_test = transform_y_array(y_arr=Y_test)
+    Y_data = transform_y_array(y_arr=Y_data)
 
     y_pred = correct_pred_values(y_pred)
 
+    if testsize == 0:
+        y_type = "band_4_valid"
+
     function_make_win_graph(
-        y_true=Y_test,
+        y_true=Y_data,
         y_pred=y_pred,
         testsize=testsize,
         y_type=y_type,
         now_datetime=now_datetime,
     )
 
-    function_error_132_graph(y_pred=y_pred, y_test=Y_test, now_datetime=now_datetime, y_type=y_type)
+    function_error_132_graph(y_pred=y_pred, y_test=Y_data, now_datetime=now_datetime, y_type=y_type)
 
     return
 
