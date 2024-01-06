@@ -14,27 +14,6 @@ def metric_band_hl_correction(y_true, y_pred):
     return error_hl_correction
 
 
-def metric_band_hl_correction_percent(y_true, y_pred):
-    mean_hl_height = K.mean(y_true[..., 1] - y_true[..., 0])
-
-    return metric_band_hl_correction(y_true, y_pred) / mean_hl_height * 100
-
-
-def metric_band_hl_wrongs_percent(y_true, y_pred):
-    hl_band_height_array = y_pred[..., 1] - y_pred[..., 0]
-
-    negative_hl_count = tf.reduce_sum(
-        tf.cast(tf.less(hl_band_height_array, 0), tf.float32),
-    )
-
-    total_count = K.cast(K.shape(hl_band_height_array)[1], dtype=K.floatx()) * K.cast(
-        K.shape(hl_band_height_array)[0],
-        dtype=K.floatx(),
-    )
-
-    return negative_hl_count / total_count * 100
-
-
 def metric_average_in(y_true, y_pred):
     average_pred = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2
     average_true = (y_true[:, :, 0] + y_true[:, :, 1]) / 2
@@ -93,7 +72,10 @@ def metric_new_idea_2(y_true, y_pred):
     pred_capture_fraction = pred_capture / total_capture_possible
 
     loss_amt = (
-        metric_rmse(y_true, y_pred) * 3 + metric_all_candle_in(y_true, y_pred) + metric_average_in(y_true, y_pred) * 2
+        metric_rmse(y_true, y_pred)
+        # + metric_all_candle_in(y_true, y_pred)
+        # + metric_average_in(y_true, y_pred) * 5
+        # + metric_band_height(y_true, y_pred) * 10
     )
 
     loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true * 5 + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
@@ -194,3 +176,12 @@ def metric_win_percent(y_true, y_pred):
     win_fraction = K.mean(K.cast(wins, dtype=K.floatx()))
 
     return win_fraction * 100
+
+
+def metric_band_height(y_true, y_pred):
+    # band height to approach true band height
+    error = (y_true[..., 0] + y_true[..., 1]) - (y_pred[..., 0] + y_pred[..., 1])
+
+    error_band_height = weighted_average(error)
+
+    return error_band_height
