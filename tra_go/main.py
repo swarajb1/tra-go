@@ -8,13 +8,13 @@ import band_4.training_yf_band_4 as an_4
 import keras_model as km
 import numpy as np
 import training_yf as an
-from keras.callbacks import TensorBoard, TerminateOnNaN
+from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = True
-prev_model: str = "2024-01-05 02-17"
+prev_model: str = "2024-01-08 16-59"
 
 
-NUMBER_OF_EPOCHS: int = 6000
+NUMBER_OF_EPOCHS: int = 5000
 BATCH_SIZE: int = 256
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -153,7 +153,6 @@ def main():
                     km_4.metric_win_percent,
                     km_4.metric_pred_capture_percent,
                     km_4.metric_win_pred_capture_percent,
-                    km_4.metric_all_candle_in,
                 ],
             )
 
@@ -162,7 +161,14 @@ def main():
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
             terNan = TerminateOnNaN()
 
-            callbacks = [tensorboard_callback, terNan]
+            mcp_save = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint",
+                save_best_only=True,
+                monitor="val_metric_rmse_percent",
+                mode="min",
+            )
+
+            callbacks = [tensorboard_callback, terNan, mcp_save]
 
             history = model.fit(
                 x=X_train,
