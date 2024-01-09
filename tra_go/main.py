@@ -77,8 +77,6 @@ def main():
                 ],
             )
 
-            # TODOO: make metrics list from here and pass to to traning_yf file in custom scope for loading model
-
             log_dir: str = f"training/logs/{now_datetime} - {Y_TYPE}"
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
