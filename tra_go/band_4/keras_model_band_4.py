@@ -3,15 +3,8 @@ from keras import backend as K
 from keras_model import metric_rmse, weighted_average
 
 
-def metric_band_hl_correction(y_true, y_pred):
-    # hl band height cannot be negative
-    hl_band_height_array = y_pred[..., 1] - y_pred[..., 0]
-
-    error_1 = K.maximum(-hl_band_height_array, 0)
-
-    error_hl_correction = weighted_average(error_1)
-
-    return error_hl_correction
+def metric_new_idea(y_true, y_pred):
+    return metric_rmse(y_true, y_pred) * 10 + metric_loss_comp_2(y_true, y_pred)
 
 
 def metric_average_in(y_true, y_pred):
@@ -43,44 +36,31 @@ def support_new_idea_1(y_true, y_pred):
 
 
 def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
-    cond_1 = K.all([max_true >= max_pred], axis=0)
-    cond_2 = K.all([max_pred >= min_pred], axis=0)
-    cond_3 = K.all([min_pred >= min_true], axis=0)
+    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
 
-    z_1 = K.mean((1 - K.cast(cond_1, dtype=K.floatx())) * K.abs(max_true - max_pred))
+    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
 
-    z_2 = K.mean((1 - K.cast(cond_2, dtype=K.floatx())) * K.abs(max_pred - min_pred))
+    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
 
-    z_3 = K.mean((1 - K.cast(cond_3, dtype=K.floatx())) * K.abs(min_pred - min_true))
-
-    win_amt_true = K.mean(
-        (1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_pred - min_pred),
-    )
+    win_amt_true = K.sum((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
 
     return z_1, z_2, z_3, win_amt_true
 
 
-def metric_new_idea(y_true, y_pred):
+def metric_loss_comp_2(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
 
-    z_1, z_2, z_3, win_amt_true = support_new_idea_2(min_pred, max_pred, min_true, max_true, wins)
+    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
 
-    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
+    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
 
-    total_capture_possible = K.sum(max_true / min_true - 1)
+    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
 
-    pred_capture_fraction = pred_capture / total_capture_possible
+    win_amt = K.mean(K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred))
 
-    loss_amt = (
-        metric_rmse(y_true, y_pred) * 5
-        # + metric_all_candle_in(y_true, y_pred)
-        + metric_average_in(y_true, y_pred) * 5
-        # + metric_band_height(y_true, y_pred) * 10
-    )
+    total_amt = K.mean(K.abs(max_true - min_true))
 
-    loss_comp_1 = z_1 + z_2 + z_3 + win_amt_true * 5 + (1 - pred_capture_fraction) * K.mean(max_true - min_true) * 10
-
-    return loss_amt + loss_comp_1
+    return z_1 + z_2 + z_3 + (total_amt - win_amt) * 10
 
 
 def metric_all_candle_in(y_true, y_pred):
@@ -126,22 +106,23 @@ def metric_all_candle_in(y_true, y_pred):
     return error
 
 
-def metric_loss_comp_2(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+def metric_all_candle_out_precent(y_true, y_pred):
+    min_true = y_true[..., 0]
+    max_true = y_true[..., 1]
 
-    cond_1 = K.all([max_true >= max_pred], axis=0)
-    cond_2 = K.all([max_pred >= min_pred], axis=0)
-    cond_3 = K.all([min_pred >= min_true], axis=0)
+    error = (
+        K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+    ) + (
+        K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+    )
 
-    z_1 = K.mean(1 - K.cast(cond_1, dtype=K.floatx()))
-
-    z_2 = K.mean(1 - K.cast(cond_2, dtype=K.floatx()))
-
-    z_3 = K.mean(1 - K.cast(cond_3, dtype=K.floatx()))
-
-    win_true = K.mean(1 - K.cast(wins, dtype=K.floatx()))
-
-    return z_1 + z_2 + z_3 + win_true
+    return error * 25
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):

@@ -23,45 +23,57 @@ def custom_evaluate_safety_factor(
     # convert y_test to same format as y_pred
     with custom_object_scope(
         {
+            "metric_new_idea": km_4.metric_new_idea,
             "metric_rmse_percent": km.metric_rmse_percent,
             "metric_abs_percent": km.metric_abs_percent,
-            "metric_new_idea_2": km_4.metric_new_idea,
             "metric_loss_comp_2": km_4.metric_loss_comp_2,
             "metric_win_percent": km_4.metric_win_percent,
             "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
             "metric_win_pred_capture_percent": km_4.metric_win_pred_capture_percent,
-            "metric_all_candle_in": km_4.metric_all_candle_in,
         },
     ):
         model = keras.models.load_model(
-            f"training/models/model - {now_datetime} - {y_type}",
+            f"training/models/model - {now_datetime} - {y_type} - modelCheckPoint",
         )
         model.summary()
 
     y_pred = model.predict(X_data)
 
     SKIP_FIRST_PERCENTILE = 0.2
+    SAFETY_FACTOR = 0.8
+
+    if testsize == 0:
+        y_type = y_type + "_valid"
 
     # low, high, open, close
 
-    y_pred = transform_y_array(y_arr=y_pred, skip_first_percentile=SKIP_FIRST_PERCENTILE, safety_factor=1)
-
     Y_data = transform_y_array(y_arr=Y_data)
 
-    y_pred = correct_pred_values(y_pred)
+    for SAFETY_FACTOR in [1, 0.8]:
+        y_pred = transform_y_array(
+            y_arr=y_pred,
+            skip_first_percentile=SKIP_FIRST_PERCENTILE,
+            safety_factor=SAFETY_FACTOR,
+        )
 
-    if testsize == 0:
-        y_type = "band_4_valid"
+        y_pred = correct_pred_values(y_pred)
 
-    function_make_win_graph(
-        y_true=Y_data,
-        y_pred=y_pred,
-        testsize=testsize,
-        y_type=y_type,
-        now_datetime=now_datetime,
-    )
+        function_make_win_graph(
+            y_true=Y_data,
+            y_pred=y_pred,
+            testsize=testsize,
+            y_type=y_type,
+            now_datetime=now_datetime,
+            safety_factor=SAFETY_FACTOR,
+        )
 
-    function_error_132_graph(y_pred=y_pred, y_test=Y_data, now_datetime=now_datetime, y_type=y_type)
+        function_error_132_graph(
+            y_pred=y_pred,
+            y_test=Y_data,
+            now_datetime=now_datetime,
+            y_type=y_type,
+            safety_factor=SAFETY_FACTOR,
+        )
 
     return
 
@@ -116,7 +128,7 @@ def correct_pred_values(y_arr: np.ndarray) -> np.ndarray:
     return res
 
 
-def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
+def function_error_132_graph(y_pred, y_test, now_datetime, y_type, safety_factor: float):
     error_a = np.abs(y_pred - y_test)
 
     new_array = np.empty(shape=(0, 4))
@@ -169,7 +181,7 @@ def function_error_132_graph(y_pred, y_test, now_datetime, y_type):
     plt.ylabel("perc", fontsize=15)
     plt.legend(fontsize=15)
 
-    filename = f"training/graphs/{y_type} - {now_datetime} - abs.png"
+    filename = f"training/graphs/{y_type} - {now_datetime} - abs - sf={safety_factor}.png"
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 
     plt.show()
@@ -183,6 +195,7 @@ def function_make_win_graph(
     y_type: str,
     now_datetime: str,
     testsize: float,
+    safety_factor: float,
 ):
     min_pred: np.ndarray = np.min(y_pred[:, :, 0], axis=1)
     max_pred: np.ndarray = np.max(y_pred[:, :, 1], axis=1)
@@ -285,7 +298,8 @@ def function_make_win_graph(
 
     ax = fig.add_subplot(111)
 
-    plt.axvline(x=int(len(max_true) * (1 - testsize)) - 0.5, color="blue")
+    if testsize != 0:
+        plt.axvline(x=int(len(max_true) * (1 - testsize)) - 0.5, color="blue")
 
     plt.fill_between(x, min_true, max_true, color="yellow")
 
@@ -340,7 +354,7 @@ def function_make_win_graph(
         fontsize=20,
     )
 
-    filename = f"training/graphs/{y_type} - {now_datetime} - Splot.png"
+    filename = f"training/graphs/{y_type} - {now_datetime} - Splot - sf={safety_factor}.png"
 
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 
