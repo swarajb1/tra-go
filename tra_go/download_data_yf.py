@@ -5,11 +5,12 @@
 import datetime
 import os
 import time
+from datetime import date as date_
 
 import pandas as pd
 import yfinance as yf
 
-other_config = {
+other_config: dict[str, dict[str, int]] = {
     "1m": {"number of days": 30, "batch days": 7},
     "2m": {"number of days": 60, "batch days": 60},
     "5m": {"number of days": 60, "batch days": 60},
@@ -19,7 +20,7 @@ other_config = {
     "1d": {"number of days": 9000, "batch days": 9000},
 }
 
-nifty50_tickers = [
+nifty50_tickers: list[str] = [
     "ADANIPORTS.NS",
     "APOLLOHOSP.NS",
     "ASIANPAINT.NS",
@@ -81,23 +82,23 @@ for INTERVAL in [
     "1h",
     "1d",
 ]:
-    NUMBER_OF_DAYS = other_config[INTERVAL]["number of days"]
-    BATCH_DAYS = other_config[INTERVAL]["batch days"]
+    NUMBER_OF_DAYS: int = other_config[INTERVAL]["number of days"]
+    BATCH_DAYS: int = other_config[INTERVAL]["batch days"]
     print(BATCH_DAYS)
     print(NUMBER_OF_DAYS)
 
     for ticker in nifty50_tickers:
         print(ticker)
-        last_date = datetime.date.today()
-        first_date = last_date - datetime.timedelta(days=NUMBER_OF_DAYS - 1)
+        last_date: date_ = datetime.date.today()
+        first_date: date_ = last_date - datetime.timedelta(days=NUMBER_OF_DAYS - 1)
 
         print("last_date = ", last_date)
         print("first_date = ", first_date)
 
-        end_date = last_date
-        start_date = end_date - datetime.timedelta(days=BATCH_DAYS - 1)
+        end_date: date_ = last_date
+        start_date: date_ = end_date - datetime.timedelta(days=BATCH_DAYS - 1)
 
-        all_data = pd.DataFrame()
+        all_data: pd.DataFrame = pd.DataFrame()
 
         count = 0
         print(count, "-----------\n")
