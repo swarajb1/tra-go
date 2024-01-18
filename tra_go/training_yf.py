@@ -263,6 +263,24 @@ def data_scaling(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def get_prev_close(df: pd.DataFrame) -> np.ndarray:
+    one_day = 375
+    num_days = len(df) // one_day
+
+    res: np.ndarray = np.zeros(num_days)
+
+    # for other days
+    for j in range(num_days - 1, 0, -1):
+        prev_close = df.loc[j * one_day - 1, "close"]
+        res[j] = prev_close
+
+    # for 1st day
+    open_val = df.at[0, "open"]
+    res[0] = open_val
+
+    return res
+
+
 def data_my_zone(df: pd.DataFrame, interval) -> pd.DataFrame:
     df["to_add"] = df["datetime"].apply(lambda x: is_in_zone(x, interval=interval))
 
@@ -405,14 +423,24 @@ def train_test_split(
         train_y = by_date_df_array(df_train_y[selected_columns_1])
         test_y = by_date_df_array(df_test_y[selected_columns_1])
 
+        train_prev_close = get_prev_close(df_train)
+        test_prev_close = get_prev_close(df_test)
+
+        return (
+            (train_x, train_y, train_prev_close),
+            (test_x, test_y, test_prev_close),
+        )
+
     return ((train_x, train_y), (test_x, test_y))
 
 
 def last_close_value(df: pd.DataFrame) -> np.ndarray:
     res = np.array([])
 
-    for i in range(len(df) // 132):
-        res = np.append(res, df.iloc[i * 132 + 131]["close"])
+    res = np.append(res, df.iloc[0]["open"])
+
+    for i in range(1, len(df) // 132):
+        res = np.append(res, df.iloc[(i - 1) * 132 + 131]["close"])
 
     return res
 
@@ -568,3 +596,7 @@ def append_test_train_arr(X_train, Y_train, X_test, Y_test):
     Y_arr = np.append(Y_train, Y_test, axis=0)
 
     return X_arr, Y_arr
+
+
+def round_to_nearest_0_05(value):
+    return np.round(value * 20) / 20

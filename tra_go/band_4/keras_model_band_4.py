@@ -4,7 +4,7 @@ from keras_model import metric_rmse, weighted_average
 
 
 def metric_new_idea(y_true, y_pred):
-    return metric_rmse(y_true, y_pred) * 10 + metric_loss_comp_2(y_true, y_pred)
+    return metric_rmse(y_true, y_pred) * 5 + metric_average_in(y_true, y_pred) * 5 + metric_loss_comp_2(y_true, y_pred)
 
 
 def metric_average_in(y_true, y_pred):
@@ -56,11 +56,13 @@ def metric_loss_comp_2(y_true, y_pred):
 
     z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
 
+    win_amt_true_error = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+
     win_amt = K.mean(K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred))
 
     total_amt = K.mean(K.abs(max_true - min_true))
 
-    return z_1 + z_2 + z_3 + (total_amt - win_amt) * 10
+    return z_1 + z_2 + z_3 + (win_amt_true_error + (total_amt - win_amt)) * 30
 
 
 def metric_all_candle_in(y_true, y_pred):

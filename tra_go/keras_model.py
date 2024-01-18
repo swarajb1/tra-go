@@ -6,7 +6,7 @@ from tensorflow import keras
 
 # keep total neurons below 2700 (900 * 3)
 
-NUMBER_OF_NEURONS = 512
+NUMBER_OF_NEURONS = 900
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
@@ -69,16 +69,12 @@ def metric_abs(y_true, y_pred):
 
 
 def metric_abs_percent(y_true, y_pred):
-    # Calculate the absolute mean error (MAE)
-
     error = y_true - y_pred
 
     return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
 
 
 def metric_rmse_percent(y_true, y_pred):
-    # Calculate the root mean squared error (RMSE)
-
     error = y_true - y_pred
 
     return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
@@ -86,6 +82,4 @@ def metric_rmse_percent(y_true, y_pred):
 
 def weighted_average(array):
     # weight average of an array with mea and rmse
-    return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(
-        K.mean(K.square(array)),
-    )
+    return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(K.mean(K.square(array)))
