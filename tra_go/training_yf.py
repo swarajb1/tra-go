@@ -6,6 +6,13 @@ import pandas as pd
 import pytz
 
 
+class DataCleanerYf:
+    def __init__(self, df: pd.DataFrame, ticker: str, interval: str):
+        self.df = df
+        self.ticker = ticker
+        self.interval = interval
+
+
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
     # which_half = 0, means 1st half - input data
     # which_half = 1, means 2nd half - predict data
@@ -133,7 +140,7 @@ def get_csv_file_path(ticker, interval) -> str:
     return file_path
 
 
-def data_cleaning(df) -> pd.DataFrame:
+def data_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     # start time = 0915
     # last time = 1529
     # total minutes = 375
@@ -306,6 +313,7 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
     df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
     all_dates = df["date"].unique()
     num_days = len(all_dates)
+
     training_dates = all_dates[: int(num_days * (1 - test_size))]
     testing_dates = all_dates[int(num_days * (1 - test_size)) :]
 
@@ -377,6 +385,9 @@ def train_test_split(
     # for the very first day of the dataset - divide the prices by the opening price.
 
     df = data_cleaning(data_df)
+
+    df_cleaned = df.copy(deep=True)
+
     # getting clean and my zone data
     df = data_scaling(df)
     # getting scaled data according to previous day closing price, in percentages terms
@@ -423,8 +434,10 @@ def train_test_split(
         train_y = by_date_df_array(df_train_y[selected_columns_1])
         test_y = by_date_df_array(df_test_y[selected_columns_1])
 
-        train_prev_close = get_prev_close(df_train)
-        test_prev_close = get_prev_close(df_test)
+        df_train_c, df_test_c = data_split_train_test(df=df_cleaned, test_size=test_size)
+
+        train_prev_close = get_prev_close(df_train_c)
+        test_prev_close = get_prev_close(df_test_c)
 
         return (
             (train_x, train_y, train_prev_close),
@@ -591,11 +604,12 @@ def get_x_y_individual_data(
     return arr_x, arr_y
 
 
-def append_test_train_arr(X_train, Y_train, X_test, Y_test):
+def append_test_train_arr(X_train, Y_train, X_test, Y_test, train_prev_close, test_prev_close):
     X_arr = np.append(X_train, X_test, axis=0)
     Y_arr = np.append(Y_train, Y_test, axis=0)
+    prev_arr = np.append(train_prev_close, test_prev_close, axis=0)
 
-    return X_arr, Y_arr
+    return X_arr, Y_arr, prev_arr
 
 
 def round_to_nearest_0_05(value):
