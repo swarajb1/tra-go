@@ -4,13 +4,13 @@ from datetime import datetime
 
 # import band_2.training_yf_band_2 as an_2
 import band_4.keras_model_band_4 as km_4
-import band_4.training_yf_band_4 as an_4
 import keras_model as km
 import training_yf as an
+from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-01-08 22-34"
+prev_model: str = "2024-01-11 15-56"
 
 
 NUMBER_OF_EPOCHS: int = 7000
@@ -116,7 +116,7 @@ def main():
     #     )
 
     if Y_TYPE == "band_4":
-        (X_train, Y_train), (X_test, Y_test), prev_close = an.train_test_split(
+        (X_train, Y_train, train_prev_close), (X_test, Y_test, test_prev_close) = an.train_test_split(
             data_df=df,
             test_size=TEST_SIZE,
             y_type=Y_TYPE,
@@ -182,29 +182,56 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        X_all, Y_all = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
+        X_all, Y_all, prev_close = an.append_test_train_arr(
+            X_train,
+            Y_train,
+            X_test,
+            Y_test,
+            train_prev_close,
+            test_prev_close,
+        )
 
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        an_4.custom_evaluate_safety_factor(
+        full_data_custom_evaluation = CustomEvaluation(
             X_data=X_all,
             Y_data=Y_all,
+            prev_close=prev_close,
             y_type=Y_TYPE,
             test_size=TEST_SIZE,
             now_datetime=now_datetime,
         )
 
+        # an_4.custom_evaluate_safety_factor(
+        #     X_data=X_all,
+        #     Y_data=Y_all,
+        #     prev_close=prev_close,
+        #     y_type=Y_TYPE,
+        #     test_size=TEST_SIZE,
+        #     now_datetime=now_datetime,
+        # )
+
         print("\n" * 4, "*" * 1000, "\n" * 4)
         print("only validation data now")
 
-        an_4.custom_evaluate_safety_factor(
+        valid_data_custom_evaluation = CustomEvaluation(
             X_data=X_test,
             Y_data=Y_test,
+            prev_close=test_prev_close,
             y_type=Y_TYPE,
             test_size=0,
             now_datetime=now_datetime,
         )
+
+        # an_4.custom_evaluate_safety_factor(
+        #     X_data=X_test,
+        #     Y_data=Y_test,
+        #     prev_close=test_prev_close,
+        #     y_type=Y_TYPE,
+        #     test_size=0,
+        #     now_datetime=now_datetime,
+        # )
 
 
 if __name__ == "__main__":
