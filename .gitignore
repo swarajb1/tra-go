@@ -8,4 +8,5 @@ __pycache__
 training/logs
 training/past_logs
 training/graphs
-data_stock_price_yf copy
+data_stock_price_yf_copy
+output.diff
