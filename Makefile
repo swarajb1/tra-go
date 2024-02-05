@@ -11,6 +11,8 @@ ifeq ($(PYTHON),)
 endif
 
 
+PYTHON = ./.venv/bin/python
+
 WORKDIR=tra_go
 
 
@@ -21,15 +23,13 @@ install:  ## Install poetry to run on local
 	poetry run pre-commit install
 
 run: ## run the program
-	PYTHONPATH=$(WORKDIR)/ python3 main.py
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py
 
 clean:
 	rm -rf __pycache__
 
 
 new-yf-data:
-	PYTHONPATH=$(WORKDIR) tra_go/download_yf_data.py
-
-
-gst:
-	gst
+	rm -rf data_stock_price_yf_copy
+	cp -r data_stock_price_yf data_stock_price_yf_copy
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/download_data_yf.py
