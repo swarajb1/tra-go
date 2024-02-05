@@ -977,13 +977,13 @@ files = [
 
 [[package]]
 name = "kiteconnect"
-version = "4.2.0"
+version = "5.0.0"
 description = "The official Python client for the Kite Connect trading API"
 optional = false
 python-versions = "*"
 files = [
-    {file = "kiteconnect-4.2.0-py3-none-any.whl", hash = "sha256:88b346db38d22470ca2f068c44e454be7cf181d9a9346aa2289df5a3955db527"},
-    {file = "kiteconnect-4.2.0.tar.gz", hash = "sha256:ea8a323eab044016880e4ffd62695a99ff5c035cafef5eeb0dc4c1355234fbfb"},
+    {file = "kiteconnect-5.0.0-py3-none-any.whl", hash = "sha256:9f48405bb967ca815c135d8ecfdb73a3fa1e2573cd96ca2c07de84d685a7e684"},
+    {file = "kiteconnect-5.0.0.tar.gz", hash = "sha256:a0e9056d3e02d4eed7a0690dfa1a732411d660a0811ec8d2ba9108f1dd6bc32c"},
 ]
 
 [package.dependencies]
@@ -2626,4 +2626,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.12"
-content-hash = "d88eeefa4b1da3d81d4596485586154618e420b3aa875faf4c7fc27472ce2a67"
+content-hash = "b066d3b88b55742698cc2400478a5c8a5b084f29508270dd1057b41223cb78d8"
