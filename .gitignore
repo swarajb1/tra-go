@@ -1,12 +1,8 @@
 .env
 .DS_Store
 .venv
-logs
-models
-models_saved
 __pycache__
-training/logs
-training/past_logs
-training/graphs
+training/
+
 data_stock_price_yf_copy
 output.diff
