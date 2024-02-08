@@ -1,4 +1,3 @@
-import multiprocessing
 import time
 from datetime import datetime
 
@@ -10,7 +9,7 @@ from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-01-11 15-56"
+prev_model: str = "2024-02-02 09-09"
 
 
 NUMBER_OF_EPOCHS: int = 7000
@@ -32,7 +31,6 @@ def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
     # total cores = 8 in this mac.
-    num_cores: int = multiprocessing.cpu_count()
     num_workers: int = 1
 
     # if Y_TYPE == "band_2":
@@ -150,6 +148,7 @@ def main():
                     km_4.metric_win_percent,
                     km_4.metric_pred_capture_percent,
                     km_4.metric_win_pred_capture_percent,
+                    km_4.metric_min_checkpoint,
                 ],
             )
 
@@ -165,7 +164,14 @@ def main():
                 mode="min",
             )
 
-            callbacks = [tensorboard_callback, terNan, mcp_save]
+            mcp_save_2 = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-2",
+                save_best_only=True,
+                monitor="val_metric_min_checkpoint",
+                mode="min",
+            )
+
+            callbacks = [tensorboard_callback, terNan, mcp_save, mcp_save_2]
 
             history = model.fit(
                 x=X_train,
@@ -203,16 +209,7 @@ def main():
             now_datetime=now_datetime,
         )
 
-        # an_4.custom_evaluate_safety_factor(
-        #     X_data=X_all,
-        #     Y_data=Y_all,
-        #     prev_close=prev_close,
-        #     y_type=Y_TYPE,
-        #     test_size=TEST_SIZE,
-        #     now_datetime=now_datetime,
-        # )
-
-        print("\n" * 4, "*" * 1000, "\n" * 4)
+        print("\n" * 4, "*" * 500, "\n" * 4)
         print("only validation data now")
 
         valid_data_custom_evaluation = CustomEvaluation(
@@ -223,15 +220,6 @@ def main():
             test_size=0,
             now_datetime=now_datetime,
         )
-
-        # an_4.custom_evaluate_safety_factor(
-        #     X_data=X_test,
-        #     Y_data=Y_test,
-        #     prev_close=test_prev_close,
-        #     y_type=Y_TYPE,
-        #     test_size=0,
-        #     now_datetime=now_datetime,
-        # )
 
 
 if __name__ == "__main__":
