@@ -4,7 +4,7 @@ from keras_model import metric_rmse, weighted_average
 
 
 def metric_new_idea(y_true, y_pred):
-    return metric_rmse(y_true, y_pred) * 5 + metric_average_in(y_true, y_pred) * 5 + metric_loss_comp_2(y_true, y_pred)
+    return metric_rmse(y_true, y_pred) + metric_average_in(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
 
 
 def metric_average_in(y_true, y_pred):
@@ -62,7 +62,7 @@ def metric_loss_comp_2(y_true, y_pred):
 
     total_amt = K.mean(K.abs(max_true - min_true))
 
-    return z_1 + z_2 + z_3 + (win_amt_true_error + (total_amt - win_amt)) * 30
+    return z_1 + z_2 + z_3 + (win_amt_true_error + (total_amt - win_amt)) * 2
 
 
 def metric_all_candle_in(y_true, y_pred):
@@ -168,3 +168,14 @@ def metric_band_height(y_true, y_pred):
     error_band_height = weighted_average(error)
 
     return error_band_height
+
+
+def metric_min_checkpoint(y_true, y_pred):
+    average_pred = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2
+    average_true = (y_true[:, :, 0] + y_true[:, :, 1]) / 2
+
+    error_average_in = average_pred - average_true
+
+    error_fraction_average_in = weighted_average(error_average_in) / K.mean(K.abs(average_true))
+
+    return (error_fraction_average_in + (1 - metric_pred_capture_percent(y_true, y_pred) / 100) * 10) / 11

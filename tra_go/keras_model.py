@@ -6,7 +6,7 @@ from tensorflow import keras
 
 # keep total neurons below 2700 (900 * 3)
 
-NUMBER_OF_NEURONS = 900
+NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
 
