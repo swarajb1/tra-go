@@ -10,7 +10,7 @@ from training_yf import round_to_nearest_0_05
 import tra_go.band_4.keras_model_band_4 as km_4
 
 
-def get_number_of_epochs():
+def get_number_of_epochs() -> int:
     from main import NUMBER_OF_EPOCHS
 
     return NUMBER_OF_EPOCHS
@@ -43,7 +43,7 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint"
+        folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-2"
 
         if not os.path.exists(folder_path):
             folder_path: str = f"training/models_saved/model - {self.now_datetime} - {self.y_type} - modelCheckPoint"
@@ -58,12 +58,13 @@ class CustomEvaluation:
                 "metric_win_pred_capture_percent": km_4.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
                 "metric_all_candle_out_precent": km_4.metric_pred_capture_percent,
+                "metric_min_checkpoint": km_4.metric_min_checkpoint,
             },
         ):
             model = keras.models.load_model(folder_path)
             model.summary()
 
-        y_pred: np.ndarray = model.predict(self.X_data)
+        self.y_pred: np.ndarray = model.predict(self.X_data)
 
         x_close: np.ndarray = self.X_data[:, -1, 3]
         x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
@@ -73,16 +74,17 @@ class CustomEvaluation:
         # Y_data = self.transform_y_array(y_arr=self.Y_data)
 
         # for SAFETY_FACTOR in [1, 0.8]:
-        y_pred = self.transform_y_pred(y_arr=y_pred)
+        self.y_pred_new = self.transform_y_pred(y_arr=self.y_pred)
 
-        y_pred = self.correct_pred_values(y_pred)
+        self.y_pred_new = self.correct_pred_values(self.y_pred_new)
 
-        y_pred_real = round_to_nearest_0_05(y_pred * self.prev_close[:, np.newaxis, np.newaxis])
-        Y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
+        self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis, np.newaxis])
+        self.Y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
-        self.function_make_win_graph(y_true=Y_data_real, y_pred=y_pred_real, x_close=x_close_real)
+        self.function_make_win_graph(y_true=self.Y_data_real, y_pred=self.y_pred_real, x_close=x_close_real)
 
-        self.function_error_132_graph(y_true=Y_data_real, y_pred=y_pred_real)
+        self.function_error_132_graph(y_true=self.Y_data_real, y_pred=self.y_pred_real)
+
         return
 
     def transform_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
@@ -603,3 +605,25 @@ class CustomEvaluation:
         # if not is_more_than_5:
         #     print("not iteration more than 1 perc")
         return
+
+    def day_candle_pred_true(self, i_day: int):
+        error = self.Y_data_real - self.y_pred_real
+
+        y_l = error[i_day, :, 0]
+        y_h = error[i_day, :, 1]
+        y_o = error[i_day, :, 2]
+        y_c = error[i_day, :, 3]
+
+        x = np.arange(error.shape[1])
+
+        plt.figure(figsize=(16, 9))
+        plt.title(f"Day - {i_day}")
+
+        plt.axhline(y=0, xmin=x[0], xmax=x[-1], color="blue")
+
+        plt.plot(x, y_l, label="low Δ")
+        plt.plot(x, y_h, label="high Δ")
+        plt.plot(x, y_o, label="open Δ")
+        plt.plot(x, y_c, label="close Δ")
+
+        return None
