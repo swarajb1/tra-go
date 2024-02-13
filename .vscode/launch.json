@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Python: Current File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "tra_go/main.py",
       "console": "integratedTerminal",
