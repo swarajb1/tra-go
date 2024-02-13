@@ -25,7 +25,8 @@ class CustomEvaluation:
         y_type: str,
         test_size: float,
         now_datetime: str,
-        skip_first_percentile: float = 0.2,
+        skip_first_percentile: float = 0.20,
+        skip_last_percentile: float = 0.20,
         safety_factor=0.8,
     ):
         self.X_data = X_data
@@ -36,6 +37,7 @@ class CustomEvaluation:
         self.now_datetime = now_datetime
 
         self.SKIP_FIRST_PERCENTILE = skip_first_percentile
+        self.SKIP_LAST_PERCENTILE = skip_last_percentile
         self.SAFETY_FACTOR = safety_factor
 
         self.number_of_days = self.X_data.shape[0]
@@ -43,7 +45,7 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-2"
+        folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
 
         if not os.path.exists(folder_path):
             folder_path: str = f"training/models_saved/model - {self.now_datetime} - {self.y_type} - modelCheckPoint"
@@ -88,12 +90,18 @@ class CustomEvaluation:
         return
 
     def transform_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eiminated_element_index: int = int(self.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
+        first_non_eliminated_element_index: int = int(self.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
+        last_non_eliminated_element_index: int = y_arr.shape[1] - int(self.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+
+        last_skipped_elements: int = int(self.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
         res: np.ndarray = y_arr.copy()
 
-        for i in range(first_non_eiminated_element_index):
-            res[:, i, :] = y_arr[:, first_non_eiminated_element_index, :]
+        for i in range(first_non_eliminated_element_index):
+            res[:, i, :] = y_arr[:, first_non_eliminated_element_index, :]
+
+        for i in range(last_skipped_elements):
+            res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
         if self.SAFETY_FACTOR < 1:
             res[:, :, 0] = (res[:, :, 0] + res[:, :, 1]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
