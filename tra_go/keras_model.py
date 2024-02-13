@@ -1,5 +1,5 @@
 from keras import backend as K
-from keras.layers import LSTM, Dense, Dropout
+from keras.layers import LSTM, Bidirectional, Dense, Dropout
 from tensorflow import keras
 
 # PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
@@ -24,6 +24,7 @@ def get_untrained_model(X_train, y_type):
             activation="relu",
         ),
     )
+
     model.add(Dropout(INITIAL_DROPOUT / 100))
 
     for i in range(NUMBER_OF_LAYERS - 1):
@@ -44,6 +45,47 @@ def get_untrained_model(X_train, y_type):
         model.add(Dense(4))
 
     model.summary()
+    print("\n" * 2)
+
+    return model
+
+
+def get_untrained_model_new(X_train, y_type):
+    model = keras.Sequential()
+
+    model.add(
+        Bidirectional(
+            LSTM(
+                units=NUMBER_OF_NEURONS,
+                input_shape=(X_train[0].shape),
+                return_sequences=True,
+                activation="relu",
+            ),
+        ),
+    )
+
+    model.add(Dropout(INITIAL_DROPOUT / 100))
+
+    for i in range(NUMBER_OF_LAYERS - 1):
+        model.add(
+            Bidirectional(
+                LSTM(
+                    units=NUMBER_OF_NEURONS,
+                    return_sequences=True,
+                    activation="relu",
+                ),
+            ),
+        )
+        #  dropout value decreases in exponential fashion.
+        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
+
+    model.add(Dense(4))
+
+    model.build(X_train.shape)
+
+    model.summary()
+
+    print("\n" * 2)
 
     return model
 
