@@ -9,7 +9,7 @@ from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-02-02 09-09"
+prev_model: str = "2024-02-11 18-20"
 
 
 NUMBER_OF_EPOCHS: int = 7000
@@ -127,7 +127,8 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+            # model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+            model = km.get_untrained_model_new(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
             print("training elememt shape\t", X_train[0].shape)
@@ -149,6 +150,7 @@ def main():
                     km_4.metric_pred_capture_percent,
                     km_4.metric_win_pred_capture_percent,
                     km_4.metric_min_checkpoint,
+                    km_4.metric_new_idea,
                 ],
             )
 
@@ -171,7 +173,14 @@ def main():
                 mode="min",
             )
 
-            callbacks = [tensorboard_callback, terNan, mcp_save, mcp_save_2]
+            mcp_save_3 = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-3",
+                save_best_only=True,
+                monitor="val_metric_new_idea",
+                mode="min",
+            )
+
+            callbacks = [tensorboard_callback, terNan, mcp_save, mcp_save_2, mcp_save_3]
 
             history = model.fit(
                 x=X_train,
