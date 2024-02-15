@@ -155,3 +155,66 @@ class LossDifferenceCallback(tf.keras.callbacks.Callback):
     def update_tensorboard(self, epoch, loss_difference):
         with self.writer.as_default():
             tf.summary.scalar("Loss Difference", loss_difference, step=epoch)
+
+
+if type == "band_4":
+
+    def metric_all_candle_in(y_true, y_pred):
+        min_true = y_true[..., 0]
+        max_true = y_true[..., 1]
+
+        error = (
+            K.mean(
+                (1 - K.cast(K.all([max_true >= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+                * K.abs(max_true - y_pred[..., 0]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([max_true >= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+                * K.abs(max_true - y_pred[..., 1]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([max_true >= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+                * K.abs(max_true - y_pred[..., 2]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([max_true >= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+                * K.abs(max_true - y_pred[..., 3]),
+            )
+        ) + (
+            K.mean(
+                (1 - K.cast(K.all([min_true <= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+                * K.abs(min_true - y_pred[..., 0]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([min_true <= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+                * K.abs(min_true - y_pred[..., 1]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([min_true <= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+                * K.abs(min_true - y_pred[..., 2]),
+            )
+            + K.mean(
+                (1 - K.cast(K.all([min_true <= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+                * K.abs(min_true - y_pred[..., 3]),
+            )
+        )
+
+        return error
+
+    def metric_all_candle_out_precent(y_true, y_pred):
+        min_true = y_true[..., 0]
+        max_true = y_true[..., 1]
+
+        error = (
+            K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+        ) + (
+            K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 0]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 1]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 2]], axis=0), dtype=K.floatx()))
+            + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 3]], axis=0), dtype=K.floatx()))
+        )
+
+        return error * 25
