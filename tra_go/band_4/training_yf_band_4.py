@@ -48,7 +48,7 @@ class CustomEvaluation:
         folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
 
         if not os.path.exists(folder_path):
-            folder_path: str = f"training/models_saved/model - {self.now_datetime} - {self.y_type} - modelCheckPoint"
+            folder_path: str = f"training/models_saved/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
 
         with custom_object_scope(
             {
@@ -59,8 +59,6 @@ class CustomEvaluation:
                 "metric_win_percent": km_4.metric_win_percent,
                 "metric_win_pred_capture_percent": km_4.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
-                "metric_all_candle_out_precent": km_4.metric_pred_capture_percent,
-                "metric_min_checkpoint": km_4.metric_min_checkpoint,
             },
         ):
             model = keras.models.load_model(folder_path)
@@ -76,7 +74,7 @@ class CustomEvaluation:
         # Y_data = self.transform_y_array(y_arr=self.Y_data)
 
         # for SAFETY_FACTOR in [1, 0.8]:
-        self.y_pred_new = self.transform_y_pred(y_arr=self.y_pred)
+        self.y_pred_new = self.truncated_y_pred(y_arr=self.y_pred)
 
         self.y_pred_new = self.correct_pred_values(self.y_pred_new)
 
@@ -89,7 +87,7 @@ class CustomEvaluation:
 
         return
 
-    def transform_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
+    def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
         first_non_eliminated_element_index: int = int(self.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
         last_non_eliminated_element_index: int = y_arr.shape[1] - int(self.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
@@ -333,8 +331,8 @@ class CustomEvaluation:
 
         ax = fig.add_subplot(111)
 
-        if self.test_size != 0:
-            plt.axvline(x=int(len(max_true) * (1 - self.test_size)) - 0.5, color="blue")
+        # if self.test_size != 0:
+        #     plt.axvline(x=int(len(max_true) * (1 - self.test_size)) - 0.5, color="blue")
 
         plt.fill_between(x, min_true, max_true, color="yellow")
 
@@ -364,7 +362,7 @@ class CustomEvaluation:
                 )
                 ax.set_xlabel("days", fontsize=15)
 
-        ax.set_ylabel("fraction of prev close", fontsize=15)
+        ax.set_ylabel("price", fontsize=15)
 
         print("\n\n")
         print("valid_act\t", round(fraction_valid_actual * 100, 2), " %")
