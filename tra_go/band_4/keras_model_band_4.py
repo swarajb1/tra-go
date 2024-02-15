@@ -65,68 +65,6 @@ def metric_loss_comp_2(y_true, y_pred):
     return z_1 + z_2 + z_3 + (win_amt_true_error + (total_amt - win_amt)) * 2
 
 
-def metric_all_candle_in(y_true, y_pred):
-    min_true = y_true[..., 0]
-    max_true = y_true[..., 1]
-
-    error = (
-        K.mean(
-            (1 - K.cast(K.all([max_true >= y_pred[..., 0]], axis=0), dtype=K.floatx()))
-            * K.abs(max_true - y_pred[..., 0]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([max_true >= y_pred[..., 1]], axis=0), dtype=K.floatx()))
-            * K.abs(max_true - y_pred[..., 1]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([max_true >= y_pred[..., 2]], axis=0), dtype=K.floatx()))
-            * K.abs(max_true - y_pred[..., 2]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([max_true >= y_pred[..., 3]], axis=0), dtype=K.floatx()))
-            * K.abs(max_true - y_pred[..., 3]),
-        )
-    ) + (
-        K.mean(
-            (1 - K.cast(K.all([min_true <= y_pred[..., 0]], axis=0), dtype=K.floatx()))
-            * K.abs(min_true - y_pred[..., 0]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([min_true <= y_pred[..., 1]], axis=0), dtype=K.floatx()))
-            * K.abs(min_true - y_pred[..., 1]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([min_true <= y_pred[..., 2]], axis=0), dtype=K.floatx()))
-            * K.abs(min_true - y_pred[..., 2]),
-        )
-        + K.mean(
-            (1 - K.cast(K.all([min_true <= y_pred[..., 3]], axis=0), dtype=K.floatx()))
-            * K.abs(min_true - y_pred[..., 3]),
-        )
-    )
-
-    return error
-
-
-def metric_all_candle_out_precent(y_true, y_pred):
-    min_true = y_true[..., 0]
-    max_true = y_true[..., 1]
-
-    error = (
-        K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 0]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 1]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 2]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([max_true >= y_pred[..., 3]], axis=0), dtype=K.floatx()))
-    ) + (
-        K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 0]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 1]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 2]], axis=0), dtype=K.floatx()))
-        + K.mean(1 - K.cast(K.all([min_true <= y_pred[..., 3]], axis=0), dtype=K.floatx()))
-    )
-
-    return error * 25
-
-
 def metric_win_pred_capture_percent(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
 
@@ -159,23 +97,3 @@ def metric_win_percent(y_true, y_pred):
     win_fraction = K.mean(K.cast(wins, dtype=K.floatx()))
 
     return win_fraction * 100
-
-
-def metric_band_height(y_true, y_pred):
-    # band height to approach true band height
-    error = (y_true[..., 0] + y_true[..., 1]) - (y_pred[..., 0] + y_pred[..., 1])
-
-    error_band_height = weighted_average(error)
-
-    return error_band_height
-
-
-def metric_min_checkpoint(y_true, y_pred):
-    average_pred = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2
-    average_true = (y_true[:, :, 0] + y_true[:, :, 1]) / 2
-
-    error_average_in = average_pred - average_true
-
-    error_fraction_average_in = weighted_average(error_average_in) / K.mean(K.abs(average_true))
-
-    return (error_fraction_average_in + (1 - metric_pred_capture_percent(y_true, y_pred) / 100) * 10) / 11
