@@ -1,17 +1,14 @@
-import tensorflow as tf
-from tensorflow import keras
-from keras import backend as K
-from keras.callbacks import TensorBoard, ModelCheckpoint
+import multiprocessing
 import time
 from datetime import datetime
-import multiprocessing
-import numpy as np
-from keras.utils import custom_object_scope
-from sklearn.model_selection import train_test_split
 
 import keras_model as km
+import numpy as np
 import training_yf as an
-
+from keras.callbacks import TensorBoard, TerminateOnNaN
+from keras.utils import custom_object_scope
+from sklearn.model_selection import train_test_split
+from tensorflow import keras
 
 # 2_mods = 2 hl models
 # terminal command: tensorboard --logdir=training/logs/
@@ -79,10 +76,10 @@ def main():
                             "custom_loss_2_mods_high": km.custom_loss_2_mods_high,
                             "custom_loss_2_mods_low": km.custom_loss_2_mods_low,
                             "metric_rmse": km.metric_rmse,
-                        }
+                        },
                     ):
                         model = keras.models.load_model(
-                            f"training/models_saved/model - {prev_model} - {Y_TYPE} - {key}"
+                            f"training/models_saved/model - {prev_model} - {Y_TYPE} - {key}",
                         )
                         model.summary()
                 else:
@@ -133,23 +130,26 @@ def main():
 
                 print(f"\nmodel - {key} : training done. \n")
 
-        X_test_h = np.append(data_dict["high"]["train_x"], data_dict["high"]["test_x"], axis=0)
-        Y_test_h = np.append(data_dict["high"]["train_y"], data_dict["high"]["test_y"], axis=0)
-        X_test_l = np.append(data_dict["low"]["train_x"], data_dict["low"]["test_x"], axis=0)
-        Y_test_l = np.append(data_dict["low"]["train_y"], data_dict["low"]["test_y"], axis=0)
+            X_test_h = np.append(data_dict["high"]["train_x"], data_dict["high"]["test_x"], axis=0)
+            Y_test_h = np.append(data_dict["high"]["train_y"], data_dict["high"]["test_y"], axis=0)
+            X_test_l = np.append(data_dict["low"]["train_x"], data_dict["low"]["test_x"], axis=0)
+            Y_test_l = np.append(data_dict["low"]["train_y"], data_dict["low"]["test_y"], axis=0)
 
-        an.custom_evaluate_safety_factor_2_mods(
-            X_test_h=X_test_h,
-            Y_test_h=Y_test_h,
-            X_test_l=X_test_l,
-            Y_test_l=Y_test_l,
-            testsize=TEST_SIZE,
-            now_datetime=now_datetime,
-        )
+            an.custom_evaluate_safety_factor_2_mods(
+                X_test_h=X_test_h,
+                Y_test_h=Y_test_h,
+                X_test_l=X_test_l,
+                Y_test_l=Y_test_l,
+                testsize=TEST_SIZE,
+                now_datetime=now_datetime,
+            )
 
     elif Y_TYPE == "band":
         (X_train, Y_train), (X_test, Y_test) = an.train_test_split(
-            data_df=df, test_size=TEST_SIZE, y_type=Y_TYPE, interval=INTERVAL
+            data_df=df,
+            test_size=TEST_SIZE,
+            y_type=Y_TYPE,
+            interval=INTERVAL,
         )
 
         if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
@@ -205,20 +205,100 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        X_test = np.append(X_train, X_test, axis=0)
-        Y_test = np.append(Y_train, Y_test, axis=0)
-        zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
-        Y_test = np.concatenate((Y_test, zeros), axis=2)
+            X_test = np.append(X_train, X_test, axis=0)
+            Y_test = np.append(Y_train, Y_test, axis=0)
+            zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
+            Y_test = np.concatenate((Y_test, zeros), axis=2)
 
-        print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
-        print("-" * 30)
+            print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+            print("-" * 30)
 
-        an.custom_evaluate_safety_factor_band_2(
-            X_test=X_test,
-            Y_test=Y_test,
-            testsize=TEST_SIZE,
-            now_datetime=now_datetime,
+            an.custom_evaluate_safety_factor_band_2(
+                X_test=X_test,
+                Y_test=Y_test,
+                testsize=TEST_SIZE,
+                now_datetime=now_datetime,
+            )
+
+    if Y_TYPE == "band_2":
+        (X_train, Y_train), (X_test, Y_test), x_close = an.train_test_split(
+            data_df=df,
+            test_size=TEST_SIZE,
+            y_type=Y_TYPE,
+            interval=INTERVAL,
         )
+
+        if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
+            now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
+        else:
+            now_datetime = prev_model
+
+        if IS_TRAINING_MODEL:
+            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+
+            print("training data shape\t", X_train.shape)
+            print("training elememt shape\t", X_train[0].shape)
+
+            print("model output shape\t", model.output_shape)
+
+            optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
+
+            loss = km.metric_new_idea_2
+
+            model.compile(
+                optimizer=optimizer,
+                loss=loss,
+                metrics=[
+                    km.metric_band_base_percent,
+                    km.metric_loss_comp_2,
+                    km.metric_band_hl_wrongs_percent,
+                    km.metric_band_avg_correction_percent,
+                    km.metric_band_average_percent,
+                    km.metric_band_height_percent,
+                    km.metric_win_percent,
+                    km.metric_pred_capture_percent,
+                    km.metric_win_pred_capture_percent,
+                ],
+            )
+
+            log_dir: str = f"training/logs/{now_datetime} - {Y_TYPE}"
+
+            tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+            terNan = TerminateOnNaN()
+
+            callbacks = [tensorboard_callback, terNan]
+
+            history = model.fit(
+                x=X_train,
+                y=Y_train,
+                epochs=NUMBER_OF_EPOCHS,
+                batch_size=BATCH_SIZE,
+                workers=num_workers,
+                use_multiprocessing=True,
+                validation_data=(X_test, Y_test),
+                callbacks=callbacks,
+            )
+
+            model.save(f"training/models/model - {now_datetime} - {Y_TYPE}")
+
+            print("\nmodel : training done. \n")
+
+            X_test, Y_test = an.append_test_train_arr(X_train, Y_train, X_test, Y_test)
+
+            zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
+            Y_test = np.concatenate((Y_test, zeros), axis=2)
+
+            print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+            print("-" * 30)
+
+            an_2.custom_evaluate_safety_factor(
+                X_test=X_test,
+                Y_test=Y_test,
+                x_close=x_close,
+                y_type=Y_TYPE,
+                test_size=TEST_SIZE,
+                now_datetime=now_datetime,
+            )
 
 
 if __name__ == "__main__":
