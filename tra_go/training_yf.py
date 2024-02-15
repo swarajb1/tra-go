@@ -447,6 +447,73 @@ def train_test_split(
     return ((train_x, train_y), (test_x, test_y))
 
 
+def train_test_split_5(
+    data_df,
+    interval,
+    y_type,
+    test_size=0.2,
+) -> np.ndarray:
+    # separate into 132, 132 entries df. for train and test df.
+
+    # divide the price data of that day by the closing price of the previous day.
+    # for the very first day of the dataset - divide the prices by the opening price.
+
+    df = data_cleaning(data_df)
+
+    df_cleaned = df.copy(deep=True)
+
+    # getting clean and my zone data
+    df = data_scaling(df)
+    # getting scaled data according to previous day closing price, in percentages terms
+    df = data_my_zone(df, interval=interval)
+    # getting data is inside the full zone.
+
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+
+    df_train_x, df_train_y = data_split_x_y(df=df_train, interval=interval)
+
+    df_test_x, df_test_y = data_split_x_y(df=df_test, interval=interval)
+
+    selected_columns_1 = ["low", "high", "open", "close"]
+
+    train_x = by_date_df_array(df_train_x[selected_columns_1])
+    test_x = by_date_df_array(df_test_x[selected_columns_1])
+
+    train_y = by_date_df_array(df_train_y[selected_columns_1])
+    test_y = by_date_df_array(df_test_y[selected_columns_1])
+
+    train_y = add_trend_parameter(train_y)
+    test_y = add_trend_parameter(test_y)
+
+    df_train_c, df_test_c = data_split_train_test(df=df_cleaned, test_size=test_size)
+
+    train_prev_close = get_prev_close(df_train_c)
+    test_prev_close = get_prev_close(df_test_c)
+
+    return (
+        (train_x, train_y, train_prev_close),
+        (test_x, test_y, test_prev_close),
+    )
+
+
+def get_day_trend(day_arr: np.ndarray) -> int:
+    min_index: np.ndarray = np.argmin(day_arr[:, 0])
+    max_index: np.ndarray = np.argmax(day_arr[:, 1])
+
+    return int(max_index > min_index)
+
+
+def add_trend_parameter(arr: np.ndarray) -> np.ndarray:
+    res = np.zeros((arr.shape[0], arr.shape[1], 5))
+
+    res[:, :, :4] = arr
+
+    for day in range(arr.shape[0]):
+        res[day, :, 4] = get_day_trend(arr[day])
+
+    return res
+
+
 def last_close_value(df: pd.DataFrame) -> np.ndarray:
     res = np.array([])
 
@@ -463,7 +530,7 @@ def train_test_split_2_mods(
     interval,
     y_type,
     test_size=0.2,
-) -> [pd.DataFrame]:
+) -> np.ndarray:
     # y_type = "2_mods"
 
     # separate into 132, 132 entries df. for train and test df.
