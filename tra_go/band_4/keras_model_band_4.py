@@ -19,15 +19,12 @@ def metric_average_in(y_true, y_pred):
 
 
 def support_new_idea_1(y_true, y_pred):
-    # n = y_pred.shape[1]
-    # start_index = int(n * SKIP_PERCENTILE)
-    # end_index = n - start_index
+    n = y_pred.shape[1]
+    start_index = int(n * SKIP_PERCENTILE)
+    end_index = n - start_index
 
-    # min_pred = K.min(y_pred[:, start_index:end_index, 0], axis=1)
-    # max_pred = K.max(y_pred[:, start_index:end_index, 1], axis=1)
-
-    min_pred = K.min(y_pred[:, :, 0], axis=1)
-    max_pred = K.max(y_pred[:, :, 1], axis=1)
+    min_pred = K.min(y_pred[:, start_index:end_index, 0], axis=1)
+    max_pred = K.max(y_pred[:, start_index:end_index, 1], axis=1)
 
     min_true = K.min(y_true[:, :, 0], axis=1)
     max_true = K.max(y_true[:, :, 1], axis=1)
@@ -57,15 +54,12 @@ def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
 
 
 def support_new_idea_3(y_true, y_pred):
-    # n = y_pred.shape[1]
-    # start_index = int(n * SKIP_PERCENTILE)
-    # end_index = n - start_index
+    n = y_pred.shape[1]
+    start_index = int(n * SKIP_PERCENTILE)
+    end_index = n - start_index
 
-    # min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
-    # max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
-
-    min_pred_index = K.argmin(y_pred[:, :, 0], axis=1)
-    max_pred_index = K.argmax(y_pred[:, :, 1], axis=1)
+    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+    max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
 
     min_true_index = K.argmin(y_true[:, :, 0], axis=1)
     max_true_index = K.argmax(y_true[:, :, 1], axis=1)
