@@ -25,8 +25,8 @@ class CustomEvaluation:
         y_type: str,
         test_size: float,
         now_datetime: str,
-        skip_first_percentile: float = 0.20,
-        skip_last_percentile: float = 0.20,
+        skip_first_percentile: float = 0.18,
+        skip_last_percentile: float = 0.18,
         safety_factor=0.8,
     ):
         self.X_data = X_data
@@ -45,10 +45,12 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        folder_path: str = f"training/models/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
+        folder_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
+
+        folder_path: str = "training/models/" + folder_name
 
         if not os.path.exists(folder_path):
-            folder_path: str = f"training/models_saved/model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
+            folder_path: str = "training/models_saved/" + folder_name
 
         with custom_object_scope(
             {
@@ -59,6 +61,9 @@ class CustomEvaluation:
                 "metric_win_percent": km_4.metric_win_percent,
                 "metric_win_pred_capture_percent": km_4.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
+                "metric_min_checkpoint": km.metric_abs_percent,
+                "metric_correct_trend_percent": km_4.metric_correct_trend_percent,
+                "metric_correct_win_trend_percent": km_4.metric_correct_win_trend_percent,
             },
         ):
             model = keras.models.load_model(folder_path)
