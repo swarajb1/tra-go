@@ -171,9 +171,7 @@ for INTERVAL in [
         if os.path.exists(filename):
             previous_data = pd.read_csv(filename, index_col=0)
 
-            final_data = pd.concat([previous_data, final_data]).drop_duplicates(
-                keep="first",
-            )
+            final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
 
         final_data.to_csv(filename, index=True)
 
