@@ -33,3 +33,7 @@ new-yf-data:
 	rm -rf data_stock_price_yf_copy
 	cp -r data_stock_price_yf data_stock_price_yf_copy
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/download_data_yf.py
+
+
+script_1:
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) script_1.py
