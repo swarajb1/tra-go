@@ -1,8 +1,23 @@
-.env
+# mac os files
 .DS_Store
+
+# virtual environment
 .venv
+
+# cache
 __pycache__
+
+# diff files
+*.diff
+
+# secret keys
+api_key.txt
+.env
+
+# training files
 training/
 
-data_stock_price_yf_copy
-output.diff
+# data
+data_yf
+data_z
+data_cleaned
