@@ -91,7 +91,8 @@ def get_untrained_model_new(X_train, y_type):
 
 
 def get_optimiser(learning_rate: float):
-    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    return keras.optimizers.Adam(learning_rate=learning_rate)
+    # return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
 def metric_rmse(y_true, y_pred):
