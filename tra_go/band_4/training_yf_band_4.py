@@ -45,12 +45,12 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        folder_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-3"
+        self.folder_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-5"
 
-        folder_path: str = "training/models/" + folder_name
+        folder_path: str = "training/models/" + self.folder_name
 
         if not os.path.exists(folder_path):
-            folder_path: str = "training/models_saved/" + folder_name
+            folder_path: str = "training/models_saved/" + self.folder_name
 
         with custom_object_scope(
             {
@@ -61,9 +61,8 @@ class CustomEvaluation:
                 "metric_win_percent": km_4.metric_win_percent,
                 "metric_win_pred_capture_percent": km_4.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_4.metric_pred_capture_percent,
-                "metric_min_checkpoint": km.metric_abs_percent,
-                "metric_correct_trend_percent": km_4.metric_correct_trend_percent,
                 "metric_correct_win_trend_percent": km_4.metric_correct_win_trend_percent,
+                "metric_win_checkpoint": km_4.metric_win_checkpoint,
             },
         ):
             model = keras.models.load_model(folder_path)
@@ -405,6 +404,8 @@ class CustomEvaluation:
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
         print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
+
+        print("folder_name\t\t", self.folder_name)
 
         # plt.show()
 
