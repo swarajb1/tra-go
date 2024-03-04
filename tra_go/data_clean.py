@@ -223,55 +223,40 @@ class DataScalerZero:
     def data_scaling(self) -> pd.DataFrame:
         df = self.data_cleaned.copy(deep=True)
 
-        df["real_close"] = df["close"] + 1
+        df["real_close"] = df["close"]
+
+        # for 1st day
+        # real close if the open of that day itself, as there is no previous day
+        df.iloc[:375, df.columns.get_loc("real_close")] = df.iloc[0, df.columns.get_loc("open")]
+
+        for day in range(1, len(df) // 375):
+            start_index: int = day * 375
+            end_index: int = start_index + 375
+
+            prev_close: float = df.iloc[start_index - 1, df.columns.get_loc("close")]
+
+            df.iloc[start_index:end_index, df.columns.get_loc("real_close")] = prev_close
+
+        df["open"] = df["open"] / df["real_close"]
+        df["close"] = df["close"] / df["real_close"]
+        df["high"] = df["high"] / df["real_close"]
+        df["low"] = df["low"] / df["real_close"]
 
         return df[["open", "close", "high", "low", "real_close"]]
 
     def save_scaled_data(self) -> None:
-        self.data_scaled.to_csv(f"./data_traning/{self.symbol} - {self.interval}.csv", index=False)
+        self.data_scaled.to_csv(f"./data_training/{self.symbol} - {self.interval}.csv", index=True)
 
 
 if __name__ == "__main__":
     interval = "1m"
 
-    def func(symbol: str):
+    for symbol in nifty50_symbols:
         print("\n" * 2)
         print(symbol)
 
-        DataCleanerZero(symbol=symbol, interval=interval)
-        print("Data Cleaning Done.")
+        # DataCleanerZero(symbol=symbol, interval=interval)
+        # print("Data Cleaning Done.")
 
-        # DataScalerZero(symbol=symbol, interval=interval)
-        # print("Data Scaling Done.")
-
-    for symbol in nifty50_symbols:
-        func(symbol=symbol)
-
-    # arr = np.array(nifty50_symbols)
-    # split_arr = np.array_split(arr, 3)
-
-    # def func_1():
-    #     for symbol in split_arr[0]:
-    #         func(symbol)
-
-    # def func_2():
-    #     for symbol in split_arr[1]:
-    #         func(symbol)
-
-    # def func_3():
-    #     for symbol in split_arr[2]:
-    #         func(symbol)
-
-    # t1 = threading.Thread(target=func_1)
-    # t2 = threading.Thread(target=func_2)
-    # t3 = threading.Thread(target=func_3)
-
-    # # Start threads
-    # t1.start()
-    # t2.start()
-    # t3.start()
-
-    # # Wait for both threads to finish
-    # t1.join()
-    # t2.join()
-    # t3.join()
+        DataScalerZero(symbol=symbol, interval=interval)
+        print("Data Scaling Done.")
