@@ -1,5 +1,3 @@
-import pandas as pd
-
 nifty50_symbols: list[str] = [
     "ADANIPORTS",
     "APOLLOHOSP",
@@ -56,10 +54,10 @@ nifty50_symbols: list[str] = [
 ]
 
 
-df = pd.read_csv("instrument_df.csv")
+# df = pd.read_csv("instrument_df.csv")
 
-# Assuming 'df' is your DataFrame and 'column_name' is the name of the column you want to check
-filtered_df = df[df["tradingsymbol"].isin(nifty50_symbols)]
+# # Assuming 'df' is your DataFrame and 'column_name' is the name of the column you want to check
+# filtered_df = df[df["tradingsymbol"].isin(nifty50_symbols)]
 
-# Save the filtered DataFrame to a new CSV file
-filtered_df.to_csv("selected_stocks.csv", index=False)
+# # Save the filtered DataFrame to a new CSV file
+# filtered_df.to_csv("selected_stocks.csv", index=False)
