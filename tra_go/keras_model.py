@@ -1,6 +1,6 @@
-from keras import backend as K
+import keras
+import tensorflow as tf
 from keras.layers import LSTM, Bidirectional, Dense, Dropout
-from tensorflow import keras
 
 # PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
 
@@ -100,7 +100,8 @@ def metric_rmse(y_true, y_pred):
 
     error = y_true - y_pred
 
-    return K.sqrt(K.mean(K.square(error)))
+    # return K.sqrt(K.mean(K.square(error)))
+    return tf.sqrt(tf.reduce_mean(tf.square(error)))
 
 
 def metric_abs(y_true, y_pred):
@@ -108,21 +109,29 @@ def metric_abs(y_true, y_pred):
 
     error = y_true - y_pred
 
-    return K.mean(K.abs(error))
+    # return K.mean(K.abs(error))
+    return tf.reduce_mean(tf.abs(error))
 
 
 def metric_abs_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
+    # return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
+    return tf.reduce_mean(tf.abs(error)) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
 def metric_rmse_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
+    # return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
+    # return tf.sqrt(K.mean(K.square(error))) / K.mean(tf.abs(y_true)) * 100
+    return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
 def weighted_average(array):
     # weight average of an array with mea and rmse
-    return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(K.mean(K.square(array)))
+
+    # return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(K.mean(K.square(array)))
+    return (WEIGHT_FOR_MEA * tf.reduce_mean(tf.abs(array))) + (
+        (1 - WEIGHT_FOR_MEA) * tf.sqrt(tf.reduce_mean(tf.square(array)))
+    )

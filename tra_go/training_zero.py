@@ -6,13 +6,6 @@ import pandas as pd
 import pytz
 
 
-class DataCleanerZero:
-    def __init__(self, df: pd.DataFrame, ticker: str, interval: str):
-        self.df = df
-        self.ticker = ticker
-        self.interval = interval
-
-
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
     # which_half = 0, means 1st half - input data
     # which_half = 1, means 2nd half - predict data
@@ -136,7 +129,7 @@ def get_data_all_df(ticker, interval) -> pd.DataFrame:
 
 
 def get_csv_file_path(ticker, interval) -> str:
-    file_path = f"./new_data_z/{interval}_data/{ticker} - {interval}.csv"
+    file_path = f"./data_cleaned/{interval}/{ticker} - {interval}.csv"
     return file_path
 
 
@@ -379,9 +372,9 @@ def train_test_split(data_df, interval, y_type, test_size=0.2) -> pd.DataFrame:
     # divide the price data of that day by the closing price of the previous day.
     # for the very first day of the dataset - divide the prices by the opening price.
 
-    df = data_cleaning(data_df)
+    # df = data_cleaning(data_df)
 
-    df_cleaned = df.copy(deep=True)
+    df = data_df.copy(deep=True)
 
     # getting clean and my zone data
     df = data_scaling(df)
@@ -405,10 +398,10 @@ def train_test_split(data_df, interval, y_type, test_size=0.2) -> pd.DataFrame:
     train_y = by_date_df_array(df_train_y[selected_columns_1])
     test_y = by_date_df_array(df_test_y[selected_columns_1])
 
-    df_train_c, df_test_c = data_split_train_test(df=df_cleaned, test_size=test_size)
+    df_train_close, df_test_close = data_split_train_test(df=data_df, test_size=test_size)
 
-    train_prev_close = get_prev_close(df_train_c)
-    test_prev_close = get_prev_close(df_test_c)
+    train_prev_close = get_prev_close(df_train_close)
+    test_prev_close = get_prev_close(df_test_close)
 
     return (
         (train_x, train_y, train_prev_close),
@@ -462,26 +455,26 @@ def split_by_date(data_df: pd.DataFrame, interval: str, columns: list[str]):
     return res
 
 
-def get_x_y_individual_data(
-    data_df: pd.DataFrame,
-    interval: str,
-    columns: list[str],
-) -> np.ndarray:
-    df = data_cleaning(data_df)
-    # getting clean and my zone data
-    df = data_scaling(df)
-    # getting scaled data according to previous day closing price, in percentages terms
-    df = data_my_zone(df, interval=interval)
+# def get_x_y_individual_data(
+#     data_df: pd.DataFrame,
+#     interval: str,
+#     columns: list[str]
+# ) -> np.ndarray:
+#     df = data_cleaning(data_df)
+#     # getting clean and my zone data
+#     df = data_scaling(df)
+#     # getting scaled data according to previous day closing price, in percentages terms
+#     df = data_my_zone(df, interval=interval)
 
-    data_df_x, data_df_y = data_split_x_y_new(df=df, interval=interval)
+#     data_df_x, data_df_y = data_split_x_y_new(df=df, interval=interval)
 
-    arr_x = split_by_date(data_df=data_df_x, interval=interval, columns=columns)
-    arr_y = split_by_date(data_df=data_df_y, interval=interval, columns=columns)
+#     arr_x = split_by_date(data_df=data_df_x, interval=interval, columns=columns)
+#     arr_y = split_by_date(data_df=data_df_y, interval=interval, columns=columns)
 
-    arr_x = arr_x.astype(np.float32)
-    arr_y = arr_y.astype(np.float32)
+#     arr_x = arr_x.astype(np.float32)
+#     arr_y = arr_y.astype(np.float32)
 
-    return arr_x, arr_y
+#     return arr_x, arr_y
 
 
 def round_to_nearest_0_05(value):
