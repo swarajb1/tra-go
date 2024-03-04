@@ -27,9 +27,6 @@ PREV_MODEL_TRAINING: bool = False
 def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
-    # total cores = 8 in this mac.
-    num_workers: int = 1
-
     if Y_TYPE == "band_4":
         (X_train, Y_train, train_prev_close), (X_test, Y_test, test_prev_close) = an.train_test_split(
             data_df=df,
@@ -110,8 +107,6 @@ def main():
                 y=Y_train,
                 epochs=NUMBER_OF_EPOCHS,
                 batch_size=BATCH_SIZE,
-                workers=num_workers,
-                use_multiprocessing=True,
                 validation_data=(X_test, Y_test),
                 callbacks=callbacks,
             )
@@ -122,24 +117,6 @@ def main():
 
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
-
-        # X_all, Y_all, prev_close = an.append_test_train_arr(
-        #     X_train,
-        #     Y_train,
-        #     X_test,
-        #     Y_test,
-        #     train_prev_close,
-        #     test_prev_close,
-        # )
-
-        # full_data_custom_evaluation = CustomEvaluation(
-        #     X_data=X_all,
-        #     Y_data=Y_all,
-        #     prev_close=prev_close,
-        #     y_type=Y_TYPE,
-        #     test_size=TEST_SIZE,
-        #     now_datetime=now_datetime,
-        # )
 
         print("\n" * 4, "*" * 500, "\n" * 4)
         print("only training data now")
