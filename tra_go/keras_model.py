@@ -1,10 +1,6 @@
 import keras
 import tensorflow as tf
-from keras.layers import LSTM, Bidirectional, Dense, Dropout
-
-# PYTHONPATH = /Users/bisane.s/my_files/my_codes/tra-go/.venv/bin/python
-
-# keep total neurons below 2700 (900 * 3)
+from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input
 
 NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
@@ -50,23 +46,12 @@ def get_untrained_model(X_train, y_type):
     return model
 
 
-def get_untrained_model_new(X_train, y_type):
-    model = keras.Sequential()
+def get_untrained_model_new(X_train):
+    model = keras.models.Sequential()
 
-    model.add(
-        Bidirectional(
-            LSTM(
-                units=NUMBER_OF_NEURONS,
-                input_shape=(X_train[0].shape),
-                return_sequences=True,
-                activation="relu",
-            ),
-        ),
-    )
+    model.add(Input(shape=(X_train[0].shape)))
 
-    model.add(Dropout(INITIAL_DROPOUT / 100))
-
-    for i in range(NUMBER_OF_LAYERS - 1):
+    for i in range(NUMBER_OF_LAYERS):
         model.add(
             Bidirectional(
                 LSTM(
@@ -77,11 +62,9 @@ def get_untrained_model_new(X_train, y_type):
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
+        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 1)) / 100))
 
     model.add(Dense(4))
-
-    model.build(X_train.shape)
 
     model.summary()
 
@@ -91,8 +74,7 @@ def get_untrained_model_new(X_train, y_type):
 
 
 def get_optimiser(learning_rate: float):
-    return keras.optimizers.Adam(learning_rate=learning_rate)
-    # return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
 def metric_rmse(y_true, y_pred):
@@ -124,7 +106,6 @@ def metric_rmse_percent(y_true, y_pred):
     error = y_true - y_pred
 
     # return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
-    # return tf.sqrt(K.mean(K.square(error))) / K.mean(tf.abs(y_true)) * 100
     return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
