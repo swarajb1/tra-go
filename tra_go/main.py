@@ -8,11 +8,11 @@ from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 IS_TRAINING_MODEL: bool = True
-prev_model: str = "2024-02-26 16-08"
+prev_model: str = "2024-03-04 20-27"
 
 
-NUMBER_OF_EPOCHS: int = 7000
-BATCH_SIZE: int = 256
+NUMBER_OF_EPOCHS: int = 5000
+BATCH_SIZE: int = 1024
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
@@ -42,7 +42,7 @@ def main():
 
         if IS_TRAINING_MODEL:
             # model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
-            model = km.get_untrained_model_new(X_train=X_train, y_type=Y_TYPE)
+            model = km.get_untrained_model_new(X_train=X_train)
 
             print("training data shape\t", X_train.shape)
             print("training elememt shape\t", X_train[0].shape)
@@ -111,7 +111,7 @@ def main():
                 callbacks=callbacks,
             )
 
-            model.save(f"training/models/model - {now_datetime} - {Y_TYPE}")
+            model.save(f"training/models/model - {now_datetime} - {Y_TYPE}.keras")
 
             print("\nmodel : training done. \n")
 
