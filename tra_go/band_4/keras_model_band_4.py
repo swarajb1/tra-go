@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras_model import metric_rmse, weighted_average
+from keras_model import metric_rmse, rmse_average
 
 SKIP_PERCENTILE: float = 0.18
 
@@ -14,7 +14,7 @@ def metric_average_in(y_true, y_pred):
 
     error = average_pred - average_true
 
-    return weighted_average(error)
+    return rmse_average(error)
 
 
 def support_new_idea_1(y_true, y_pred):

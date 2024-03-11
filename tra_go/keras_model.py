@@ -1,12 +1,10 @@
 import keras
-import tensorflow as tf
+import keras.backend as K
 from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input
 
 NUMBER_OF_NEURONS = 512
 NUMBER_OF_LAYERS = 3
 INITIAL_DROPOUT = 0
-
-WEIGHT_FOR_MEA = 0
 
 
 def get_untrained_model(X_train, y_type):
@@ -82,8 +80,8 @@ def metric_rmse(y_true, y_pred):
 
     error = y_true - y_pred
 
-    # return K.sqrt(K.mean(K.square(error)))
-    return tf.sqrt(tf.reduce_mean(tf.square(error)))
+    return K.sqrt(K.mean(K.square(error)))
+    # return tf.sqrt(tf.reduce_mean(tf.square(error)))
 
 
 def metric_abs(y_true, y_pred):
@@ -91,28 +89,25 @@ def metric_abs(y_true, y_pred):
 
     error = y_true - y_pred
 
-    # return K.mean(K.abs(error))
-    return tf.reduce_mean(tf.abs(error))
+    return K.mean(K.abs(error))
+    # return tf.reduce_mean(tf.abs(error))
 
 
 def metric_abs_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    # return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
-    return tf.reduce_mean(tf.abs(error)) / tf.reduce_mean(tf.abs(y_true)) * 100
+    return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
+    # return tf.reduce_mean(tf.abs(error)) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
 def metric_rmse_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    # return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
-    return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
+    return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
+    # return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
-def weighted_average(array):
+def rmse_average(array):
     # weight average of an array with mea and rmse
 
-    # return WEIGHT_FOR_MEA * K.mean(K.abs(array)) + (1 - WEIGHT_FOR_MEA) * K.sqrt(K.mean(K.square(array)))
-    return (WEIGHT_FOR_MEA * tf.reduce_mean(tf.abs(array))) + (
-        (1 - WEIGHT_FOR_MEA) * tf.sqrt(tf.reduce_mean(tf.square(array)))
-    )
+    return K.sqrt(K.mean(K.square(array)))
