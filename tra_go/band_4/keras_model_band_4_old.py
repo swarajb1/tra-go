@@ -1,12 +1,12 @@
 import tensorflow as tf
 from keras import backend as K
-from keras_model import metric_rmse, weighted_average
+from keras_model import metric_rmse, rmse_average
 
 SKIP_PERCENTILE: float = 0.18
 
 
 def metric_new_idea(y_true, y_pred):
-    return metric_rmse(y_true, y_pred) * 2 + metric_average_in(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
+    return metric_rmse(y_true, y_pred) * 3 + metric_average_in(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
 
 
 def metric_average_in(y_true, y_pred):
@@ -15,7 +15,7 @@ def metric_average_in(y_true, y_pred):
 
     error = average_pred - average_true
 
-    return weighted_average(error)
+    return rmse_average(error)
 
 
 def support_new_idea_1(y_true, y_pred):
@@ -103,22 +103,23 @@ def metric_loss_comp_2(y_true, y_pred):
         K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
     )
 
-    correct_trends = support_new_idea_3(y_true, y_pred)
+    return z_1 + z_2 + z_3 + win_amt_true_error + win_amt_pred_error
 
-    trend_error = K.mean((1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true))
+    # correct_trends = support_new_idea_3(y_true, y_pred)
 
-    trend_error_win = K.mean(
-        (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true),
-    )
+    # trend_error = K.mean((1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true))
 
-    trend_error_win_pred = K.mean(
-        (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
-    )
+    # trend_error_win = K.mean(
+    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true),
+    # )
 
-    return (
-        (z_1 + z_2 + z_3) * 2
-        + (trend_error + trend_error_win + trend_error_win_pred * 2 + win_amt_true_error + win_amt_pred_error)
-    ) / 1.5
+    # trend_error_win_pred = K.mean(
+    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
+    # )
+
+    # return (
+    #     (z_1 + z_2 + z_3) * 3
+    #     + (trend_error + trend_error_win + trend_error_win_pred * 2 + win_amt_true_error + win_amt_pred_error * 3)
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):
@@ -170,29 +171,4 @@ def metric_correct_win_trend_percent(y_true, y_pred):
 
 
 def metric_win_checkpoint(y_true, y_pred):
-    n = y_pred.shape[1]
-    start_index = int(n * SKIP_PERCENTILE)
-    end_index = n - start_index
-
-    min_pred_s = K.min(y_pred[:, start_index:end_index, 0], axis=1)
-    max_pred_s = K.max(y_pred[:, start_index:end_index, 1], axis=1)
-
-    min_true = K.min(y_true[:, :, 0], axis=1)
-    max_true = K.max(y_true[:, :, 1], axis=1)
-
-    wins = K.all(
-        [
-            max_true >= max_pred_s,
-            max_pred_s >= min_pred_s,  # valid_pred
-            min_pred_s >= min_true,
-        ],
-        axis=0,
-    )
-
-    correct_trends = support_new_idea_3(y_true, y_pred)
-
-    trend_error_win_pred = K.mean(
-        K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()) * K.abs(max_pred_s - min_pred_s),
-    ) / K.mean(K.abs(max_true - min_true))
-
-    return trend_error_win_pred * 100
+    return metric_pred_capture_percent(y_true, y_pred)

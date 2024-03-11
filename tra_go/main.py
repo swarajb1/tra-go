@@ -1,18 +1,18 @@
 import time
 from datetime import datetime
 
-import band_4.keras_model_band_4 as km_4
+import band_4.keras_model_band_4_old as km_4
 import keras_model as km
 import training_zero as an
 from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
-IS_TRAINING_MODEL: bool = True
-prev_model: str = "2024-03-04 20-27"
+IS_TRAINING_MODEL: bool = False
+prev_model: str = "2024-03-08 11-41"
 
 
-NUMBER_OF_EPOCHS: int = 5000
-BATCH_SIZE: int = 1024
+NUMBER_OF_EPOCHS: int = 3000
+BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
@@ -62,7 +62,6 @@ def main():
                     km_4.metric_loss_comp_2,
                     km_4.metric_win_percent,
                     km_4.metric_win_pred_capture_percent,
-                    km_4.metric_correct_win_trend_percent,
                     km_4.metric_win_checkpoint,
                 ],
             )
@@ -72,35 +71,35 @@ def main():
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
             terNan = TerminateOnNaN()
 
+            mcp_save_1 = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-1.keras",
+                save_best_only=True,
+                monitor="loss",
+                mode="min",
+            )
+
             mcp_save_2 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-2.keras",
                 save_best_only=True,
-                monitor="loss",
+                monitor="val_loss",
                 mode="min",
             )
 
             mcp_save_3 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-3.keras",
                 save_best_only=True,
-                monitor="val_loss",
-                mode="min",
+                monitor="metric_win_pred_capture_percent",
+                mode="max",
             )
 
             mcp_save_4 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-4.keras",
                 save_best_only=True,
-                monitor="metric_win_checkpoint",
+                monitor="val_metric_win_pred_capture_percent",
                 mode="max",
             )
 
-            mcp_save_5 = ModelCheckpoint(
-                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-5.keras",
-                save_best_only=True,
-                monitor="val_metric_win_checkpoint",
-                mode="max",
-            )
-
-            callbacks = [tensorboard_callback, terNan, mcp_save_2, mcp_save_3, mcp_save_4, mcp_save_5]
+            callbacks = [tensorboard_callback, terNan, mcp_save_1, mcp_save_2, mcp_save_3, mcp_save_4]
 
             history = model.fit(
                 x=X_train,

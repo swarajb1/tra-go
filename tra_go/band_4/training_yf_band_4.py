@@ -9,6 +9,8 @@ from training_yf import round_to_nearest_0_05
 
 import tra_go.band_4.keras_model_band_4 as km_4
 
+RISK_TO_REWARD_RATIO: float = 0.6
+
 
 def get_number_of_epochs() -> int:
     from main import NUMBER_OF_EPOCHS
@@ -187,8 +189,7 @@ class CustomEvaluation:
             + f"NUMBER_OF_NEURONS = {km.NUMBER_OF_NEURONS}  "
             + f"NUMBER_OF_LAYERS = {km.NUMBER_OF_LAYERS}\n"
             + f"NUMBER_OF_EPOCHS = {get_number_of_epochs()} | "
-            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT} | "
-            + f"WEIGHT_FOR_MEA = {km.WEIGHT_FOR_MEA}",
+            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT}",
             fontsize=20,
         )
 
@@ -405,7 +406,6 @@ class CustomEvaluation:
         print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
-        print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
 
         print("folder_name\t\t", self.model_file_name)
 
@@ -546,7 +546,6 @@ class CustomEvaluation:
         print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
-        print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
 
         print("folder_name\t\t", self.model_file_name)
 
@@ -559,8 +558,6 @@ class CustomEvaluation:
         order_type_buy_arr: np.array,
         real_price_arr: np.ndarray,
     ) -> None:
-        RISK_TO_REWARD_RATIO = 0.6
-
         # 3 order are placed when the similation starts
         #   buy order
         #   sell order
