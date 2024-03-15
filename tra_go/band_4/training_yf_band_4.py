@@ -10,6 +10,9 @@ from training_yf import round_to_nearest_0_05
 import tra_go.band_4.keras_model_band_4 as km_4
 
 RISK_TO_REWARD_RATIO: float = 0.6
+SAFETY_FACTOR: float = 0.8
+SKIP_FIRST_PERCENTILE: float = 0.18
+SKIP_LAST_PERCENTILE: float = 0.18
 
 
 def get_number_of_epochs() -> int:
@@ -27,29 +30,31 @@ class CustomEvaluation:
         y_type: str,
         test_size: float,
         now_datetime: str,
+        model_num: int = 1,
         skip_first_percentile: float = 0.18,
         skip_last_percentile: float = 0.18,
         safety_factor=0.8,
     ):
         self.X_data = X_data
         self.Y_data = Y_data
-        self.prev_close = prev_close.reshape(
-            len(prev_close),
-        )
+        self.prev_close = prev_close.reshape(len(prev_close))
         self.y_type = y_type
         self.test_size = test_size
         self.now_datetime = now_datetime
+        self.model_num = model_num
 
-        self.SKIP_FIRST_PERCENTILE = skip_first_percentile
-        self.SKIP_LAST_PERCENTILE = skip_last_percentile
-        self.SAFETY_FACTOR = safety_factor
+        self.SKIP_FIRST_PERCENTILE = SKIP_FIRST_PERCENTILE
+        self.SKIP_LAST_PERCENTILE = SKIP_LAST_PERCENTILE
+        self.SAFETY_FACTOR = SAFETY_FACTOR
 
         self.number_of_days = self.X_data.shape[0]
 
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-5.keras"
+        self.model_file_name: str = (
+            f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
+        )
 
         file_path: str = "training/models/" + self.model_file_name
 
@@ -198,15 +203,14 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR}.png"
+        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
         if self.test_size == 0:
-            filename = (
-                f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - valid.png"
-            )
+            filename = filename[:-4] + "- valid.png"
 
         plt.savefig(filename, dpi=300, bbox_inches="tight")
 
-        plt.show()
+        # NOTE: when you want to see graphs, you need to uncomment the following line
+        # plt.show()
 
         return
 
@@ -703,8 +707,6 @@ class CustomEvaluation:
 
         print("\npercent_win_trades\t\t", "{:.2f}".format(number_of_win_trades / number_of_days * 100), " %")
 
-        x = np.arange(0, number_of_days, 1)
-
         new_invested_day_wise_list = np.copy(invested_day_wise_list)
         new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
 
@@ -712,6 +714,8 @@ class CustomEvaluation:
         arr_real = arr / new_invested_day_wise_list
 
         plt.figure(figsize=(16, 9))
+
+        x = np.arange(0, number_of_days, 1)
         plt.scatter(x, arr_real, color="orange", s=50)
 
         plt.plot(arr_real)
@@ -719,11 +723,9 @@ class CustomEvaluation:
         arr2 = np.array(stop_loss_hit_list) * (-0.2)
         plt.plot(arr2)
 
-        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR}.png"
+        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
         if self.test_size == 0:
-            filename = (
-                f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - valid.png"
-            )
+            filename = filename[:-4] + "- valid.png"
 
         plt.savefig(filename, dpi=300, bbox_inches="tight")
 

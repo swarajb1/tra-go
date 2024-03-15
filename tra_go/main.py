@@ -7,8 +7,8 @@ import training_zero as an
 from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
-IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-03-08 11-41"
+IS_TRAINING_MODEL: bool = True
+prev_model: str = "2024-03-11 10-24"
 
 
 NUMBER_OF_EPOCHS: int = 3000
@@ -41,7 +41,6 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            # model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
             model = km.get_untrained_model_new(X_train=X_train)
 
             print("training data shape\t", X_train.shape)
@@ -117,29 +116,32 @@ def main():
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        print("\n" * 4, "*" * 500, "\n" * 4)
-        print("only training data now")
+        for model_num in range(1, 5):
+            print("\n" * 4, "*" * 500, "\n" * 4)
+            print("only training data now")
 
-        training_data_custom_evaluation = CustomEvaluation(
-            X_data=X_train,
-            Y_data=Y_train,
-            prev_close=train_prev_close,
-            y_type=Y_TYPE,
-            test_size=TEST_SIZE,
-            now_datetime=now_datetime,
-        )
+            training_data_custom_evaluation = CustomEvaluation(
+                X_data=X_train,
+                Y_data=Y_train,
+                prev_close=train_prev_close,
+                y_type=Y_TYPE,
+                test_size=TEST_SIZE,
+                now_datetime=now_datetime,
+                model_num=model_num,
+            )
 
-        print("\n" * 4, "*" * 500, "\n" * 4)
-        print("only validation data now")
+            print("\n" * 4, "*" * 500, "\n" * 4)
+            print("only validation data now")
 
-        valid_data_custom_evaluation = CustomEvaluation(
-            X_data=X_test,
-            Y_data=Y_test,
-            prev_close=test_prev_close,
-            y_type=Y_TYPE,
-            test_size=0,
-            now_datetime=now_datetime,
-        )
+            valid_data_custom_evaluation = CustomEvaluation(
+                X_data=X_test,
+                Y_data=Y_test,
+                prev_close=test_prev_close,
+                y_type=Y_TYPE,
+                test_size=0,
+                now_datetime=now_datetime,
+                model_num=model_num,
+            )
 
 
 if __name__ == "__main__":

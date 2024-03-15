@@ -7,34 +7,28 @@ repos:
     rev: v1.0
     hooks:
       - id: upgrade-type-hints
-  - repo: https://github.com/asottile/add-trailing-comma
-    rev: v3.0.1
-    hooks:
-      - id: add-trailing-comma
   - repo: https://github.com/psf/black
     rev: 23.7.0
     hooks:
       - id: black
-        args: ["--line-length=119"]
+        args: ['--line-length=119']
         verbose: true
+  # - repo: https://github.com/asottile/add-trailing-comma
+  #   rev: v3.0.1
+  #   hooks:
+  #     - id: add-trailing-comma
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.0
     hooks:
       - id: autoflake
-        args:
-          [
-            "-r",
-            "-i",
-            "--remove-all-unused-imports",
-            "--remove-unused-variables",
-          ]
+        args: ['-r', '-i', '--remove-all-unused-imports', '--remove-unused-variables']
         verbose: true
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        name: isort (python)
-        verbose: true
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.12.0
+  #   hooks:
+  #     - id: isort
+  #       name: isort (python)
+  #       verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -49,14 +43,14 @@ repos:
       - id: debug-statements
       - id: end-of-file-fixer
       - id: fix-encoding-pragma
-        args: ["--remove"]
+        args: ['--remove']
       - id: mixed-line-ending
-        args: ["--fix=lf"]
+        args: ['--fix=lf']
       - id: name-tests-test
-        args: ["--pytest-test-first"]
+        args: ['--pytest-test-first']
       - id: requirements-txt-fixer
       - id: trailing-whitespace
-        args: ["--markdown-linebreak-ext=md"]
+        args: ['--markdown-linebreak-ext=md']
   - repo: https://github.com/PyCQA/docformatter
     rev: v1.7.5
     hooks:
