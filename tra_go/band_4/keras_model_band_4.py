@@ -1,11 +1,22 @@
 import tensorflow as tf
+from band_4.training_yf_band_4 import (
+    SAFETY_FACTOR,
+    SKIP_FIRST_PERCENTILE,
+    SKIP_LAST_PERCENTILE,
+)
+from keras import backend as K
 from keras_model import metric_rmse, rmse_average
 
 SKIP_PERCENTILE: float = 0.18
 
 
 def metric_new_idea(y_true, y_pred):
-    return metric_rmse(y_true, y_pred) * 2 + metric_average_in(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
+    return (
+        metric_rmse(y_true, y_pred) * 4
+        + metric_average_in(y_true, y_pred)
+        + metric_loss_comp_2(y_true, y_pred)
+        + (1 - metric_win_checkpoint(y_true, y_pred) / 100) / 36
+    )
 
 
 def metric_average_in(y_true, y_pred):
@@ -17,25 +28,25 @@ def metric_average_in(y_true, y_pred):
     return rmse_average(error)
 
 
-def support_new_idea_1(y_true, y_pred):
+def support_idea_1(y_true, y_pred):
     n = y_pred.shape[1]
     start_index = int(n * SKIP_PERCENTILE)
-    end_index = n - start_index
+    end_index = n - start_index * 2
 
-    min_pred_s = tf.reduce_min(y_pred[:, start_index:end_index, 0], axis=1)
-    max_pred_s = tf.reduce_max(y_pred[:, start_index:end_index, 1], axis=1)
+    min_pred_s = K.min(y_pred[:, start_index:end_index, 0], axis=1)
+    max_pred_s = K.max(y_pred[:, start_index:end_index, 1], axis=1)
 
-    min_pred = tf.reduce_min(y_pred[:, :, 0], axis=1)
-    max_pred = tf.reduce_max(y_pred[:, :, 1], axis=1)
+    min_pred = K.min(y_pred[:, :, 0], axis=1)
+    max_pred = K.max(y_pred[:, :, 1], axis=1)
 
-    min_true = tf.reduce_min(y_true[:, :, 0], axis=1)
-    max_true = tf.reduce_max(y_true[:, :, 1], axis=1)
+    min_true = K.min(y_true[:, :, 0], axis=1)
+    max_true = K.max(y_true[:, :, 1], axis=1)
 
-    wins = tf.reduce_all(
+    wins = K.all(
         [
-            tf.math.greater_equal(max_true, max_pred_s),
-            tf.math.greater_equal(max_pred_s, min_pred_s),  # valid_pred
-            tf.math.greater_equal(min_pred_s, min_true),
+            max_true >= max_pred_s,
+            max_pred_s >= min_pred_s,  # valid_pred
+            min_pred_s >= min_true,
         ],
         axis=0,
     )
@@ -43,47 +54,73 @@ def support_new_idea_1(y_true, y_pred):
     return min_pred, max_pred, min_true, max_true, wins
 
 
-def support_new_idea_2(min_pred, max_pred, min_true, max_true, wins):
-    z_1 = tf.reduce_mean(
-        (1 - tf.cast(tf.math.greater_equal(max_true, max_pred), dtype=tf.float32)) * tf.abs(max_true - max_pred),
+def support_idea_1_new(y_true, y_pred):
+    # create new y_pred with .80 as safety factor from average along axis=1
+
+    y_pred_safety_min = (y_pred[:, :, 1] + y_pred[:, :, 0]) / 2 - (
+        (y_pred[:, :, 1] - y_pred[:, :, 0]) / 2 * SAFETY_FACTOR
+    )
+    y_pred_safety_max = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2 + (
+        (y_pred[:, :, 1] - y_pred[:, :, 0]) / 2 * SAFETY_FACTOR
     )
 
-    z_2 = tf.reduce_mean(
-        (1 - tf.cast(tf.math.greater_equal(max_pred, min_pred), dtype=tf.float32)) * tf.abs(max_pred - min_pred),
-    )
+    n: int = y_pred.shape[1]
+    start_index: int = int(n * SKIP_FIRST_PERCENTILE)
+    end_index: int = n - int(n * SKIP_FIRST_PERCENTILE) - int(n * SKIP_LAST_PERCENTILE)
 
-    z_3 = tf.reduce_mean(
-        (1 - tf.cast(tf.math.greater_equal(min_pred, min_true), dtype=tf.float32)) * tf.abs(min_pred - min_true),
-    )
+    min_pred_s = K.min(y_pred_safety_min[:, start_index:end_index], axis=1)
+    max_pred_s = K.max(y_pred_safety_max[:, start_index:end_index], axis=1)
 
-    win_amt_true = tf.reduce_sum((1 - tf.cast(wins, dtype=tf.float32)) * tf.abs(max_true - min_true))
+    min_true = K.min(y_true[:, :, 0], axis=1)
+    max_true = K.max(y_true[:, :, 1], axis=1)
 
-    return z_1, z_2, z_3, win_amt_true
-
-
-def support_new_idea_3(y_true, y_pred):
-    n = y_pred.shape[1]
-    start_index = int(n * SKIP_PERCENTILE)
-    end_index = n - start_index
-
-    min_pred_index = tf.argmin(y_pred[:, start_index:end_index, 0], axis=1)
-    max_pred_index = tf.argmax(y_pred[:, start_index:end_index, 1], axis=1)
-
-    min_true_index = tf.argmin(y_true[:, :, 0], axis=1)
-    max_true_index = tf.argmax(y_true[:, :, 1], axis=1)
-
-    correct_trends_buy = tf.reduce_all(
+    band_inside = K.all(
         [
-            tf.greater(max_pred_index, min_pred_index),
-            tf.greater(max_true_index, min_true_index),
+            max_true >= max_pred_s,
+            max_pred_s >= min_pred_s,  # valid_pred
+            min_pred_s >= min_true,
         ],
         axis=0,
     )
 
-    correct_trends_sell = tf.reduce_all(
+    return min_pred_s, max_pred_s, min_true, max_true, band_inside
+
+
+def support_idea_2(min_pred, max_pred, min_true, max_true, wins):
+    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
+
+    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
+
+    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
+
+    win_amt_true = K.sum((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+
+    return z_1, z_2, z_3, win_amt_true
+
+
+def support_idea_3(y_true, y_pred):
+    n = y_pred.shape[1]
+    start_index = int(n * SKIP_PERCENTILE)
+    end_index = n - start_index
+
+    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+    max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
+
+    min_true_index = K.argmin(y_true[:, :, 0], axis=1)
+    max_true_index = K.argmax(y_true[:, :, 1], axis=1)
+
+    correct_trends_buy = K.all(
         [
-            tf.less(max_pred_index, min_pred_index),
-            tf.less(max_true_index, min_true_index),
+            max_pred_index > min_pred_index,
+            max_true_index > min_true_index,
+        ],
+        axis=0,
+    )
+
+    correct_trends_sell = K.all(
+        [
+            max_pred_index < min_pred_index,
+            max_true_index < min_true_index,
         ],
         axis=0,
     )
@@ -94,55 +131,47 @@ def support_new_idea_3(y_true, y_pred):
 
 
 def metric_loss_comp_2(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+    min_pred, max_pred, min_true, max_true, wins = support_idea_1_new(y_true, y_pred)
 
-    z_1 = tf.reduce_mean(
-        (1 - tf.cast(tf.reduce_all([tf.math.greater_equal(max_true, max_pred)], axis=0), dtype=tf.float32))
-        * tf.abs(max_true - max_pred),
+    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
+
+    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
+
+    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
+
+    win_amt_true_error = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+
+    win_amt_pred_error = K.mean(
+        K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
     )
 
-    z_2 = tf.reduce_mean(
-        (1 - tf.cast(tf.reduce_all([tf.math.greater_equal(max_pred, min_pred)], axis=0), dtype=tf.float32))
-        * tf.abs(max_pred - min_pred),
-    )
+    return z_1 + z_2 + z_3 + win_amt_true_error + win_amt_pred_error
 
-    z_3 = tf.reduce_mean(
-        (1 - tf.cast(tf.reduce_all([tf.math.greater_equal(min_pred, min_true)], axis=0), dtype=tf.float32))
-        * tf.abs(min_pred - min_true),
-    )
+    # correct_trends = support_idea_3(y_true, y_pred)
 
-    win_amt_true_error = tf.reduce_mean((1 - tf.cast(wins, dtype=tf.float32)) * tf.abs(max_true - min_true))
+    # trend_error = K.mean((1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true))
 
-    win_amt_pred_error = tf.reduce_mean(
-        tf.abs(max_true - min_true) - (tf.cast(wins, dtype=tf.float32) * tf.abs(max_pred - min_pred)),
-    )
+    # trend_error_win = K.mean(
+    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true),
+    # )
 
-    correct_trends = support_new_idea_3(y_true, y_pred)
+    # trend_error_win_pred = K.mean(
+    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
+    # )
 
-    trend_error = tf.reduce_mean((1 - tf.cast(correct_trends, dtype=tf.float32)) * tf.abs(max_true - min_true))
-
-    trend_error_win = tf.reduce_mean(
-        (1 - tf.cast(wins, dtype=tf.float32) * tf.cast(correct_trends, dtype=tf.float32))
-        * tf.abs(max_true - min_true),
-    )
-
-    trend_error_win_pred = tf.reduce_mean(
-        (1 - tf.cast(wins, dtype=tf.float32) * tf.cast(correct_trends, dtype=tf.float32))
-        * tf.abs(max_pred - min_pred),
-    )
-
-    return (
-        (z_1 + z_2 + z_3) * 2
-        + (trend_error + trend_error_win + trend_error_win_pred * 2 + win_amt_true_error + win_amt_pred_error)
-    ) / 1.5
+    # return (
+    #     (z_1 + z_2 + z_3) * 3
+    #     + (trend_error + trend_error_win + trend_error_win_pred * 2 + win_amt_true_error + win_amt_pred_error * 3)
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+    min_pred, max_pred, min_true, max_true, wins = support_idea_1_new(y_true, y_pred)
 
-    pred_capture = tf.reduce_sum((max_pred / min_pred - 1) * tf.cast(wins, dtype=tf.float32))
+    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
 
-    total_win_pred_capture_possible = tf.reduce_sum((max_true / min_true - 1) * tf.cast(wins, dtype=tf.float32))
+    total_win_pred_capture_possible = K.sum(
+        (max_true / min_true - 1) * K.cast(wins, dtype=K.floatx()),
+    )
 
     x = pred_capture / total_win_pred_capture_possible
 
@@ -152,65 +181,76 @@ def metric_win_pred_capture_percent(y_true, y_pred):
 
 
 def metric_pred_capture_percent(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+    min_pred, max_pred, min_true, max_true, wins = support_idea_1_new(y_true, y_pred)
 
-    pred_capture = tf.reduce_sum((max_pred / min_pred - 1) * tf.cast(wins, dtype=tf.float32))
+    pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
 
-    total_capture_possible = tf.reduce_sum(max_true / min_true - 1)
+    total_capture_possible = K.sum(max_true / min_true - 1)
 
     return pred_capture / total_capture_possible * 100
 
 
 def metric_win_percent(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+    min_pred, max_pred, min_true, max_true, wins = support_idea_1_new(y_true, y_pred)
 
-    win_fraction = tf.reduce_mean(tf.cast(wins, dtype=tf.float32))
+    win_fraction = K.mean(K.cast(wins, dtype=K.floatx()))
 
     return win_fraction * 100
 
 
 def metric_correct_win_trend_percent(y_true, y_pred):
-    min_pred, max_pred, min_true, max_true, wins = support_new_idea_1(y_true, y_pred)
+    min_pred, max_pred, min_true, max_true, wins = support_idea_1(y_true, y_pred)
 
-    correct_trends = support_new_idea_3(y_true, y_pred)
+    correct_trends = support_idea_3(y_true, y_pred)
 
-    correct_win_trend = tf.reduce_mean(
-        tf.cast(correct_trends, dtype=tf.float32) * tf.cast(wins, dtype=tf.float32),
-    ) / tf.reduce_mean(tf.cast(wins, dtype=tf.float32))
-
-    metric = tf.where(
-        tf.math.is_nan(correct_win_trend),
-        tf.zeros_like(correct_win_trend),
-        correct_win_trend,
+    correct_win_trend = K.mean(K.cast(correct_trends, dtype=K.floatx()) * K.cast(wins, dtype=K.floatx())) / K.mean(
+        K.cast(wins, dtype=K.floatx()),
     )
+
+    metric = tf.where(tf.math.is_nan(correct_win_trend), tf.zeros_like(correct_win_trend), correct_win_trend)
 
     return metric * 100
 
 
 def metric_win_checkpoint(y_true, y_pred):
-    n = y_pred.shape[1]
-    start_index = int(n * SKIP_PERCENTILE)
-    end_index = n - start_index
+    n: int = y_pred.shape[1]
+    start_index: int = int(n * SKIP_FIRST_PERCENTILE)
+    end_index: int = n - int(n * SKIP_FIRST_PERCENTILE) - int(n * SKIP_LAST_PERCENTILE)
 
-    min_pred_s = tf.reduce_min(y_pred[:, start_index:end_index, 0], axis=1)
-    max_pred_s = tf.reduce_max(y_pred[:, start_index:end_index, 1], axis=1)
+    min_pred_s, max_pred_s, min_true, max_true, band_inside = support_idea_1_new(y_true, y_pred)
 
-    min_true = tf.reduce_min(y_true[:, :, 0], axis=1)
-    max_true = tf.reduce_max(y_true[:, :, 1], axis=1)
+    # getting trends.
 
-    wins = tf.reduce_all(
+    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+    max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
+
+    min_true_index = K.argmin(y_true[:, :, 0], axis=1)
+    max_true_index = K.argmax(y_true[:, :, 1], axis=1)
+
+    correct_trends_buy = K.all(
         [
-            tf.math.greater_equal(max_true, max_pred_s),
-            tf.math.greater_equal(max_pred_s, min_pred_s),  # valid_pred
-            tf.math.greater_equal(min_pred_s, min_true),
+            max_pred_index > min_pred_index,
+            max_true_index > min_true_index,
         ],
         axis=0,
     )
 
-    correct_trends = support_new_idea_3(y_true, y_pred)
+    correct_trends_sell = K.all(
+        [
+            max_pred_index < min_pred_index,
+            max_true_index < min_true_index,
+        ],
+        axis=0,
+    )
 
-    trend_error_win_pred = tf.reduce_mean(
-        tf.cast(wins, dtype=tf.float32) * tf.cast(correct_trends, dtype=tf.float32) * tf.abs(max_pred_s - min_pred_s),
-    ) / tf.reduce_mean(tf.abs(max_true - min_true))
+    correct_trends = tf.logical_or(correct_trends_buy, correct_trends_sell)
 
-    return trend_error_win_pred * 100
+    pred_capture = K.sum(
+        (max_pred_s / min_pred_s - 1)
+        * K.cast(band_inside, dtype=K.floatx())
+        * K.cast(correct_trends, dtype=K.floatx()),
+    )
+
+    total_capture_possible = K.sum(max_true / min_true - 1)
+
+    return pred_capture / total_capture_possible * 100
