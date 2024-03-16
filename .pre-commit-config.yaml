@@ -7,12 +7,6 @@ repos:
     rev: v1.0
     hooks:
       - id: upgrade-type-hints
-  - repo: https://github.com/psf/black
-    rev: 23.7.0
-    hooks:
-      - id: black
-        args: ['--line-length=119']
-        verbose: true
   - repo: https://github.com/asottile/add-trailing-comma
     rev: v3.0.1
     hooks:
@@ -28,6 +22,13 @@ repos:
     hooks:
       - id: isort
         name: isort (python)
+        verbose: true
+        args: ['--profile', 'black']
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        args: ['--line-length=119']
         verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0

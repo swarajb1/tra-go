@@ -7,7 +7,7 @@ import training_zero as an
 from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
-IS_TRAINING_MODEL: bool = True
+IS_TRAINING_MODEL: bool = False
 prev_model: str = "2024-03-11 10-24"
 
 
@@ -87,18 +87,41 @@ def main():
             mcp_save_3 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-3.keras",
                 save_best_only=True,
-                monitor="metric_win_pred_capture_percent",
+                monitor="metric_pred_capture_percent",
                 mode="max",
             )
 
             mcp_save_4 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-4.keras",
                 save_best_only=True,
-                monitor="val_metric_win_pred_capture_percent",
+                monitor="val_metric_pred_capture_percent",
                 mode="max",
             )
 
-            callbacks = [tensorboard_callback, terNan, mcp_save_1, mcp_save_2, mcp_save_3, mcp_save_4]
+            mcp_save_5 = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-5.keras",
+                save_best_only=True,
+                monitor="metric_win_checkpoint",
+                mode="max",
+            )
+
+            mcp_save_6 = ModelCheckpoint(
+                f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-6.keras",
+                save_best_only=True,
+                monitor="val_metric_win_checkpoint",
+                mode="max",
+            )
+
+            callbacks = [
+                tensorboard_callback,
+                terNan,
+                mcp_save_1,
+                mcp_save_2,
+                mcp_save_3,
+                mcp_save_4,
+                mcp_save_5,
+                mcp_save_6,
+            ]
 
             history = model.fit(
                 x=X_train,
@@ -116,7 +139,7 @@ def main():
         print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        for model_num in range(1, 5):
+        for model_num in range(1, 7):
             print("\n" * 4, "*" * 500, "\n" * 4)
             print("only training data now")
 
