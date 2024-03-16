@@ -23,6 +23,7 @@ install:  ## Install poetry to run on local
 	poetry run pre-commit install
 
 run: ## run the program
+	clear
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py
 
 clean:

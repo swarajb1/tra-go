@@ -9,7 +9,7 @@ from training_yf import round_to_nearest_0_05
 
 import tra_go.band_4.keras_model_band_4 as km_4
 
-RISK_TO_REWARD_RATIO: float = 0.6
+RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
 SKIP_FIRST_PERCENTILE: float = 0.18
 SKIP_LAST_PERCENTILE: float = 0.18
@@ -61,6 +61,11 @@ class CustomEvaluation:
         if not os.path.exists(file_path):
             file_path: str = "training/models_saved/" + self.model_file_name
 
+        if not os.path.exists(file_path):
+            raise Exception(
+                f"file not found: {self.model_file_name} both in training/models and training/models_saved",
+            )
+
         with custom_object_scope(
             {
                 "metric_new_idea": km_4.metric_new_idea,
@@ -75,7 +80,7 @@ class CustomEvaluation:
             },
         ):
             model = load_model(file_path)
-            model.summary()
+            # model.summary()
 
         self.y_pred: np.ndarray = model.predict(self.X_data)
 
@@ -89,7 +94,8 @@ class CustomEvaluation:
         # for SAFETY_FACTOR in [1, 0.8]:
         self.y_pred_new = self.truncated_y_pred(y_arr=self.y_pred)
 
-        self.y_pred_new = self.correct_pred_values(self.y_pred_new)
+        # temporary - not correctting the pred values
+        # self.y_pred_new = self.correct_pred_values(self.y_pred_new)
 
         self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis, np.newaxis])
         self.Y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
@@ -546,10 +552,10 @@ class CustomEvaluation:
         print("\nleverage:\t", pro_250_5_str)
         print("datetime:\t", self.now_datetime)
 
-        print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
-        print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
-        print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
-        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+        # print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
+        # print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
+        # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
+        # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
 
         print("folder_name\t\t", self.model_file_name)
 
@@ -736,6 +742,11 @@ class CustomEvaluation:
 
         print("\n\n250_days\t\t\t", "{:.2f}".format((pow(1 + avg_win_per_day, 250) - 1) * 100), " %")
         print("250_days_leverage\t\t", "{:.2f}".format((pow(1 + avg_win_per_day * 5, 250) - 1) * 100), " %")
+
+        if self.test_size != 0:
+            print(f"\n work: data = VALIDATION DATA, model={self.model_num} \n")
+        else:
+            print(f"\n work: data = TRANING DATA, model={self.model_num} \n")
 
         return
 
