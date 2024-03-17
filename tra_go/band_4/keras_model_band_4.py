@@ -20,8 +20,8 @@ def metric_new_idea(y_true, y_pred):
 
 
 def metric_average_in(y_true, y_pred):
-    average_pred = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2
-    average_true = (y_true[:, :, 0] + y_true[:, :, 1]) / 2
+    average_pred = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2
+    average_true = (y_true[:, :, 2] + y_true[:, :, 1]) / 2
 
     error = average_pred - average_true
 
@@ -33,13 +33,13 @@ def support_idea_1(y_true, y_pred):
     start_index = int(n * SKIP_PERCENTILE)
     end_index = n - start_index * 2
 
-    min_pred_s = K.min(y_pred[:, start_index:end_index, 0], axis=1)
+    min_pred_s = K.min(y_pred[:, start_index:end_index, 2], axis=1)
     max_pred_s = K.max(y_pred[:, start_index:end_index, 1], axis=1)
 
-    min_pred = K.min(y_pred[:, :, 0], axis=1)
+    min_pred = K.min(y_pred[:, :, 2], axis=1)
     max_pred = K.max(y_pred[:, :, 1], axis=1)
 
-    min_true = K.min(y_true[:, :, 0], axis=1)
+    min_true = K.min(y_true[:, :, 2], axis=1)
     max_true = K.max(y_true[:, :, 1], axis=1)
 
     wins = K.all(
@@ -57,11 +57,11 @@ def support_idea_1(y_true, y_pred):
 def support_idea_1_new(y_true, y_pred):
     # create new y_pred with .80 as safety factor from average along axis=1
 
-    y_pred_safety_min = (y_pred[:, :, 1] + y_pred[:, :, 0]) / 2 - (
-        (y_pred[:, :, 1] - y_pred[:, :, 0]) / 2 * SAFETY_FACTOR
+    y_pred_safety_min = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2 - (
+        (y_pred[:, :, 1] - y_pred[:, :, 2]) / 2 * SAFETY_FACTOR
     )
-    y_pred_safety_max = (y_pred[:, :, 0] + y_pred[:, :, 1]) / 2 + (
-        (y_pred[:, :, 1] - y_pred[:, :, 0]) / 2 * SAFETY_FACTOR
+    y_pred_safety_max = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2 + (
+        (y_pred[:, :, 1] - y_pred[:, :, 2]) / 2 * SAFETY_FACTOR
     )
 
     n: int = y_pred.shape[1]
@@ -71,7 +71,7 @@ def support_idea_1_new(y_true, y_pred):
     min_pred_s = K.min(y_pred_safety_min[:, start_index:end_index], axis=1)
     max_pred_s = K.max(y_pred_safety_max[:, start_index:end_index], axis=1)
 
-    min_true = K.min(y_true[:, :, 0], axis=1)
+    min_true = K.min(y_true[:, :, 2], axis=1)
     max_true = K.max(y_true[:, :, 1], axis=1)
 
     band_inside = K.all(
@@ -103,10 +103,10 @@ def support_idea_3(y_true, y_pred):
     start_index = int(n * SKIP_PERCENTILE)
     end_index = n - start_index
 
-    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 2], axis=1)
     max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
 
-    min_true_index = K.argmin(y_true[:, :, 0], axis=1)
+    min_true_index = K.argmin(y_true[:, :, 2], axis=1)
     max_true_index = K.argmax(y_true[:, :, 1], axis=1)
 
     correct_trends_buy = K.all(
@@ -221,10 +221,10 @@ def metric_win_checkpoint(y_true, y_pred):
 
     # getting trends.
 
-    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 2], axis=1)
     max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
 
-    min_true_index = K.argmin(y_true[:, :, 0], axis=1)
+    min_true_index = K.argmin(y_true[:, :, 2], axis=1)
     max_true_index = K.argmax(y_true[:, :, 1], axis=1)
 
     correct_trends_buy = K.all(
@@ -251,6 +251,34 @@ def metric_win_checkpoint(y_true, y_pred):
         * K.cast(correct_trends, dtype=K.floatx()),
     )
 
+    max_inside_not_band = K.all(
+        [
+            max_true >= max_pred_s,
+            max_pred_s >= min_true,
+            min_pred_s <= min_true,
+        ],
+        axis=0,
+    )
+
+    min_inside_not_band = K.all(
+        [
+            max_true <= max_pred_s,
+            max_true >= min_pred_s,
+            min_pred_s >= min_true,
+        ],
+        axis=0,
+    )
+
+    loss_captured = K.sum(
+        (max_pred_s / y_true[:, -1, 3] - 1)
+        * K.cast(max_inside_not_band, dtype=K.floatx())
+        * K.cast(max_pred_index < min_pred_index, dtype=K.floatx()),
+    ) + K.sum(
+        (y_true[:, -1, 3] / min_pred_s - 1)
+        * K.cast(min_inside_not_band, dtype=K.floatx())
+        * K.cast(max_pred_index > min_pred_index, dtype=K.floatx()),
+    )
+
     total_capture_possible = K.sum(max_true / min_true - 1)
 
-    return pred_capture / total_capture_possible * 100
+    return (loss_captured + pred_capture) / total_capture_possible * 100
