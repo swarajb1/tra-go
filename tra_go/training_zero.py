@@ -36,8 +36,8 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
     test_df.reset_index(drop=True, inplace=True)
 
     return (
-        train_df[["open", "close", "high", "low", "real_close"]],
-        test_df[["open", "close", "high", "low", "real_close"]],
+        train_df[["open", "high", "low", "close", "real_close"]],
+        test_df[["open", "high", "low", "close", "real_close"]],
     )
 
 
@@ -64,8 +64,8 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     df_o.reset_index(drop=True, inplace=True)
 
     return (
-        df_i[["open", "close", "high", "low"]],
-        df_o[["open", "close", "high", "low"]],
+        df_i[["open", "high", "low", "close"]],
+        df_o[["open", "high", "low", "close"]],
         prev_close[["real_close"]],
     )
 
@@ -83,7 +83,7 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
 
     res_df.reset_index(drop=True, inplace=True)
 
-    return res_df[["open", "close", "high", "low", "real_close"]]
+    return res_df[["open", "high", "low", "close", "real_close"]]
 
 
 def by_date_df_array(df: pd.DataFrame) -> np.ndarray:
