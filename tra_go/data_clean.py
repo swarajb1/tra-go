@@ -28,13 +28,13 @@ class DataCleanerZero:
         df = pd.read_csv(self.get_csv_file_path())
 
         df["open"] = df["open"].apply(lambda x: round(number=x, ndigits=2))
-        df["close"] = df["close"].apply(lambda x: round(number=x, ndigits=2))
         df["high"] = df["high"].apply(lambda x: round(number=x, ndigits=2))
         df["low"] = df["low"].apply(lambda x: round(number=x, ndigits=2))
+        df["close"] = df["close"].apply(lambda x: round(number=x, ndigits=2))
 
         df.rename(columns={"date": "datetime"}, inplace=True)
 
-        return df[["datetime", "open", "close", "high", "low"]]
+        return df[["datetime", "open", "high", "low", "close"]]
 
     def data_clean_1(self) -> pd.DataFrame:
         # step 1: only regular data
@@ -43,10 +43,10 @@ class DataCleanerZero:
 
         # remove diwali murath trading rows
         df["is_regular_hours"] = df["datetime"].apply(lambda x: self.is_in_regular_hours(x))
-        df = df[df["is_regular_hours"] == True].copy(deep=True)
+        df = df[df["is_regular_hours"]].copy(deep=True)
 
         df["is_weekday"] = df["datetime"].apply(lambda x: is_weekday_datetime_str(x))
-        df = df[df["is_weekday"] == True].copy(deep=True)
+        df = df[df["is_weekday"]].copy(deep=True)
 
         # step 2: datetimes with second != 0, putting them to be zero, if second=0 does not exist
 
@@ -62,9 +62,9 @@ class DataCleanerZero:
                 dict_1 = {
                     "datetime": new_datetime_str,
                     "open": df.at[index, "open"],
-                    "close": df.at[index, "close"],
                     "high": df.at[index, "high"],
                     "low": df.at[index, "low"],
+                    "close": df.at[index, "close"],
                 }
 
                 df = pd.concat([df, pd.DataFrame(dict_1, index=[0])], ignore_index=True)
@@ -77,7 +77,7 @@ class DataCleanerZero:
         # df["datetime_obj"] = pd.to_datetime(df["datetime"], format="%Y-%m-%d %H:%M:%S%z")
         # duplicate_non_zero_second_indexes = df[df["datetime_obj"].dt.second != 0].index.tolist()
 
-        return df[["datetime", "open", "close", "high", "low"]]
+        return df[["datetime", "open", "high", "low", "close"]]
 
     def data_cleaning(self) -> pd.DataFrame:
         # start time = 0915
@@ -147,9 +147,9 @@ class DataCleanerZero:
             ref_index = self.get_non_zero_index(index, missing_indexes, len(df) - 1)
 
             df.at[index, "open"] = df.at[ref_index, "open"]
-            df.at[index, "close"] = df.at[ref_index, "close"]
             df.at[index, "high"] = df.at[ref_index, "high"]
             df.at[index, "low"] = df.at[ref_index, "low"]
+            df.at[index, "close"] = df.at[ref_index, "close"]
 
             missing_rows -= 1
 
@@ -157,7 +157,7 @@ class DataCleanerZero:
 
         df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
 
-        return df[["datetime", "open", "close", "high", "low"]]
+        return df[["datetime", "open", "high", "low", "close"]]
 
     def get_non_zero_index(self, index: int, missing_indexes: list[int], max_index: int) -> int:
         left_index: int = index - 1
@@ -238,11 +238,11 @@ class DataScalerZero:
             df.iloc[start_index:end_index, df.columns.get_loc("real_close")] = prev_close
 
         df["open"] = df["open"] / df["real_close"]
-        df["close"] = df["close"] / df["real_close"]
         df["high"] = df["high"] / df["real_close"]
         df["low"] = df["low"] / df["real_close"]
+        df["close"] = df["close"] / df["real_close"]
 
-        return df[["open", "close", "high", "low", "real_close"]]
+        return df[["open", "high", "low", "close", "real_close"]]
 
     def save_scaled_data(self) -> None:
         self.data_scaled.to_csv(f"./data_training/{self.symbol} - {self.interval}.csv", index=True)
@@ -255,8 +255,8 @@ if __name__ == "__main__":
         print("\n" * 2)
         print(symbol)
 
-        # DataCleanerZero(symbol=symbol, interval=interval)
-        # print("Data Cleaning Done.")
+        DataCleanerZero(symbol=symbol, interval=interval)
+        print("Data Cleaning Done.")
 
         DataScalerZero(symbol=symbol, interval=interval)
         print("Data Scaling Done.")
