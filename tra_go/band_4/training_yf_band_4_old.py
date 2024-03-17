@@ -7,7 +7,7 @@ from keras.utils import custom_object_scope
 from tensorflow import keras
 from training_yf import round_to_nearest_0_05
 
-import tra_go.band_4.keras_model_band_4 as km_4
+import tra_go.band_4.keras_model_band_4_tf as km_4
 
 
 def get_number_of_epochs() -> int:
