@@ -1,14 +1,17 @@
+import os
+import subprocess
 import time
 from datetime import datetime
 
-import band_4.keras_model_band_4_old as km_4
 import keras_model as km
 import training_zero as an
 from band_4.training_yf_band_4 import CustomEvaluation
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
+import tra_go.band_4.keras_model_band_4 as km_4
+
 IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-03-11 10-24"
+prev_model: str = "2024-03-17 21-12"
 
 
 NUMBER_OF_EPOCHS: int = 3000
@@ -61,6 +64,7 @@ def main():
                     km_4.metric_loss_comp_2,
                     km_4.metric_win_percent,
                     km_4.metric_win_pred_capture_percent,
+                    km_4.metric_pred_capture_percent,
                     km_4.metric_win_checkpoint,
                 ],
             )
@@ -140,7 +144,7 @@ def main():
         print("-" * 30)
 
         for model_num in range(1, 7):
-            print("\n" * 4, "*" * 500, "\n" * 4)
+            print("\n" * 4, "*" * 200, "\n" * 4, sep="")
             print("only training data now")
 
             training_data_custom_evaluation = CustomEvaluation(
@@ -168,6 +172,19 @@ def main():
 
 
 if __name__ == "__main__":
+    os.system("clear")
+
+    if IS_TRAINING_MODEL:
+        # Get the current process ID
+        pid = os.getpid()
+        # os.system(f"cpulimit -l 13 -p {pid}")
+
+        # The command you want to run
+        command = f"cpulimit -l 13 -p {pid}"
+
+        # Open a new terminal and run the command
+        subprocess.Popen(["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)])
+
     time_1 = time.time()
     main()
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
