@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime
 
@@ -10,8 +11,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_4.keras_model_band_4 as km_4
 
-IS_TRAINING_MODEL: bool = False
-prev_model: str = "2024-03-17 21-12"
+IS_TRAINING_MODEL: bool = True
+prev_model: str = "2024-03-22 20-57"
 
 
 NUMBER_OF_EPOCHS: int = 3000
@@ -127,6 +128,8 @@ def main():
                 mcp_save_6,
             ]
 
+            print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
+
             history = model.fit(
                 x=X_train,
                 y=Y_train,
@@ -140,13 +143,10 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+        print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
         print("-" * 30)
 
         for model_num in range(1, 7):
-            print("\n" * 4, "*" * 200, "\n" * 4, sep="")
-            print("only training data now")
-
             training_data_custom_evaluation = CustomEvaluation(
                 X_data=X_train,
                 Y_data=Y_train,
@@ -156,9 +156,6 @@ def main():
                 now_datetime=now_datetime,
                 model_num=model_num,
             )
-
-            print("\n" * 4, "*" * 500, "\n" * 4)
-            print("only validation data now")
 
             valid_data_custom_evaluation = CustomEvaluation(
                 X_data=X_test,
@@ -174,13 +171,68 @@ def main():
 if __name__ == "__main__":
     os.system("clear")
 
-    if IS_TRAINING_MODEL:
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "true":
+            IS_TRAINING_MODEL = True
+            # Get the current process ID
+            pid = os.getpid()
+
+            # The command you want to run
+            command = f"cpulimit -l 12 -p {pid}"
+
+            # Open a new terminal and run the command
+            subprocess.Popen(["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)])
+
+        elif sys.argv[1] == "new":
+            IS_TRAINING_MODEL = False
+
+            # when to training is going on
+            # get prev_model
+
+            list_of_files = os.listdir("training/models")
+
+            list_of_files.remove(".DS_Store")
+
+            list_of_files = sorted(list_of_files, key=lambda x: os.path.getmtime("training/models/" + x))
+
+            if list_of_files:
+                latest_file = list_of_files[-1]
+
+                print(latest_file)
+
+                date_str: str = latest_file.split(" - ")[1]
+                prev_model = date_str
+
+            else:
+                raise Exception("file not found in folder")
+
+        elif sys.argv[1] == "new_prev":
+            IS_TRAINING_MODEL = False
+
+            # get prev_model
+            list_of_files = os.listdir("training/models")
+
+            list_of_files.remove(".DS_Store")
+
+            list_of_files = sorted(list_of_files, key=lambda x: os.path.getmtime("training/models/" + x))
+
+            if list_of_files:
+                latest_file = list_of_files[-7]
+
+                print(latest_file)
+
+                date_str: str = latest_file.split(" - ")[1]
+                prev_model = date_str
+
+            else:
+                raise Exception("file not found in folder")
+
+    if IS_TRAINING_MODEL and len(sys.argv) == 1:
         # Get the current process ID
         pid = os.getpid()
-        # os.system(f"cpulimit -l 13 -p {pid}")
 
         # The command you want to run
-        command = f"cpulimit -l 13 -p {pid}"
+        command = f"cpulimit -l 11 -p {pid}"
 
         # Open a new terminal and run the command
         subprocess.Popen(["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)])

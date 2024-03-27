@@ -210,7 +210,7 @@ def main():
             zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
             Y_test = np.concatenate((Y_test, zeros), axis=2)
 
-            print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+            print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
             print("-" * 30)
 
             an.custom_evaluate_safety_factor_band_2(
@@ -288,7 +288,7 @@ def main():
             zeros = np.zeros((Y_test.shape[0], Y_test.shape[1], 2))
             Y_test = np.concatenate((Y_test, zeros), axis=2)
 
-            print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+            print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
             print("-" * 30)
 
             an_2.custom_evaluate_safety_factor(

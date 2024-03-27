@@ -30,54 +30,53 @@ if __name__ == "__main__":
 
     print("Kite Session Generated")
 
-    exchange: str = "BSE"
-
-    dict_symbols = create_symbol_instrument_token_dict(exchange)
-
     hard_start_date = date(2000, 1, 1)
     hard_stop_date = date.today()
 
-    for symbol, instrument_token in dict_symbols.items():
-        print("\n" * 2, symbol, "\t=", instrument_token)
+    for exchange in ["NSE", "BSE"]:
+        dict_symbols = create_symbol_instrument_token_dict(exchange)
 
-        file_path: str = f"data_z/{exchange.lower()}/1m/{symbol} - 1m.csv"
+        for symbol, instrument_token in dict_symbols.items():
+            print("\n" * 2, symbol, "\t=", instrument_token)
 
-        if os.path.exists(file_path):
-            continue
+            file_path: str = f"data_z/{exchange.lower()}/1m/{symbol} - 1m.csv"
 
-        all_data_df = pd.DataFrame()
+            if os.path.exists(file_path):
+                continue
 
-        stop_date = hard_start_date + timedelta(days=60)
+            all_data_df = pd.DataFrame()
 
-        while stop_date <= hard_stop_date:
-            print(stop_date)
-            start_date = stop_date - timedelta(days=60)
+            stop_date = hard_start_date + timedelta(days=60)
 
-            data_dump = kite.historical_data(
-                instrument_token=instrument_token,
-                from_date=start_date,
-                to_date=stop_date,
-                interval="minute",
-            )
+            while stop_date <= hard_stop_date:
+                print(stop_date)
+                start_date = stop_date - timedelta(days=60)
 
-            data_df = pd.DataFrame(data_dump)
+                data_dump = kite.historical_data(
+                    instrument_token=instrument_token,
+                    from_date=start_date,
+                    to_date=stop_date,
+                    interval="minute",
+                )
 
-            print(symbol)
-            print(data_df.head())
+                data_df = pd.DataFrame(data_dump)
 
-            all_data_df = pd.concat([all_data_df, data_df]).drop_duplicates(keep="first")
+                print(symbol)
+                print(data_df.head())
 
-            if stop_date == hard_stop_date:
-                break
+                all_data_df = pd.concat([all_data_df, data_df]).drop_duplicates(keep="first")
 
-            stop_date = stop_date + timedelta(days=61)
+                if stop_date == hard_stop_date:
+                    break
 
-            if stop_date > hard_stop_date:
-                stop_date = hard_stop_date
+                stop_date = stop_date + timedelta(days=61)
 
-            sleep(0.1)
+                if stop_date > hard_stop_date:
+                    stop_date = hard_stop_date
 
-        all_data_df.to_csv(file_path, index=False)
+                sleep(0.1)
 
-        print(symbol, "\tfull_data")
-        print(all_data_df.head())
+            all_data_df.to_csv(file_path, index=False)
+
+            print(symbol, "\tfull_data")
+            print(all_data_df.head())

@@ -1,21 +1,19 @@
 import tensorflow as tf
-from band_4.training_yf_band_4 import (
-    SAFETY_FACTOR,
-    SKIP_FIRST_PERCENTILE,
-    SKIP_LAST_PERCENTILE,
-)
 from keras import backend as K
 from keras_model import metric_rmse, rmse_average
 
 SKIP_PERCENTILE: float = 0.18
 
+SKIP_FIRST_PERCENTILE: float = 0.18
+SKIP_LAST_PERCENTILE: float = 0.18
+
 
 def metric_new_idea(y_true, y_pred):
     return (
-        metric_rmse(y_true, y_pred) * 4
+        metric_rmse(y_true, y_pred) * 2
         + metric_average_in(y_true, y_pred)
         + metric_loss_comp_2(y_true, y_pred)
-        + (1 - metric_win_checkpoint(y_true, y_pred) / 100) / 36
+        + (1 - metric_win_checkpoint(y_true, y_pred) / 100) / 20
     )
 
 
@@ -23,9 +21,11 @@ def metric_average_in(y_true, y_pred):
     average_pred = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2
     average_true = (y_true[:, :, 2] + y_true[:, :, 1]) / 2
 
-    error = average_pred - average_true
-
-    return rmse_average(error)
+    return (
+        rmse_average(average_pred - average_true)
+        + rmse_average(y_pred[:, :, 2] - y_true[:, :, 2])
+        + rmse_average(y_pred[:, :, 1] - y_true[:, :, 1])
+    )
 
 
 def support_idea_1(y_true, y_pred):
@@ -55,21 +55,15 @@ def support_idea_1(y_true, y_pred):
 
 
 def support_idea_1_new(y_true, y_pred):
-    # create new y_pred with .80 as safety factor from average along axis=1
-
-    y_pred_safety_min = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2 - (
-        (y_pred[:, :, 1] - y_pred[:, :, 2]) / 2 * SAFETY_FACTOR
-    )
-    y_pred_safety_max = (y_pred[:, :, 2] + y_pred[:, :, 1]) / 2 + (
-        (y_pred[:, :, 1] - y_pred[:, :, 2]) / 2 * SAFETY_FACTOR
-    )
+    y_pred_min = y_pred[:, :, 2]
+    y_pred_max = y_pred[:, :, 1]
 
     n: int = y_pred.shape[1]
     start_index: int = int(n * SKIP_FIRST_PERCENTILE)
     end_index: int = n - int(n * SKIP_FIRST_PERCENTILE) - int(n * SKIP_LAST_PERCENTILE)
 
-    min_pred_s = K.min(y_pred_safety_min[:, start_index:end_index], axis=1)
-    max_pred_s = K.max(y_pred_safety_max[:, start_index:end_index], axis=1)
+    min_pred_s = K.min(y_pred_min[:, start_index:end_index], axis=1)
+    max_pred_s = K.max(y_pred_max[:, start_index:end_index], axis=1)
 
     min_true = K.min(y_true[:, :, 2], axis=1)
     max_true = K.max(y_true[:, :, 1], axis=1)
@@ -105,6 +99,9 @@ def support_idea_3(y_true, y_pred):
 
     min_pred_index = K.argmin(y_pred[:, start_index:end_index, 2], axis=1)
     max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
+
+    # min_pred_index = K.argmin(y_pred[:, :, 2], axis=1)
+    # max_pred_index = K.argmax(y_pred[:, :, 1], axis=1)
 
     min_true_index = K.argmin(y_true[:, :, 2], axis=1)
     max_true_index = K.argmax(y_true[:, :, 1], axis=1)
@@ -145,23 +142,15 @@ def metric_loss_comp_2(y_true, y_pred):
         K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
     )
 
-    return z_1 + z_2 + z_3 + win_amt_true_error + win_amt_pred_error
+    # return z_1 + z_2 + z_3 + win_amt_true_error + win_amt_pred_error
 
-    # correct_trends = support_idea_3(y_true, y_pred)
+    correct_trends = support_idea_3(y_true, y_pred)
 
-    # trend_error = K.mean((1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true))
+    trend_error_win = K.mean(
+        (1 - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()))) * K.abs(max_true - min_true),
+    )
 
-    # trend_error_win = K.mean(
-    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true),
-    # )
-
-    # trend_error_win_pred = K.mean(
-    #     (1 - K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
-    # )
-
-    # return (
-    #     (z_1 + z_2 + z_3) * 3
-    #     + (trend_error + trend_error_win + trend_error_win_pred * 2 + win_amt_true_error + win_amt_pred_error * 3)
+    return ((z_1 + z_2 + z_3) * 2 + (trend_error_win + win_amt_true_error * 2 + win_amt_pred_error * 3)) / 2
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):
@@ -169,9 +158,7 @@ def metric_win_pred_capture_percent(y_true, y_pred):
 
     pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
 
-    total_win_pred_capture_possible = K.sum(
-        (max_true / min_true - 1) * K.cast(wins, dtype=K.floatx()),
-    )
+    total_win_pred_capture_possible = K.sum((max_true / min_true - 1) * K.cast(wins, dtype=K.floatx()))
 
     x = pred_capture / total_win_pred_capture_possible
 
@@ -251,7 +238,7 @@ def metric_win_checkpoint(y_true, y_pred):
         * K.cast(correct_trends, dtype=K.floatx()),
     )
 
-    max_inside_not_band = K.all(
+    max_inside_but_not_band = K.all(
         [
             max_true >= max_pred_s,
             max_pred_s >= min_true,
@@ -260,7 +247,7 @@ def metric_win_checkpoint(y_true, y_pred):
         axis=0,
     )
 
-    min_inside_not_band = K.all(
+    min_inside_but_not_band = K.all(
         [
             max_true <= max_pred_s,
             max_true >= min_pred_s,
@@ -269,16 +256,30 @@ def metric_win_checkpoint(y_true, y_pred):
         axis=0,
     )
 
+    # loss captured, when trade taken, but other side of trade no inside band, also considering here that risk_to_reward_ratio is unbounded.
+
+    # case 1: when max inside, and sell trade
+    # case 2: when min inside, and buy trade
+    # closing both trades at the last closing tick price.
+
     loss_captured = K.sum(
         (max_pred_s / y_true[:, -1, 3] - 1)
-        * K.cast(max_inside_not_band, dtype=K.floatx())
+        * K.cast(max_inside_but_not_band, dtype=K.floatx())
         * K.cast(max_pred_index < min_pred_index, dtype=K.floatx()),
     ) + K.sum(
         (y_true[:, -1, 3] / min_pred_s - 1)
-        * K.cast(min_inside_not_band, dtype=K.floatx())
+        * K.cast(min_inside_but_not_band, dtype=K.floatx())
         * K.cast(max_pred_index > min_pred_index, dtype=K.floatx()),
     )
 
+    loss_captured_x = tf.where(tf.math.is_nan(loss_captured), tf.zeros_like(loss_captured), loss_captured)
+
     total_capture_possible = K.sum(max_true / min_true - 1)
 
-    return (loss_captured + pred_capture) / total_capture_possible * 100
+    trade_fraction = (
+        K.mean(K.cast(band_inside, dtype=K.floatx()))
+        + K.mean(K.cast(max_inside_but_not_band, dtype=K.floatx()))
+        + K.mean(K.cast(min_inside_but_not_band, dtype=K.floatx()))
+    )
+
+    return (trade_fraction + (loss_captured_x + pred_capture) / total_capture_possible) * 100

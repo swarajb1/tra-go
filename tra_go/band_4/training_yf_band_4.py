@@ -11,8 +11,6 @@ import tra_go.band_4.keras_model_band_4 as km_4
 
 RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
-SKIP_FIRST_PERCENTILE: float = 0.18
-SKIP_LAST_PERCENTILE: float = 0.18
 
 
 def get_number_of_epochs() -> int:
@@ -43,11 +41,16 @@ class CustomEvaluation:
         self.now_datetime = now_datetime
         self.model_num = model_num
 
-        self.SKIP_FIRST_PERCENTILE = SKIP_FIRST_PERCENTILE
-        self.SKIP_LAST_PERCENTILE = SKIP_LAST_PERCENTILE
         self.SAFETY_FACTOR = SAFETY_FACTOR
 
         self.number_of_days = self.X_data.shape[0]
+
+        print("\n" * 4, "*" * 200, "\n" * 4, sep="")
+
+        if self.test_size > 0:
+            print("only TRAINING data now")
+        else:
+            print("only VALIDATION data now")
 
         self.custom_evaluate_safety_factor()
 
@@ -91,7 +94,6 @@ class CustomEvaluation:
 
         # Y_data = self.transform_y_array(y_arr=self.Y_data)
 
-        # for SAFETY_FACTOR in [1, 0.8]:
         self.y_pred_new = self.truncated_y_pred(y_arr=self.y_pred)
 
         # temporary - not correctting the pred values
@@ -100,17 +102,19 @@ class CustomEvaluation:
         self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis, np.newaxis])
         self.Y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
+        y_pred_real_untruncated = round_to_nearest_0_05(self.y_pred * self.prev_close[:, np.newaxis, np.newaxis])
+
         self.function_make_win_graph(y_true=self.Y_data_real, y_pred=self.y_pred_real, x_close=x_close_real)
 
-        self.function_error_132_graph(y_true=self.Y_data_real, y_pred=self.y_pred_real)
+        self.function_error_132_graph(y_true=self.Y_data_real, y_pred=y_pred_real_untruncated)
 
         return
 
     def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eliminated_element_index: int = int(self.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
-        last_non_eliminated_element_index: int = y_arr.shape[1] - int(self.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        first_non_eliminated_element_index: int = int(km_4.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
+        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
-        last_skipped_elements: int = int(self.SKIP_LAST_PERCENTILE * y_arr.shape[1])
+        last_skipped_elements: int = int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
         res: np.ndarray = y_arr.copy()
 
@@ -201,7 +205,7 @@ class CustomEvaluation:
             + f"NUMBER_OF_NEURONS = {km.NUMBER_OF_NEURONS}  "
             + f"NUMBER_OF_LAYERS = {km.NUMBER_OF_LAYERS}\n"
             + f"NUMBER_OF_EPOCHS = {get_number_of_epochs()} | "
-            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT}",
+            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT_PERCENT}",
             fontsize=20,
         )
 
@@ -416,9 +420,9 @@ class CustomEvaluation:
         print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
         print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
-        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT_PERCENT)
 
-        print("folder_name\t\t", self.model_file_name)
+        print("folder_name\t", self.model_file_name)
 
         # plt.show()
 
@@ -582,7 +586,7 @@ class CustomEvaluation:
 
         print("simulation started....")
 
-        for RISK_TO_REWARD_RATIO in np.arange(0, 2.1, 0.1):
+        for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
             number_of_days: int = real_price_arr.shape[0]
 
             wins_day_wise_list: np.array = np.zeros(number_of_days)

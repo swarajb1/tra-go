@@ -24,10 +24,14 @@ install:  ## Install poetry to run on local
 
 run: ## run the program
 	clear
-	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py $(new)
 
 clean:
 	rm -rf __pycache__
+
+
+clean_logs:
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) utils/clean_logs.py
 
 
 new-yf-data:
