@@ -185,7 +185,7 @@ class CustomEvaluation:
             + f"NUMBER_OF_NEURONS = {km.NUMBER_OF_NEURONS}  "
             + f"NUMBER_OF_LAYERS = {km.NUMBER_OF_LAYERS}\n"
             + f"NUMBER_OF_EPOCHS = {get_number_of_epochs()} | "
-            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT} | "
+            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT_PERCENT} | "
             + f"WEIGHT_FOR_MEA = {km.WEIGHT_FOR_MEA}",
             fontsize=20,
         )
@@ -402,7 +402,7 @@ class CustomEvaluation:
         print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
         print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
-        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT_PERCENT)
         print("WEIGHT_FOR_MEA\t\t\t", km.WEIGHT_FOR_MEA)
 
         print("folder_name\t\t", self.folder_name)

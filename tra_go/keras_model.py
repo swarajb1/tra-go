@@ -1,10 +1,11 @@
 import keras
 import keras.backend as K
 from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input
+from keras.regularizers import L1
 
-NUMBER_OF_NEURONS = 512
-NUMBER_OF_LAYERS = 3
-INITIAL_DROPOUT = 0
+NUMBER_OF_NEURONS: int = 512
+NUMBER_OF_LAYERS: int = 6
+INITIAL_DROPOUT_PERCENT: float = 0.01
 
 
 def get_untrained_model(X_train, y_type):
@@ -19,7 +20,7 @@ def get_untrained_model(X_train, y_type):
         ),
     )
 
-    model.add(Dropout(INITIAL_DROPOUT / 100))
+    model.add(Dropout(INITIAL_DROPOUT_PERCENT / 100))
 
     for i in range(NUMBER_OF_LAYERS - 1):
         model.add(
@@ -30,7 +31,7 @@ def get_untrained_model(X_train, y_type):
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 2)) / 100))
+        model.add(Dropout(pow(INITIAL_DROPOUT_PERCENT, 1 / (i + 2)) / 100))
 
     if y_type == "band_2":
         model.add(Dense(2))
@@ -56,11 +57,12 @@ def get_untrained_model_new(X_train):
                     units=NUMBER_OF_NEURONS,
                     return_sequences=True,
                     activation="relu",
+                    kernel_regularizer=L1(0.00001),
                 ),
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(INITIAL_DROPOUT, 1 / (i + 1)) / 100))
+        model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
     model.add(Dense(4))
 

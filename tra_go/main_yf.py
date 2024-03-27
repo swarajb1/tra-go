@@ -123,7 +123,7 @@ def main():
 
             print("\nmodel : training done. \n")
 
-        print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+        print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
         print("-" * 30)
 
         # X_all, Y_all, prev_close = an.append_test_train_arr(
@@ -242,7 +242,7 @@ def main():
 
     #         print("\nmodel : training done. \n")
 
-    #     print(f"\n\nnow_datatime:\t{now_datetime}\n\n")
+    #     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
     #     print("-" * 30)
 
     #     print("\n" * 4, "*" * 80, "\n" * 4)
