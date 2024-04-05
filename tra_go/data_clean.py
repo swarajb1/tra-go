@@ -42,7 +42,9 @@ class DataCleanerZero:
         df = self.data_raw.sort_values(by="datetime", ascending=True)
 
         # remove diwali murath trading rows
-        df["is_regular_hours"] = df["datetime"].apply(lambda x: self.is_in_regular_hours(x))
+        df["is_regular_hours"] = df["datetime"].apply(
+            lambda x: self.is_in_regular_hours(x),
+        )
         df = df[df["is_regular_hours"]].copy(deep=True)
 
         df["is_weekday"] = df["datetime"].apply(lambda x: is_weekday_datetime_str(x))
@@ -50,11 +52,17 @@ class DataCleanerZero:
 
         # step 2: datetimes with second != 0, putting them to be zero, if second=0 does not exist
 
-        df["datetime_obj"] = pd.to_datetime(df["datetime"], format="%Y-%m-%d %H:%M:%S%z")
+        df["datetime_obj"] = pd.to_datetime(
+            df["datetime"],
+            format="%Y-%m-%d %H:%M:%S%z",
+        )
         non_zero_second_indexes = df[df["datetime_obj"].dt.second != 0].index.tolist()
 
         for index in non_zero_second_indexes:
-            datetime_obj = datetime.strptime(df.at[index, "datetime"], "%Y-%m-%d %H:%M:%S%z")
+            datetime_obj = datetime.strptime(
+                df.at[index, "datetime"],
+                "%Y-%m-%d %H:%M:%S%z",
+            )
             new_datetime = datetime_obj.replace(second=0)
             new_datetime_str = new_datetime.strftime("%Y-%m-%d %H:%M:%S%z")
 
@@ -105,13 +113,16 @@ class DataCleanerZero:
             first_datetime = timezone.localize(date_obj)
 
             all_datetimes_required.extend(
-                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z") for i in range(375)
+                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z")
+                for i in range(375)
             )
 
         all_datetimes_in_data = []
         for index, row in df.iterrows():
             all_datetimes_in_data.append(
-                datetime.strptime(row["datetime"], "%Y-%m-%d %H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S%z"),
+                datetime.strptime(row["datetime"], "%Y-%m-%d %H:%M:%S%z").strftime(
+                    "%Y-%m-%d %H:%M:%S%z",
+                ),
             )
 
         # make a set of all datetime to be there
@@ -159,7 +170,12 @@ class DataCleanerZero:
 
         return df[["datetime", "open", "high", "low", "close"]]
 
-    def get_non_zero_index(self, index: int, missing_indexes: list[int], max_index: int) -> int:
+    def get_non_zero_index(
+        self,
+        index: int,
+        missing_indexes: list[int],
+        max_index: int,
+    ) -> int:
         left_index: int = index - 1
         right_index: int = index + 1
 
@@ -179,7 +195,10 @@ class DataCleanerZero:
     def save_cleaned_data(self) -> None:
         print(self.symbol, "\t= ", len(self.data_cleaned) / 375)
 
-        self.data_cleaned.to_csv(f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv", index=False)
+        self.data_cleaned.to_csv(
+            f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv",
+            index=False,
+        )
 
     def is_in_regular_hours(self, check_datetime) -> bool:
         time_open = time(9, 15, 0)
@@ -205,6 +224,20 @@ def is_weekday_datetime_str(datetime_str: str):
 
 
 class DataScalerZero:
+    """A class for scaling and saving data. This is the data that is used for
+    model training.
+
+    Attributes:
+        symbol (str): The symbol of the data.
+        interval (str): The interval of the data.
+
+    Methods:
+        __init__(symbol: str, interval: str): Initializes the DataScalerZero object.
+        get_csv_file_path() -> str: Returns the file path of the CSV file.
+        data_scaling() -> pd.DataFrame: Scales the data and returns a DataFrame.
+        save_scaled_data() -> None: Saves the scaled data to a CSV file.
+    """
+
     def __init__(self, symbol: str, interval: str):
         self.symbol = symbol
         self.interval = interval
@@ -216,7 +249,9 @@ class DataScalerZero:
         self.save_scaled_data()
 
     def get_csv_file_path(self) -> str:
-        file_path = f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
+        file_path = (
+            f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
+        )
 
         return file_path
 
@@ -227,7 +262,10 @@ class DataScalerZero:
 
         # for 1st day
         # real close if the open of that day itself, as there is no previous day
-        df.iloc[:375, df.columns.get_loc("real_close")] = df.iloc[0, df.columns.get_loc("open")]
+        df.iloc[:375, df.columns.get_loc("real_close")] = df.iloc[
+            0,
+            df.columns.get_loc("open"),
+        ]
 
         for day in range(1, len(df) // 375):
             start_index: int = day * 375
@@ -235,7 +273,10 @@ class DataScalerZero:
 
             prev_close: float = df.iloc[start_index - 1, df.columns.get_loc("close")]
 
-            df.iloc[start_index:end_index, df.columns.get_loc("real_close")] = prev_close
+            df.iloc[
+                start_index:end_index,
+                df.columns.get_loc("real_close"),
+            ] = prev_close
 
         df["open"] = df["open"] / df["real_close"]
         df["high"] = df["high"] / df["real_close"]
@@ -245,7 +286,10 @@ class DataScalerZero:
         return df[["open", "high", "low", "close", "real_close"]]
 
     def save_scaled_data(self) -> None:
-        self.data_scaled.to_csv(f"./data_training/{self.symbol} - {self.interval}.csv", index=True)
+        self.data_scaled.to_csv(
+            f"./data_training/{self.symbol} - {self.interval}.csv",
+            index=True,
+        )
 
 
 if __name__ == "__main__":
