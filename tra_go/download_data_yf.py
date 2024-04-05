@@ -160,7 +160,7 @@ for INTERVAL in [
 
         print(final_data)
 
-        folder_name = f"./data_stock_price_yf/{INTERVAL}_data"
+        folder_name = f"./data_yf/nse/{INTERVAL}_data"
         if not os.path.exists(folder_name):
             os.mkdir(folder_name)
 
@@ -171,7 +171,9 @@ for INTERVAL in [
         if os.path.exists(filename):
             previous_data = pd.read_csv(filename, index_col=0)
 
-            final_data = pd.concat([previous_data, final_data]).drop_duplicates(keep="first")
+            final_data = pd.concat([previous_data, final_data]).drop_duplicates(
+                keep="first",
+            )
 
         final_data.to_csv(filename, index=True)
 

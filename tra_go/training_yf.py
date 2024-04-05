@@ -136,7 +136,7 @@ def get_data_all_df(ticker, interval) -> pd.DataFrame:
 
 
 def get_csv_file_path(ticker, interval) -> str:
-    file_path = f"./data_stock_price_yf/{interval}_data/{ticker} - {interval}.csv"
+    file_path = f"./data_yf/nse/{interval}_data/{ticker} - {interval}.csv"
     return file_path
 
 
@@ -334,8 +334,12 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
 
 
 def data_split_x_y(df, interval) -> pd.DataFrame:
-    df["is_input"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=0, interval=interval))
-    df["is_output"] = df["datetime"].apply(lambda x: is_in_half(x, which_half=1, interval=interval))
+    df["is_input"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=0, interval=interval),
+    )
+    df["is_output"] = df["datetime"].apply(
+        lambda x: is_in_half(x, which_half=1, interval=interval),
+    )
 
     df_i = df[df["is_input"]].copy(deep=True)
     df_o = df[df["is_output"]].copy(deep=True)
@@ -434,7 +438,10 @@ def train_test_split(
         train_y = by_date_df_array(df_train_y[selected_columns_1])
         test_y = by_date_df_array(df_test_y[selected_columns_1])
 
-        df_train_c, df_test_c = data_split_train_test(df=df_cleaned, test_size=test_size)
+        df_train_c, df_test_c = data_split_train_test(
+            df=df_cleaned,
+            test_size=test_size,
+        )
 
         train_prev_close = get_prev_close(df_train_c)
         test_prev_close = get_prev_close(df_test_c)
@@ -671,7 +678,14 @@ def get_x_y_individual_data(
     return arr_x, arr_y
 
 
-def append_test_train_arr(X_train, Y_train, X_test, Y_test, train_prev_close, test_prev_close):
+def append_test_train_arr(
+    X_train,
+    Y_train,
+    X_test,
+    Y_test,
+    train_prev_close,
+    test_prev_close,
+):
     X_arr = np.append(X_train, X_test, axis=0)
     Y_arr = np.append(Y_train, Y_test, axis=0)
     prev_arr = np.append(train_prev_close, test_prev_close, axis=0)
