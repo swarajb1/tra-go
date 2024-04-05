@@ -8,12 +8,15 @@ SKIP_FIRST_PERCENTILE: float = 0.18
 SKIP_LAST_PERCENTILE: float = 0.18
 
 
+RISK_TO_REWARD_RATIO: float = 0.3
+
+
 def metric_new_idea(y_true, y_pred):
     return (
         metric_rmse(y_true, y_pred) * 2
         + metric_average_in(y_true, y_pred)
         + metric_loss_comp_2(y_true, y_pred)
-        + (1 - metric_win_checkpoint(y_true, y_pred) / 100) / 20
+        # + (1 - metric_win_checkpoint(y_true, y_pred) / 100) / 20
     )
 
 
@@ -60,7 +63,7 @@ def support_idea_1_new(y_true, y_pred):
 
     n: int = y_pred.shape[1]
     start_index: int = int(n * SKIP_FIRST_PERCENTILE)
-    end_index: int = n - int(n * SKIP_FIRST_PERCENTILE) - int(n * SKIP_LAST_PERCENTILE)
+    end_index: int = n - int(n * SKIP_LAST_PERCENTILE)
 
     min_pred_s = K.min(y_pred_min[:, start_index:end_index], axis=1)
     max_pred_s = K.max(y_pred_max[:, start_index:end_index], axis=1)
@@ -81,13 +84,24 @@ def support_idea_1_new(y_true, y_pred):
 
 
 def support_idea_2(min_pred, max_pred, min_true, max_true, wins):
-    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
+    z_1 = K.mean(
+        (1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx()))
+        * K.abs(max_true - max_pred),
+    )
 
-    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
+    z_2 = K.mean(
+        (1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx()))
+        * K.abs(max_pred - min_pred),
+    )
 
-    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
+    z_3 = K.mean(
+        (1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx()))
+        * K.abs(min_pred - min_true),
+    )
 
-    win_amt_true = K.sum((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+    win_amt_true = K.sum(
+        (1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true),
+    )
 
     return z_1, z_2, z_3, win_amt_true
 
@@ -130,16 +144,28 @@ def support_idea_3(y_true, y_pred):
 def metric_loss_comp_2(y_true, y_pred):
     min_pred, max_pred, min_true, max_true, wins = support_idea_1_new(y_true, y_pred)
 
-    z_1 = K.mean((1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx())) * K.abs(max_true - max_pred))
+    z_1 = K.mean(
+        (1 - K.cast(K.all([max_true >= max_pred], axis=0), dtype=K.floatx()))
+        * K.abs(max_true - max_pred),
+    )
 
-    z_2 = K.mean((1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx())) * K.abs(max_pred - min_pred))
+    z_2 = K.mean(
+        (1 - K.cast(K.all([max_pred >= min_pred], axis=0), dtype=K.floatx()))
+        * K.abs(max_pred - min_pred),
+    )
 
-    z_3 = K.mean((1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true))
+    z_3 = K.mean(
+        (1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx()))
+        * K.abs(min_pred - min_true),
+    )
 
-    win_amt_true_error = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
+    win_amt_true_error = K.mean(
+        (1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true),
+    )
 
     win_amt_pred_error = K.mean(
-        K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
+        K.abs(max_true - min_true)
+        - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
     )
 
     # return z_1 + z_2 + z_3 + win_amt_true_error + win_amt_pred_error
@@ -147,10 +173,20 @@ def metric_loss_comp_2(y_true, y_pred):
     correct_trends = support_idea_3(y_true, y_pred)
 
     trend_error_win = K.mean(
-        (1 - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()))) * K.abs(max_true - min_true),
+        (
+            1
+            - (
+                K.cast(wins, dtype=K.floatx())
+                * K.cast(correct_trends, dtype=K.floatx())
+            )
+        )
+        * K.abs(max_true - min_true),
     )
 
-    return ((z_1 + z_2 + z_3) * 2 + (trend_error_win + win_amt_true_error * 2 + win_amt_pred_error * 3)) / 2
+    return (
+        (z_1 + z_2 + z_3) * 2
+        + (trend_error_win + win_amt_true_error * 2 + win_amt_pred_error * 3)
+    ) / 2
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):
@@ -158,7 +194,9 @@ def metric_win_pred_capture_percent(y_true, y_pred):
 
     pred_capture = K.sum((max_pred / min_pred - 1) * K.cast(wins, dtype=K.floatx()))
 
-    total_win_pred_capture_possible = K.sum((max_true / min_true - 1) * K.cast(wins, dtype=K.floatx()))
+    total_win_pred_capture_possible = K.sum(
+        (max_true / min_true - 1) * K.cast(wins, dtype=K.floatx()),
+    )
 
     x = pred_capture / total_win_pred_capture_possible
 
@@ -190,11 +228,17 @@ def metric_correct_win_trend_percent(y_true, y_pred):
 
     correct_trends = support_idea_3(y_true, y_pred)
 
-    correct_win_trend = K.mean(K.cast(correct_trends, dtype=K.floatx()) * K.cast(wins, dtype=K.floatx())) / K.mean(
+    correct_win_trend = K.mean(
+        K.cast(correct_trends, dtype=K.floatx()) * K.cast(wins, dtype=K.floatx()),
+    ) / K.mean(
         K.cast(wins, dtype=K.floatx()),
     )
 
-    metric = tf.where(tf.math.is_nan(correct_win_trend), tf.zeros_like(correct_win_trend), correct_win_trend)
+    metric = tf.where(
+        tf.math.is_nan(correct_win_trend),
+        tf.zeros_like(correct_win_trend),
+        correct_win_trend,
+    )
 
     return metric * 100
 
@@ -202,9 +246,12 @@ def metric_correct_win_trend_percent(y_true, y_pred):
 def metric_win_checkpoint(y_true, y_pred):
     n: int = y_pred.shape[1]
     start_index: int = int(n * SKIP_FIRST_PERCENTILE)
-    end_index: int = n - int(n * SKIP_FIRST_PERCENTILE) - int(n * SKIP_LAST_PERCENTILE)
+    end_index: int = n - int(n * SKIP_LAST_PERCENTILE)
 
-    min_pred_s, max_pred_s, min_true, max_true, band_inside = support_idea_1_new(y_true, y_pred)
+    min_pred_s, max_pred_s, min_true, max_true, band_inside = support_idea_1_new(
+        y_true,
+        y_pred,
+    )
 
     # getting trends.
 
@@ -262,7 +309,7 @@ def metric_win_checkpoint(y_true, y_pred):
     # case 2: when min inside, and buy trade
     # closing both trades at the last closing tick price.
 
-    loss_captured = K.sum(
+    open_trade_capture = K.sum(
         (max_pred_s / y_true[:, -1, 3] - 1)
         * K.cast(max_inside_but_not_band, dtype=K.floatx())
         * K.cast(max_pred_index < min_pred_index, dtype=K.floatx()),
@@ -272,14 +319,25 @@ def metric_win_checkpoint(y_true, y_pred):
         * K.cast(max_pred_index > min_pred_index, dtype=K.floatx()),
     )
 
-    loss_captured_x = tf.where(tf.math.is_nan(loss_captured), tf.zeros_like(loss_captured), loss_captured)
+    max_loss = (
+        K.sum(
+            (1 - min_true / max_true)
+            * K.cast(max_true_index < min_true_index, dtype=K.floatx()),
+        )
+        # loss = buying high and selling low
+        + K.sum(
+            (max_true / min_true - 1)
+            * K.cast(max_true_index > min_true_index, dtype=K.floatx()),
+        )  # loss = selling low and buying high
+    )
+    open_trade_capture_x = tf.where(
+        tf.math.is_nan(open_trade_capture),
+        tf.zeros_like(open_trade_capture),
+        open_trade_capture,
+    )
 
     total_capture_possible = K.sum(max_true / min_true - 1)
 
-    trade_fraction = (
-        K.mean(K.cast(band_inside, dtype=K.floatx()))
-        + K.mean(K.cast(max_inside_but_not_band, dtype=K.floatx()))
-        + K.mean(K.cast(min_inside_but_not_band, dtype=K.floatx()))
+    return (max_loss + open_trade_capture_x + pred_capture * 5) / (
+        total_capture_possible + max_loss
     )
-
-    return (trade_fraction + (loss_captured_x + pred_capture) / total_capture_possible) * 100

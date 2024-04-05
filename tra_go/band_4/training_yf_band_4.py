@@ -48,16 +48,14 @@ class CustomEvaluation:
         print("\n" * 4, "*" * 200, "\n" * 4, sep="")
 
         if self.test_size > 0:
-            print("only TRAINING data now")
+            print("TRAINING data now ...")
         else:
-            print("only VALIDATION data now")
+            print("VALIDATION data now ...")
 
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = (
-            f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
-        )
+        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
 
         file_path: str = "training/models/" + self.model_file_name
 
@@ -65,9 +63,10 @@ class CustomEvaluation:
             file_path: str = "training/models_saved/" + self.model_file_name
 
         if not os.path.exists(file_path):
-            raise Exception(
-                f"file not found: {self.model_file_name} both in training/models and training/models_saved",
+            print(
+                f"WARNING: file not found: {self.model_file_name} both in training/models and training/models_saved",
             )
+            return
 
         with custom_object_scope(
             {
@@ -99,20 +98,37 @@ class CustomEvaluation:
         # temporary - not correctting the pred values
         # self.y_pred_new = self.correct_pred_values(self.y_pred_new)
 
-        self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis, np.newaxis])
-        self.Y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
+        self.y_pred_real = round_to_nearest_0_05(
+            self.y_pred_new * self.prev_close[:, np.newaxis, np.newaxis],
+        )
+        self.Y_data_real = round_to_nearest_0_05(
+            self.Y_data * self.prev_close[:, np.newaxis, np.newaxis],
+        )
 
-        y_pred_real_untruncated = round_to_nearest_0_05(self.y_pred * self.prev_close[:, np.newaxis, np.newaxis])
+        y_pred_real_untruncated = round_to_nearest_0_05(
+            self.y_pred * self.prev_close[:, np.newaxis, np.newaxis],
+        )
 
-        self.function_make_win_graph(y_true=self.Y_data_real, y_pred=self.y_pred_real, x_close=x_close_real)
+        self.function_make_win_graph(
+            y_true=self.Y_data_real,
+            y_pred=self.y_pred_real,
+            x_close=x_close_real,
+        )
 
-        self.function_error_132_graph(y_true=self.Y_data_real, y_pred=y_pred_real_untruncated)
+        self.function_error_132_graph(
+            y_true=self.Y_data_real,
+            y_pred=y_pred_real_untruncated,
+        )
 
         return
 
     def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eliminated_element_index: int = int(km_4.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
-        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        first_non_eliminated_element_index: int = int(
+            km_4.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
+        )
+        last_non_eliminated_element_index: int = (
+            y_arr.shape[1] - int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        )
 
         last_skipped_elements: int = int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
@@ -125,8 +141,12 @@ class CustomEvaluation:
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
         if self.SAFETY_FACTOR < 1:
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (res[:, :, 1] - res[:, :, 2]) / 2 * self.SAFETY_FACTOR
-            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (res[:, :, 1] - res[:, :, 2]) / 2 * self.SAFETY_FACTOR
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (
+                res[:, :, 1] - res[:, :, 2]
+            ) / 2 * self.SAFETY_FACTOR
+            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (
+                res[:, :, 1] - res[:, :, 2]
+            ) / 2 * self.SAFETY_FACTOR
 
         return res
 
@@ -138,7 +158,10 @@ class CustomEvaluation:
             for i_tick in range(res.shape[1]):
                 if res[i_day, i_tick, 2] > res[i_day, i_tick, 1]:
                     # (low > high)
-                    res[i_day, i_tick, 2], res[i_day, i_tick, 1] = res[i_day, i_tick, 1], res[i_day, i_tick, 2]
+                    res[i_day, i_tick, 2], res[i_day, i_tick, 1] = (
+                        res[i_day, i_tick, 1],
+                        res[i_day, i_tick, 2],
+                    )
 
         # comment - step 2, in current environment not giving better results
         # step 2 - correct values of open/close so that they are inside the low/high
@@ -225,7 +248,12 @@ class CustomEvaluation:
 
         return
 
-    def function_make_win_graph_old(self, y_true: np.ndarray, y_pred: np.ndarray, x_close: np.ndarray):
+    def function_make_win_graph_old(
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        x_close: np.ndarray,
+    ):
         min_true: np.ndarray = np.min(y_true[:, :, 2], axis=1)
         max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
 
@@ -325,11 +353,15 @@ class CustomEvaluation:
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(np.float32)
+        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
+            np.float32,
+        )
 
         total_capture_possible_arr: np.ndarray = max_true / min_true - 1
 
-        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
+        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
+            total_capture_possible_arr,
+        )
 
         pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
 
@@ -428,7 +460,12 @@ class CustomEvaluation:
 
         return
 
-    def function_make_win_graph(self, y_true: np.ndarray, y_pred: np.ndarray, x_close: np.ndarray):
+    def function_make_win_graph(
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        x_close: np.ndarray,
+    ):
         min_true: np.ndarray = np.min(y_true[:, :, 2], axis=1)
         max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
 
@@ -524,11 +561,15 @@ class CustomEvaluation:
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(np.float32)
+        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
+            np.float32,
+        )
 
         total_capture_possible_arr: np.ndarray = max_true / min_true - 1
 
-        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
+        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
+            total_capture_possible_arr,
+        )
 
         pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
 
@@ -662,7 +703,9 @@ class CustomEvaluation:
 
                 # if trade is still active at closing time, then closing the position at the closing price of the interval.
                 if trade_taken and not trade_taken_and_out:
-                    avg_close_price = (real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]) / 2
+                    avg_close_price = (
+                        real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]
+                    ) / 2
                     if is_trade_type_buy:
                         # buy trade
                         net_day_reward = avg_close_price - buy_price

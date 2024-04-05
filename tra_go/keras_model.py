@@ -1,11 +1,10 @@
 import keras
 import keras.backend as K
 from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input
-from keras.regularizers import L1
 
-NUMBER_OF_NEURONS: int = 512
-NUMBER_OF_LAYERS: int = 6
-INITIAL_DROPOUT_PERCENT: float = 0.01
+NUMBER_OF_NEURONS: int = 1024
+NUMBER_OF_LAYERS: int = 3
+INITIAL_DROPOUT_PERCENT: float = 0
 
 
 def get_untrained_model(X_train, y_type):
@@ -57,7 +56,6 @@ def get_untrained_model_new(X_train):
                     units=NUMBER_OF_NEURONS,
                     return_sequences=True,
                     activation="relu",
-                    kernel_regularizer=L1(0.00001),
                 ),
             ),
         )
