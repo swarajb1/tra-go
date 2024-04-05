@@ -32,7 +32,11 @@ def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
     if Y_TYPE == "band_4":
-        (X_train, Y_train, train_prev_close), (X_test, Y_test, test_prev_close) = an.train_test_split(
+        (X_train, Y_train, train_prev_close), (
+            X_test,
+            Y_test,
+            test_prev_close,
+        ) = an.train_test_split(
             data_df=df,
             test_size=TEST_SIZE,
             y_type=Y_TYPE,
@@ -168,20 +172,28 @@ def main():
             )
 
 
+def suppress_cpu_usage():
+    # Get the current process ID
+    pid = os.getpid()
+
+    suppres_level: int = 12
+
+    # The command you want to run
+    command = f"cpulimit -l {suppres_level} -p {pid}"
+
+    # Open a new terminal and run the command
+    subprocess.Popen(
+        ["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)],
+    )
+
+
 if __name__ == "__main__":
     os.system("clear")
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             IS_TRAINING_MODEL = True
-            # Get the current process ID
-            pid = os.getpid()
-
-            # The command you want to run
-            command = f"cpulimit -l 12 -p {pid}"
-
-            # Open a new terminal and run the command
-            subprocess.Popen(["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)])
+            suppress_cpu_usage()
 
         elif sys.argv[1] == "new":
             IS_TRAINING_MODEL = False
@@ -193,7 +205,10 @@ if __name__ == "__main__":
 
             list_of_files.remove(".DS_Store")
 
-            list_of_files = sorted(list_of_files, key=lambda x: os.path.getmtime("training/models/" + x))
+            list_of_files = sorted(
+                list_of_files,
+                key=lambda x: os.path.getmtime("training/models/" + x),
+            )
 
             if list_of_files:
                 latest_file = list_of_files[-1]
@@ -214,7 +229,10 @@ if __name__ == "__main__":
 
             list_of_files.remove(".DS_Store")
 
-            list_of_files = sorted(list_of_files, key=lambda x: os.path.getmtime("training/models/" + x))
+            list_of_files = sorted(
+                list_of_files,
+                key=lambda x: os.path.getmtime("training/models/" + x),
+            )
 
             if list_of_files:
                 latest_file = list_of_files[-7]
@@ -228,14 +246,7 @@ if __name__ == "__main__":
                 raise Exception("file not found in folder")
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
-        # Get the current process ID
-        pid = os.getpid()
-
-        # The command you want to run
-        command = f"cpulimit -l 11 -p {pid}"
-
-        # Open a new terminal and run the command
-        subprocess.Popen(["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)])
+        suppress_cpu_usage()
 
     time_1 = time.time()
     main()
