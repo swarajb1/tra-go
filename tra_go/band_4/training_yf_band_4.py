@@ -804,12 +804,14 @@ class CustomEvaluation:
             if days_250 > 1:
                 print(
                     "\t\t",
-                    "RISK_TO_REWARD_RATIO:",
+                    "risk_to_reward_ratio:",
                     "{:.2f}".format(RISK_TO_REWARD_RATIO),
                     "\t",
                     "250_days_s: ",
                     "{:.2f}".format(days_250),
                     " %",
+                    "\t" * 2,
+                    "\033[92m++\033[0m" if days_250 > 4 else "",
                 )
 
         return
