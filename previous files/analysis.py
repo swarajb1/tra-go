@@ -324,7 +324,3 @@ if __name__ == "__main__":
     time_1 = time()
     main()
     print(f"time taken = {round(time() - time_1, 2)} sec")
-
-
-# TODOO: check if length of stocks not same, when joining. - clean data, and place average values where there is none.
-# TODOO: data cleaning

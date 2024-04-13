@@ -1,7 +1,25 @@
-.env
+# mac os files
 .DS_Store
+
+# virtual environment
 .venv
-logs
-models
-models_saved
+
+# cache
 __pycache__
+
+# diff files
+*.diff
+
+# secret keys
+api_key.txt
+.env
+
+# training files
+training/
+
+# data
+data_yf
+data_z
+data_cleaned
+data_archives
+data_training
