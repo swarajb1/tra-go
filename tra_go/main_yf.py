@@ -34,7 +34,11 @@ def main():
     num_workers: int = 1
 
     if Y_TYPE == "band_4":
-        (X_train, Y_train, train_prev_close), (X_test, Y_test, test_prev_close) = an.train_test_split(
+        (X_train, Y_train, train_prev_close), (
+            X_test,
+            Y_test,
+            test_prev_close,
+        ) = an.train_test_split(
             data_df=df,
             test_size=TEST_SIZE,
             y_type=Y_TYPE,
@@ -48,7 +52,7 @@ def main():
 
         if IS_TRAINING_MODEL:
             # model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
-            model = km.get_untrained_model_new(X_train=X_train, y_type=Y_TYPE)
+            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
             print("training elememt shape\t", X_train[0].shape)
@@ -106,7 +110,14 @@ def main():
                 mode="max",
             )
 
-            callbacks = [tensorboard_callback, terNan, mcp_save_2, mcp_save_3, mcp_save_4, mcp_save_5]
+            callbacks = [
+                tensorboard_callback,
+                terNan,
+                mcp_save_2,
+                mcp_save_3,
+                mcp_save_4,
+                mcp_save_5,
+            ]
 
             history = model.fit(
                 x=X_train,
