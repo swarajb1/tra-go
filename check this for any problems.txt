@@ -1,6 +1,0 @@
-poetry shell:
-    Ideally poetry shouldn't fork off another shell when activation of an existing virtualenv is all that's needed.
-
-    1. Use poetry config to set the venv elsewhere that's really handy. I have my venvs live in ~/venv.
-    2. Source the activate script from the virtualenv (. ~/venv/project/bin/activate) instead of poetry shell.
-    3. Live in peace knowing that your environment has been treated with all the proper respect it should be.
