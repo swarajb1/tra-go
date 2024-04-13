@@ -12,7 +12,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 import tra_go.band_4.keras_model_band_4 as km_4
 
 IS_TRAINING_MODEL: bool = True
-prev_model: str = "2024-03-22 20-57"
+prev_model: str = "2024-04-08 11-50"
 
 
 NUMBER_OF_EPOCHS: int = 3000
@@ -49,7 +49,7 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            model = km.get_untrained_model_new(X_train=X_train)
+            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
             print("training elememt shape\t", X_train[0].shape)
@@ -171,19 +171,25 @@ def main():
                 model_num=model_num,
             )
 
+    elif Y_TYPE == "band_2":
+        pass
+
 
 def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    suppres_level: int = 12
+    suppress_level: int = 10
 
     # The command you want to run
-    command = f"cpulimit -l {suppres_level} -p {pid}"
+    command = f"cpulimit -l {suppress_level} -p {pid}"
+
+    # quit terminal app
+    # subprocess.run(["osascript", "-e", 'quit app "Terminal"'])
 
     # Open a new terminal and run the command
     subprocess.Popen(
-        ["osascript", "-e", 'tell app "Terminal" to do script "{}"'.format(command)],
+        ["osascript", "-e", f'tell app "Terminal" to do script "{command}"'],
     )
 
 
@@ -219,7 +225,7 @@ if __name__ == "__main__":
                 prev_model = date_str
 
             else:
-                raise Exception("file not found in folder")
+                raise FileNotFoundError("File not found in folder")
 
         elif sys.argv[1] == "new_prev":
             IS_TRAINING_MODEL = False
@@ -243,7 +249,7 @@ if __name__ == "__main__":
                 prev_model = date_str
 
             else:
-                raise Exception("file not found in folder")
+                raise FileNotFoundError("File not found in folder")
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
         suppress_cpu_usage()
