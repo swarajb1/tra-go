@@ -41,7 +41,7 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
     )
 
 
-def data_split_x_y_close(df: pd.DataFrame, interval: str) -> pd.DataFrame:
+def data_split_x_y_close(df: pd.DataFrame, interval: str, y_type: str) -> pd.DataFrame:
     df_i = pd.DataFrame()
     df_o = pd.DataFrame()
 
@@ -56,16 +56,28 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str) -> pd.DataFrame:
         df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
         df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
 
-        dict_1 = {"real_close": df.iloc[day_start_index, df.columns.get_loc("real_close")]}
+        dict_1 = {
+            "real_close": df.iloc[day_start_index, df.columns.get_loc("real_close")],
+        }
 
-        prev_close = pd.concat([prev_close, pd.DataFrame(dict_1, index=[0])], ignore_index=True)
+        prev_close = pd.concat(
+            [prev_close, pd.DataFrame(dict_1, index=[0])],
+            ignore_index=True,
+        )
 
     df_i.reset_index(drop=True, inplace=True)
     df_o.reset_index(drop=True, inplace=True)
 
+    columns: list[str] = []
+    if y_type == "band_4":
+        columns = ["open", "high", "low", "close"]
+
+    elif y_type == "band_2":
+        columns = ["low", "high"]
+
     return (
-        df_i[["open", "high", "low", "close"]],
-        df_o[["open", "high", "low", "close"]],
+        df_i[columns],
+        df_o[columns],
         prev_close[["real_close"]],
     )
 
@@ -86,9 +98,14 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     return res_df[["open", "high", "low", "close", "real_close"]]
 
 
-def by_date_df_array(df: pd.DataFrame) -> np.ndarray:
+def by_date_df_array(df: pd.DataFrame, y_type: str) -> np.ndarray:
     array = df.values
-    res = array.reshape(len(array) // 132, 132, 4)
+
+    if y_type == "band_4":
+        res = array.reshape(len(array) // 132, 132, 4)
+
+    elif y_type == "band_2":
+        res = array.reshape(len(array) // 132, 132, 2)
 
     return res
 
@@ -105,17 +122,25 @@ def train_test_split(data_df, interval, y_type, test_size=0.2) -> pd.DataFrame:
 
     df_train, df_test = data_split_train_test(df=df, test_size=test_size)
 
-    df_train_x, df_train_y, df_train_close = data_split_x_y_close(df=df_train, interval=interval)
+    df_train_x, df_train_y, df_train_close = data_split_x_y_close(
+        df=df_train,
+        interval=interval,
+        y_type=y_type,
+    )
     # 23x(132,4)
 
-    df_test_x, df_test_y, df_test_close = data_split_x_y_close(df=df_test, interval=interval)
+    df_test_x, df_test_y, df_test_close = data_split_x_y_close(
+        df=df_test,
+        interval=interval,
+        y_type=y_type,
+    )
     # 6x(132,4)
 
-    train_x = by_date_df_array(df_train_x)
-    test_x = by_date_df_array(df_test_x)
+    train_x = by_date_df_array(df_train_x, y_type=y_type)
+    test_x = by_date_df_array(df_test_x, y_type=y_type)
 
-    train_y = by_date_df_array(df_train_y)
-    test_y = by_date_df_array(df_test_y)
+    train_y = by_date_df_array(df_train_y, y_type=y_type)
+    test_y = by_date_df_array(df_test_y, y_type=y_type)
 
     train_prev_close = df_train_close.values
     test_prev_close = df_test_close.values
