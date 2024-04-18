@@ -22,7 +22,7 @@ BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
-Y_TYPE: str = "band_4"
+Y_TYPE: str = "band_2"
 
 TICKER: str = "CCI"
 INTERVAL: str = "1m"
@@ -332,6 +332,34 @@ def suppress_cpu_usage():
     )
 
 
+def set_globals(file_index_from_end: int):
+    global Y_TYPE
+    global prev_model
+
+    # get prev_model
+    list_of_files = os.listdir("training/models")
+
+    list_of_files.remove(".DS_Store")
+
+    list_of_files = sorted(
+        list_of_files,
+        key=lambda x: os.path.getmtime("training/models/" + x),
+    )
+
+    if list_of_files:
+        latest_file = list_of_files[-file_index_from_end]
+
+        print(latest_file)
+
+        date_str: str = latest_file.split(" - ")[1]
+        prev_model = date_str
+
+        Y_TYPE = latest_file.split(" - ")[2]
+
+    else:
+        raise FileNotFoundError("File not found in folder")
+
+
 if __name__ == "__main__":
     os.system("clear")
 
@@ -343,52 +371,12 @@ if __name__ == "__main__":
         elif sys.argv[1] == "new":
             IS_TRAINING_MODEL = False
 
-            # when to training is going on
-            # get prev_model
-
-            list_of_files = os.listdir("training/models")
-
-            list_of_files.remove(".DS_Store")
-
-            list_of_files = sorted(
-                list_of_files,
-                key=lambda x: os.path.getmtime("training/models/" + x),
-            )
-
-            if list_of_files:
-                latest_file = list_of_files[-1]
-
-                print(latest_file)
-
-                date_str: str = latest_file.split(" - ")[1]
-                prev_model = date_str
-
-            else:
-                raise FileNotFoundError("File not found in folder")
+            set_globals(1)
 
         elif sys.argv[1] == "new_prev":
             IS_TRAINING_MODEL = False
 
-            # get prev_model
-            list_of_files = os.listdir("training/models")
-
-            list_of_files.remove(".DS_Store")
-
-            list_of_files = sorted(
-                list_of_files,
-                key=lambda x: os.path.getmtime("training/models/" + x),
-            )
-
-            if list_of_files:
-                latest_file = list_of_files[-7]
-
-                print(latest_file)
-
-                date_str: str = latest_file.split(" - ")[1]
-                prev_model = date_str
-
-            else:
-                raise FileNotFoundError("File not found in folder")
+            set_globals(7)
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
         suppress_cpu_usage()
