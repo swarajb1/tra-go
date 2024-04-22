@@ -7,7 +7,7 @@ NUMBER_OF_LAYERS: int = 3
 INITIAL_DROPOUT_PERCENT: float = 0
 
 
-def get_untrained_model(X_train, y_type):
+def get_untrained_model(X_train, Y_train):
     model = keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -25,11 +25,13 @@ def get_untrained_model(X_train, y_type):
         #  dropout value decreases in exponential fashion.
         model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-    if y_type == "band_2":
-        model.add(Dense(2))
+    # if y_type == "band_2":
+    #     model.add(Dense(2))
 
-    elif y_type == "band_4":
-        model.add(Dense(4))
+    # elif y_type == "band_4" or y_type == "band_5":
+    #     model.add(Dense(4))
+
+    model.add(Dense(Y_train[0].shape[1]))
 
     model.summary()
 
