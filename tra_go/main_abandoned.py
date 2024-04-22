@@ -58,10 +58,19 @@ def main():
         #         time.sleep(31)
 
         for key in ["high", "low"]:
-            data_x, data_y = an.get_x_y_individual_data(data_df=df, interval=INTERVAL, columns=[key])
+            data_x, data_y = an.get_x_y_individual_data(
+                data_df=df,
+                interval=INTERVAL,
+                columns=[key],
+            )
             # TODOO: write a custom shuffle function.
 
-            X_train, X_test, Y_train, Y_test = train_test_split(data_x, data_y, test_size=TEST_SIZE, shuffle=False)
+            X_train, X_test, Y_train, Y_test = train_test_split(
+                data_x,
+                data_y,
+                test_size=TEST_SIZE,
+                shuffle=False,
+            )
 
             data_dict[key] = {}
             data_dict[key]["train_x"] = X_train
@@ -83,10 +92,13 @@ def main():
                         )
                         model.summary()
                 else:
-                    model: keras.Model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+                    model: keras.Model = km.get_untrained_model(
+                        X_train=X_train,
+                        y_type=Y_TYPE,
+                    )
 
                 print("training data shape\t", X_train.shape)
-                print("training elememt shape\t", X_train[0].shape)
+                print("training element shape\t", X_train[0].shape)
 
                 print("model output shape\t", model.output_shape)
 
@@ -130,10 +142,26 @@ def main():
 
                 print(f"\nmodel - {key} : training done. \n")
 
-            X_test_h = np.append(data_dict["high"]["train_x"], data_dict["high"]["test_x"], axis=0)
-            Y_test_h = np.append(data_dict["high"]["train_y"], data_dict["high"]["test_y"], axis=0)
-            X_test_l = np.append(data_dict["low"]["train_x"], data_dict["low"]["test_x"], axis=0)
-            Y_test_l = np.append(data_dict["low"]["train_y"], data_dict["low"]["test_y"], axis=0)
+            X_test_h = np.append(
+                data_dict["high"]["train_x"],
+                data_dict["high"]["test_x"],
+                axis=0,
+            )
+            Y_test_h = np.append(
+                data_dict["high"]["train_y"],
+                data_dict["high"]["test_y"],
+                axis=0,
+            )
+            X_test_l = np.append(
+                data_dict["low"]["train_x"],
+                data_dict["low"]["test_x"],
+                axis=0,
+            )
+            Y_test_l = np.append(
+                data_dict["low"]["train_y"],
+                data_dict["low"]["test_y"],
+                axis=0,
+            )
 
             an.custom_evaluate_safety_factor_2_mods(
                 X_test_h=X_test_h,
@@ -161,7 +189,7 @@ def main():
             model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
-            print("training elememt shape\t", X_train[0].shape)
+            print("training element shape\t", X_train[0].shape)
 
             print("model output shape\t", model.output_shape)
 
@@ -237,7 +265,7 @@ def main():
             model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
-            print("training elememt shape\t", X_train[0].shape)
+            print("training element shape\t", X_train[0].shape)
 
             print("model output shape\t", model.output_shape)
 
