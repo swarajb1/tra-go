@@ -55,7 +55,7 @@ def main():
             model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
 
             print("training data shape\t", X_train.shape)
-            print("training elememt shape\t", X_train[0].shape)
+            print("training element shape\t", X_train[0].shape)
 
             print("model output shape\t", model.output_shape)
 
@@ -196,7 +196,7 @@ def main():
     #         model = km.get_untrained_model_5(X_train=X_train, y_type=Y_TYPE)
 
     #         print("training data shape\t", X_train.shape)
-    #         print("training elememt shape\t", X_train[0].shape)
+    #         print("training element shape\t", X_train[0].shape)
 
     #         print("model output shape\t", model.output_shape)
 
