@@ -51,10 +51,10 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+            model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
             print("training data shape\t", X_train.shape)
-            print("training elememt shape\t", X_train[0].shape)
+            print("training element shape\t", X_train[0].shape)
 
             print("model output shape\t", model.output_shape)
 
@@ -191,10 +191,10 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            model = km.get_untrained_model(X_train=X_train, y_type=Y_TYPE)
+            model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
             print("training data shape\t", X_train.shape)
-            print("training elememt shape\t", X_train[0].shape)
+            print("training element shape\t", X_train[0].shape)
 
             print("model output shape\t", model.output_shape)
 
