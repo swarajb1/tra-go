@@ -1,6 +1,7 @@
 import pandas as pd
 from kiteconnect import KiteConnect
-from script_2 import nifty50_symbols
+
+from scripts.script_2 import nifty50_symbols
 
 if __name__ == "__main__":
     key_secret = open("api_key.txt").read().split()
