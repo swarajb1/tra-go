@@ -9,6 +9,7 @@ from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 import tra_go.band_2.keras_model_band_2 as km_2
+from database.enums import BandType
 
 RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
@@ -26,7 +27,7 @@ class CustomEvaluation:
         X_data: np.ndarray[float],
         Y_data: np.ndarray[float],
         prev_close: np.ndarray[float],
-        y_type: str,
+        y_type: BandType,
         test_size: float,
         now_datetime: str,
         model_num: int = 1,
@@ -56,7 +57,7 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type.value.lower()} - modelCheckPoint-{self.model_num}.keras"
 
         file_path: str = "training/models/" + self.model_file_name
 
@@ -230,7 +231,7 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
+        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
         if self.test_size == 0:
             filename = filename[:-4] + "- valid.png"
 
@@ -438,10 +439,10 @@ class CustomEvaluation:
         #     fontsize=20,
         # )
 
-        # filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR}.png"
+        # filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR}.png"
         # if self.test_size == 0:
         #     filename = (
-        #         f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - valid.png"
+        #         f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - valid.png"
         #     )
 
         # plt.savefig(filename, dpi=300, bbox_inches="tight")
@@ -777,7 +778,7 @@ class CustomEvaluation:
             # arr2 = np.array(stop_loss_hit_list) * (-0.2)
             # plt.plot(arr2)
 
-            # filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
+            # filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
             # if self.test_size == 0:
             #     filename = filename[:-4] + "- valid.png"
 
