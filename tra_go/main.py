@@ -6,7 +6,7 @@ from datetime import datetime
 
 import keras_model as km
 import training_zero as an
-from band_2.training_yf_band_2_new import CustomEvaluation
+from band_2.training_yf_band_2 import CustomEvaluation
 from band_4.training_yf_band_4 import CustomEvaluation as CustomEvaluation_4
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
