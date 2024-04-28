@@ -25,12 +25,6 @@ def get_untrained_model(X_train, Y_train):
         #  dropout value decreases in exponential fashion.
         model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-    # if y_type == "band_2":
-    #     model.add(Dense(2))
-
-    # elif y_type == "band_4" or y_type == "band_5":
-    #     model.add(Dense(4))
-
     model.add(Dense(Y_train[0].shape[1]))
 
     model.summary()
