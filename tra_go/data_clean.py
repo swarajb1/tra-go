@@ -24,6 +24,7 @@ class DataCleanerZero:
 
     def get_csv_file_path(self) -> str:
         file_path = f"./data_z/nse/{self.interval}/{self.symbol} - {self.interval}.csv"
+
         return file_path
 
     def get_data_all_df(self) -> pd.DataFrame:
@@ -116,8 +117,7 @@ class DataCleanerZero:
             first_datetime = timezone.localize(date_obj)
 
             all_datetimes_required.extend(
-                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z")
-                for i in range(375)
+                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z") for i in range(375)
             )
 
         all_datetimes_in_data = []
@@ -262,9 +262,7 @@ class DataScalerZero:
         self.save_scaled_data()
 
     def get_csv_file_path(self) -> str:
-        file_path = (
-            f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
-        )
+        file_path = f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
 
         return file_path
 
