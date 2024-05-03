@@ -1,16 +1,13 @@
 import numpy as np
 import pandas as pd
 
-from database.enums import BandType
+from database.enums import BandType, TickerOne
 
 ONE_DAY_ZONE_POINTS = 264
 
 
-def get_data_all_df(ticker, interval) -> pd.DataFrame:
-    if ticker == "CCI":
-        ticker = "ICICIBANK"
-
-    df = pd.read_csv(get_csv_file_path(ticker, interval))
+def get_data_all_df(ticker: TickerOne, interval) -> pd.DataFrame:
+    df = pd.read_csv(get_csv_file_path(ticker.value, interval))
 
     return df
 
