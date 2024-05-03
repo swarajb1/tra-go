@@ -9,7 +9,7 @@ from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 import tra_go.band_2.keras_model_band_2 as km_2
-from database.enums import BandType
+from database.enums import BandType, TickerOne
 
 RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
@@ -24,9 +24,11 @@ def get_number_of_epochs() -> int:
 class CustomEvaluation:
     def __init__(
         self,
+        ticker: TickerOne,
         X_data: np.ndarray[float],
         Y_data: np.ndarray[float],
         prev_close: np.ndarray[float],
+        x_type: BandType,
         y_type: BandType,
         test_size: float,
         now_datetime: str,
@@ -35,10 +37,15 @@ class CustomEvaluation:
         skip_last_percentile: float = 0.18,
         safety_factor=0.8,
     ):
+        self.ticker = ticker
+
         self.X_data = X_data
         self.Y_data = Y_data
         self.prev_close = prev_close.reshape(len(prev_close))
+
+        self.x_type = x_type
         self.y_type = y_type
+
         self.test_size = test_size
         self.now_datetime = now_datetime
         self.model_num = model_num
@@ -57,7 +64,7 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type.value.lower()} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name: str = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
         file_path: str = "training/models/" + self.model_file_name
 
@@ -66,7 +73,7 @@ class CustomEvaluation:
 
         if not os.path.exists(file_path):
             print(
-                f"WARNING: file not found: {self.model_file_name} both in training/models and training/models_saved",
+                f"WARNING: file not found: \n{self.model_file_name} \nboth in training/models and training/models_saved",
             )
             return
 
@@ -128,9 +135,7 @@ class CustomEvaluation:
         first_non_eliminated_element_index: int = int(
             km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
         )
-        last_non_eliminated_element_index: int = (
-            y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
-        )
+        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
         last_skipped_elements: int = int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
@@ -143,12 +148,8 @@ class CustomEvaluation:
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
         if self.SAFETY_FACTOR < 1:
-            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (
-                res[:, :, 1] - res[:, :, 0]
-            ) / 2 * self.SAFETY_FACTOR
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (
-                res[:, :, 1] - res[:, :, 0]
-            ) / 2 * self.SAFETY_FACTOR
+            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
 
         return res
 
@@ -214,8 +215,8 @@ class CustomEvaluation:
 
         fig = plt.figure(figsize=(16, 9))
 
-        plt.plot(x, y_h, label="high Δ")
         plt.plot(x, y_l, label="low Δ")
+        plt.plot(x, y_h, label="high Δ")
 
         plt.title(
             f" name: {self.now_datetime}\n"
@@ -601,226 +602,15 @@ class CustomEvaluation:
         # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
 
-        print("folder_name\t\t", self.model_file_name)
-
-        return
-
-    def simulation(
-        self,
-        buy_price_arr: np.ndarray,
-        sell_price_arr: np.ndarray,
-        order_type_buy_arr: np.array,
-        real_price_arr: np.ndarray,
-    ) -> None:
-        # 3 order are placed when the similation starts
-        #   buy order
-        #   sell order
-        #   stop_loss_order - based on what type of whole order this is - buy/sell
-        #       or trend whether max comes first or the min.
-        #
-        #   when the last tick happends. any pending order remain, the position is closed at market price..
-        #       it will be either partial reward or partial stop_loss
-        #
-        #
-
-        print("simulation started....")
-
-        for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            number_of_days: int = real_price_arr.shape[0]
-
-            wins_day_wise_list: np.array = np.zeros(number_of_days)
-            invested_day_wise_list: np.array = np.zeros(number_of_days)
-
-            trade_taken_list: np.array = np.zeros(number_of_days, dtype=bool)
-            trade_taken_and_out_list: np.array = np.zeros(number_of_days, dtype=bool)
-            stop_loss_hit_list: np.array = np.zeros(number_of_days, dtype=bool)
-            completed_at_closing_list: np.array = np.zeros(number_of_days, dtype=bool)
-            expected_trades_list: np.array = np.zeros(number_of_days, dtype=bool)
-
-            for i_day in range(number_of_days):
-                trade_taken: bool = False
-                trade_taken_and_out: bool = False
-                stop_loss_hit: bool = False
-
-                is_trade_type_buy: bool = order_type_buy_arr[i_day]
-
-                buy_price: float = buy_price_arr[i_day]
-                sell_price: float = sell_price_arr[i_day]
-                stop_loss: float = 0
-
-                expected_reward: float = sell_price - buy_price
-
-                net_day_reward: float = 0
-
-                # step 1 - find stop loss based on trade type
-                if is_trade_type_buy:
-                    # pred is up
-                    stop_loss = buy_price - expected_reward * RISK_TO_REWARD_RATIO
-                else:
-                    # pred is down
-                    stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
-
-                # step 2 - similating each tick inside the interval
-                for i_tick in range(real_price_arr.shape[1]):
-                    tick_min = real_price_arr[i_day, i_tick, 0]
-                    tick_max = real_price_arr[i_day, i_tick, 1]
-
-                    if is_trade_type_buy:
-                        # buy trade
-                        if not trade_taken:
-                            if tick_min <= buy_price and buy_price <= tick_max:
-                                trade_taken = True
-
-                        if trade_taken and not trade_taken_and_out:
-                            if tick_min <= sell_price and sell_price <= tick_max:
-                                trade_taken_and_out = True
-                                net_day_reward = expected_reward
-
-                            elif tick_min <= stop_loss and stop_loss <= tick_max:
-                                trade_taken_and_out = True
-                                stop_loss_hit = True
-
-                                net_day_reward = stop_loss - buy_price
-
-                    else:
-                        # sell trade
-                        if not trade_taken:
-                            if tick_min <= sell_price and sell_price <= tick_max:
-                                trade_taken = True
-
-                        if trade_taken and not trade_taken_and_out:
-                            if tick_min <= buy_price and buy_price <= tick_max:
-                                trade_taken_and_out = True
-                                net_day_reward = expected_reward
-
-                            elif tick_min <= stop_loss and stop_loss <= tick_max:
-                                trade_taken_and_out = True
-                                stop_loss_hit = True
-
-                                net_day_reward = sell_price - stop_loss
-
-                # if trade is still active at closing time, then closing the position at the closing price of the interval.
-                if trade_taken and not trade_taken_and_out:
-                    avg_close_price = (
-                        real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]
-                    ) / 2
-                    if is_trade_type_buy:
-                        # buy trade
-                        net_day_reward = avg_close_price - buy_price
-
-                    else:
-                        # sell trade
-                        net_day_reward = sell_price - avg_close_price
-
-                # each day's stats
-                if trade_taken:
-                    trade_taken_list[i_day] = True
-                    if is_trade_type_buy:
-                        invested_day_wise_list[i_day] = buy_price
-                    else:
-                        invested_day_wise_list[i_day] = sell_price
-
-                if trade_taken_and_out:
-                    trade_taken_and_out_list[i_day] = True
-                if stop_loss_hit:
-                    stop_loss_hit_list[i_day] = True
-                if trade_taken and not trade_taken_and_out:
-                    completed_at_closing_list[i_day] = True
-                if trade_taken_and_out and not stop_loss_hit:
-                    expected_trades_list[i_day] = True
-
-                wins_day_wise_list[i_day] = net_day_reward
-
-            # print("\n\n")
-            # print("-" * 30)
-            # print("\n\n")
-
-            # count_trade_taken: int = np.sum(trade_taken_list)
-            # count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
-            # count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
-            # count_completed_at_closing: int = np.sum(completed_at_closing_list)
-            # count_expected_trades: int = np.sum(expected_trades_list)
-
-            # print("number_of_days\t\t\t", number_of_days, "\n")
-
-            # print("percent_trade_taken\t\t", "{:.2f}".format(count_trade_taken / number_of_days * 100), " %")
-            # print(
-            #     "percent_trade_taken_and_out\t",
-            #     "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
-            #     " %",
-            # )
-            # print("percent_stop_loss_hit\t\t", "{:.2f}".format(count_stop_loss_hit / number_of_days * 100), " %")
-            # print(
-            #     "percent_completed_at_closing\t",
-            #     "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
-            #     " %",
-            # )
-
-            # print("percent_expected_trades\t\t", "{:.2f}".format(count_expected_trades / number_of_days * 100), " %")
-
-            # number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
-
-            # print("\npercent_win_trades\t\t", "{:.2f}".format(number_of_win_trades / number_of_days * 100), " %")
-
-            new_invested_day_wise_list = np.copy(invested_day_wise_list)
-            new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
-
-            arr = np.array(wins_day_wise_list) * 100
-            arr_real = arr / new_invested_day_wise_list
-
-            # plt.figure(figsize=(16, 9))
-
-            # x = np.arange(0, number_of_days, 1)
-            # plt.scatter(x, arr_real, color="orange", s=50)
-
-            # plt.plot(arr_real)
-
-            # arr2 = np.array(stop_loss_hit_list) * (-0.2)
-            # plt.plot(arr2)
-
-            # filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
-            # if self.test_size == 0:
-            #     filename = filename[:-4] + "- valid.png"
-
-            # plt.savefig(filename, dpi=300, bbox_inches="tight")
-
-            avg_win_per_day = np.mean(arr_real / 100)
-
-            days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
-
-            # print("\n\navg_percent_win_per_day\t\t", "{:.5f}".format(avg_win_per_day * 100), " %")
-            # print("avg_percent_win_per_day_leverage", "{:.5f}".format(avg_win_per_day * 100 * 5), " %")
-
-            # print("\n\n250_days\t\t\t", "{:.2f}".format(days_250), " %")
-            # print("250_days_leverage\t\t", "{:.2f}".format((pow(1 + avg_win_per_day * 5, 250) - 1) * 100), " %")
-
-            # if self.test_size != 0:
-            #     print(f"\n work: data = VALIDATION DATA, model={self.model_num} \n")
-            # else:
-            #     print(f"\n work: data = TRANING DATA, model={self.model_num} \n")
-
-            if days_250 > 1:
-                print(
-                    "\t\t",
-                    "risk_to_reward_ratio:",
-                    "{:.2f}".format(RISK_TO_REWARD_RATIO),
-                    "\t",
-                    "250_days_s: ",
-                    "{:.2f}".format(days_250),
-                    " %",
-                    "\t" * 2,
-                    "\033[92m++\033[0m" if days_250 > 4 else "",
-                )
+        print("folder_name\t", self.model_file_name)
 
         return
 
     def day_candle_pred_true(self, i_day: int):
         error = self.Y_data_real - self.y_pred_real
 
-        y_o = error[i_day, :, 0]
-        y_h = error[i_day, :, 1]
         y_l = error[i_day, :, 0]
-        y_c = error[i_day, :, 3]
+        y_h = error[i_day, :, 1]
 
         x = np.arange(error.shape[1])
 
@@ -829,9 +619,7 @@ class CustomEvaluation:
 
         plt.axhline(y=0, xmin=x[0], xmax=x[-1], color="blue")
 
-        plt.plot(x, y_o, label="open Δ")
-        plt.plot(x, y_h, label="high Δ")
         plt.plot(x, y_l, label="low Δ")
-        plt.plot(x, y_c, label="close Δ")
+        plt.plot(x, y_h, label="high Δ")
 
         return None
