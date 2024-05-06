@@ -8,7 +8,7 @@ SKIP_FIRST_PERCENTILE: float = 0.18
 SKIP_LAST_PERCENTILE: float = 0.18
 
 
-RISK_TO_REWARD_RATIO: float = 0.3
+RISK_TO_REWARD_RATIO: float = 0.2
 
 
 def metric_new_idea(y_true, y_pred):
