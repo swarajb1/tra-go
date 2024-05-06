@@ -7,7 +7,7 @@ NUMBER_OF_LAYERS: int = 3
 INITIAL_DROPOUT_PERCENT: float = 0
 
 
-def get_untrained_model(X_train, y_type):
+def get_untrained_model(X_train, Y_train):
     model = keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -25,11 +25,7 @@ def get_untrained_model(X_train, y_type):
         #  dropout value decreases in exponential fashion.
         model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-    if y_type == "band_2":
-        model.add(Dense(2))
-
-    elif y_type == "band_4":
-        model.add(Dense(4))
+    model.add(Dense(Y_train[0].shape[1]))
 
     model.summary()
 
@@ -48,7 +44,6 @@ def metric_rmse(y_true, y_pred):
     error = y_true - y_pred
 
     return K.sqrt(K.mean(K.square(error)))
-    # return tf.sqrt(tf.reduce_mean(tf.square(error)))
 
 
 def metric_abs(y_true, y_pred):
@@ -57,18 +52,15 @@ def metric_abs(y_true, y_pred):
     error = y_true - y_pred
 
     return K.mean(K.abs(error))
-    # return tf.reduce_mean(tf.abs(error))
 
 
 def metric_abs_percent(y_true, y_pred):
     error = y_true - y_pred
 
     return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
-    # return tf.reduce_mean(tf.abs(error)) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
 def metric_rmse_percent(y_true, y_pred):
     error = y_true - y_pred
 
     return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
-    # return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
