@@ -6,13 +6,6 @@ import pandas as pd
 import pytz
 
 
-class DataCleanerYf:
-    def __init__(self, df: pd.DataFrame, ticker: str, interval: str):
-        self.df = df
-        self.ticker = ticker
-        self.interval = interval
-
-
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
     # which_half = 0, means 1st half - input data
     # which_half = 1, means 2nd half - predict data

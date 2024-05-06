@@ -3,8 +3,10 @@ from datetime import datetime, time, timedelta
 
 import pandas as pd
 import pytz
+from sklearn.preprocessing import MinMaxScaler
 
-from script_2 import nifty50_symbols
+from scripts.script_2 import nifty50_symbols
+from utils.functions import min_max_scaler
 
 
 class DataCleanerZero:
@@ -22,6 +24,7 @@ class DataCleanerZero:
 
     def get_csv_file_path(self) -> str:
         file_path = f"./data_z/nse/{self.interval}/{self.symbol} - {self.interval}.csv"
+
         return file_path
 
     def get_data_all_df(self) -> pd.DataFrame:
@@ -34,7 +37,7 @@ class DataCleanerZero:
 
         df.rename(columns={"date": "datetime"}, inplace=True)
 
-        return df[["datetime", "open", "high", "low", "close"]]
+        return df[["datetime", "open", "high", "low", "close", "volume"]]
 
     def data_clean_1(self) -> pd.DataFrame:
         # step 1: only regular data
@@ -73,6 +76,7 @@ class DataCleanerZero:
                     "high": df.at[index, "high"],
                     "low": df.at[index, "low"],
                     "close": df.at[index, "close"],
+                    "volume": 0,
                 }
 
                 df = pd.concat([df, pd.DataFrame(dict_1, index=[0])], ignore_index=True)
@@ -85,7 +89,7 @@ class DataCleanerZero:
         # df["datetime_obj"] = pd.to_datetime(df["datetime"], format="%Y-%m-%d %H:%M:%S%z")
         # duplicate_non_zero_second_indexes = df[df["datetime_obj"].dt.second != 0].index.tolist()
 
-        return df[["datetime", "open", "high", "low", "close"]]
+        return df[["datetime", "open", "high", "low", "close", "volume"]]
 
     def data_cleaning(self) -> pd.DataFrame:
         # start time = 0915
@@ -113,8 +117,7 @@ class DataCleanerZero:
             first_datetime = timezone.localize(date_obj)
 
             all_datetimes_required.extend(
-                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z")
-                for i in range(375)
+                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z") for i in range(375)
             )
 
         all_datetimes_in_data = []
@@ -135,7 +138,14 @@ class DataCleanerZero:
 
         add_df_rows = []
         for d in missing_datetimes:
-            dict_1 = {"datetime": d, "open": 0, "close": 0, "high": 0, "low": 0}
+            dict_1 = {
+                "datetime": d,
+                "open": 0,
+                "close": 0,
+                "high": 0,
+                "low": 0,
+                "volume": 0,
+            }
 
             add_df_rows.append(deepcopy(dict_1))
             dict_1.clear()
@@ -161,6 +171,7 @@ class DataCleanerZero:
             df.at[index, "high"] = df.at[ref_index, "high"]
             df.at[index, "low"] = df.at[ref_index, "low"]
             df.at[index, "close"] = df.at[ref_index, "close"]
+            df.at[index, "volume"] = 0
 
             missing_rows -= 1
 
@@ -168,7 +179,7 @@ class DataCleanerZero:
 
         df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
 
-        return df[["datetime", "open", "high", "low", "close"]]
+        return df[["datetime", "open", "high", "low", "close", "volume"]]
 
     def get_non_zero_index(
         self,
@@ -246,12 +257,12 @@ class DataScalerZero:
 
         self.data_scaled = self.data_scaling()
 
+        self.volume_scaler = MinMaxScaler()
+
         self.save_scaled_data()
 
     def get_csv_file_path(self) -> str:
-        file_path = (
-            f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
-        )
+        file_path = f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
 
         return file_path
 
@@ -260,12 +271,26 @@ class DataScalerZero:
 
         df["real_close"] = df["close"]
 
+        df["volume_day_max"] = 0
+        df["volume_day_min"] = 0
+
         # for 1st day
         # real close if the open of that day itself, as there is no previous day
-        df.iloc[:375, df.columns.get_loc("real_close")] = df.iloc[
+
+        first_day_last_index: int = 375
+
+        df.iloc[:first_day_last_index, df.columns.get_loc("real_close")] = df.iloc[
             0,
             df.columns.get_loc("open"),
         ]
+
+        df.iloc[:first_day_last_index, df.columns.get_loc("volume_day_max")] = max(
+            df.iloc[:first_day_last_index, df.columns.get_loc("volume")].values,
+        )
+
+        df.iloc[:first_day_last_index, df.columns.get_loc("volume_day_min")] = min(
+            df.iloc[:first_day_last_index, df.columns.get_loc("volume")].values,
+        )
 
         for day in range(1, len(df) // 375):
             start_index: int = day * 375
@@ -273,17 +298,43 @@ class DataScalerZero:
 
             prev_close: float = df.iloc[start_index - 1, df.columns.get_loc("close")]
 
+            max_volume: int = max(
+                df.iloc[start_index:end_index, df.columns.get_loc("volume")].values,
+            )
+            min_volume: int = min(
+                df.iloc[start_index:end_index, df.columns.get_loc("volume")].values,
+            )
+
             df.iloc[
                 start_index:end_index,
                 df.columns.get_loc("real_close"),
             ] = prev_close
+
+            df.iloc[
+                start_index:end_index,
+                df.columns.get_loc("volume_day_max"),
+            ] = max_volume
+
+            df.iloc[
+                start_index:end_index,
+                df.columns.get_loc("volume_day_min"),
+            ] = min_volume
 
         df["open"] = df["open"] / df["real_close"]
         df["high"] = df["high"] / df["real_close"]
         df["low"] = df["low"] / df["real_close"]
         df["close"] = df["close"] / df["real_close"]
 
-        return df[["open", "high", "low", "close", "real_close"]]
+        df["volume"] = df.apply(
+            lambda row: min_max_scaler(
+                row["volume"],
+                row["volume_day_min"],
+                row["volume_day_max"],
+            ),
+            axis=1,
+        )
+
+        return df[["open", "high", "low", "close", "real_close", "volume"]]
 
     def save_scaled_data(self) -> None:
         self.data_scaled.to_csv(

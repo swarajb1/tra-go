@@ -1,7 +1,7 @@
 import pandas as pd
 from kiteconnect import KiteConnect
 
-from script_2 import nifty50_symbols
+from scripts.script_2 import nifty50_symbols
 
 if __name__ == "__main__":
     key_secret = open("api_key.txt").read().split()
@@ -24,6 +24,8 @@ if __name__ == "__main__":
 
         print(instrument_df.head())
 
-        filtered_df = instrument_df[instrument_df["tradingsymbol"].isin(nifty50_symbols)]
+        filtered_df = instrument_df[
+            instrument_df["tradingsymbol"].isin(nifty50_symbols)
+        ]
 
         filtered_df.to_csv(f"data_z/selected_stocks_{exchange}.csv", index=False)

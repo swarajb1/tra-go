@@ -64,7 +64,9 @@ if __name__ == "__main__":
                 print(symbol)
                 print(data_df.head())
 
-                all_data_df = pd.concat([all_data_df, data_df]).drop_duplicates(keep="first")
+                all_data_df = pd.concat([all_data_df, data_df]).drop_duplicates(
+                    keep="first",
+                )
 
                 if stop_date == hard_stop_date:
                     break
