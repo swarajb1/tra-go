@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 
 import keras_model as km
+import psutil
 import training_zero as an
 from band_2.training_yf_band_2 import CustomEvaluation
 from band_4.training_yf_band_4 import CustomEvaluation as CustomEvaluation_4
@@ -18,7 +19,7 @@ IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
 
-NUMBER_OF_EPOCHS: int = 1000
+NUMBER_OF_EPOCHS: int = 3000
 BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -215,8 +216,9 @@ def main():
                     km_2.metric_loss_comp_2,
                     km_2.metric_win_percent,
                     km_2.metric_win_pred_capture_percent,
+                    km_2.metric_win_correct_trend_percent,
                     km_2.metric_pred_capture_percent,
-                    km_2.metric_win_checkpoint,
+                    km_2.metric_pred_trend_capture_percent,
                 ],
             )
 
@@ -258,15 +260,15 @@ def main():
             mcp_save_5 = ModelCheckpoint(
                 f"{file_path_prefix} - modelCheckPoint-5.keras",
                 save_best_only=True,
-                monitor="metric_win_checkpoint",
-                mode="min",
+                monitor="metric_pred_trend_capture_percent",
+                mode="max",
             )
 
             mcp_save_6 = ModelCheckpoint(
                 f"{file_path_prefix} - modelCheckPoint-6.keras",
                 save_best_only=True,
-                monitor="val_metric_win_checkpoint",
-                mode="min",
+                monitor="val_metric_pred_trend_capture_percent",
+                mode="max",
             )
 
             callbacks = [
@@ -323,8 +325,19 @@ def main():
                 model_num=model_num,
             )
 
+    battery = psutil.sensors_battery()
+
+    is_plugged = battery.power_plugged
+
+    print("is batter on charging: ", is_plugged)
+
 
 def suppress_cpu_usage():
+    from keras_model import NUMBER_OF_NEURONS
+
+    if NUMBER_OF_NEURONS <= 128:
+        return
+
     # Get the current process ID
     pid = os.getpid()
 
