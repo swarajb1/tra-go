@@ -86,8 +86,10 @@ class CustomEvaluation:
                 "metric_win_percent": km_2.metric_win_percent,
                 "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_2.metric_pred_capture_percent,
-                "metric_correct_win_trend_percent": km_2.metric_correct_win_trend_percent,
+                "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
+                "metric_pred_capture": km_2.metric_pred_capture,
                 "metric_win_checkpoint": km_2.metric_win_checkpoint,
+                "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
             },
         ):
             model = load_model(file_path)
