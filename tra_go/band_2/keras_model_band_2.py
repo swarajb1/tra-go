@@ -6,7 +6,7 @@ SKIP_FIRST_PERCENTILE: float = 0.18
 SKIP_LAST_PERCENTILE: float = 0.18
 
 
-RISK_TO_REWARD_RATIO: float = 0.2
+# RISK_TO_REWARD_RATIO: float = 0.2
 
 
 def metric_new_idea(y_true, y_pred):
@@ -251,102 +251,102 @@ def metric_pred_trend_capture_percent(y_true, y_pred):
     return pred_capture / total_capture_possible * 100
 
 
-def metric_win_checkpoint_old(y_true, y_pred):
-    n: int = y_pred.shape[1]
-    start_index: int = int(n * SKIP_FIRST_PERCENTILE)
-    end_index: int = n - int(n * SKIP_LAST_PERCENTILE)
+# def metric_win_checkpoint_old(y_true, y_pred):
+#     n: int = y_pred.shape[1]
+#     start_index: int = int(n * SKIP_FIRST_PERCENTILE)
+#     end_index: int = n - int(n * SKIP_LAST_PERCENTILE)
 
-    min_pred_s, max_pred_s, min_true, max_true, band_inside = support_idea_1_new(
-        y_true,
-        y_pred,
-    )
+#     min_pred_s, max_pred_s, min_true, max_true, band_inside = support_idea_1_new(
+#         y_true,
+#         y_pred,
+#     )
 
-    # getting trends.
+#     # getting trends.
 
-    min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
-    max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
+#     min_pred_index = K.argmin(y_pred[:, start_index:end_index, 0], axis=1)
+#     max_pred_index = K.argmax(y_pred[:, start_index:end_index, 1], axis=1)
 
-    min_true_index = K.argmin(y_true[:, :, 0], axis=1)
-    max_true_index = K.argmax(y_true[:, :, 1], axis=1)
+#     min_true_index = K.argmin(y_true[:, :, 0], axis=1)
+#     max_true_index = K.argmax(y_true[:, :, 1], axis=1)
 
-    correct_trends_buy = K.all(
-        [
-            max_pred_index > min_pred_index,
-            max_true_index > min_true_index,
-        ],
-        axis=0,
-    )
+#     correct_trends_buy = K.all(
+#         [
+#             max_pred_index > min_pred_index,
+#             max_true_index > min_true_index,
+#         ],
+#         axis=0,
+#     )
 
-    correct_trends_sell = K.all(
-        [
-            max_pred_index < min_pred_index,
-            max_true_index < min_true_index,
-        ],
-        axis=0,
-    )
+#     correct_trends_sell = K.all(
+#         [
+#             max_pred_index < min_pred_index,
+#             max_true_index < min_true_index,
+#         ],
+#         axis=0,
+#     )
 
-    correct_trends = tf.logical_or(correct_trends_buy, correct_trends_sell)
+#     correct_trends = tf.logical_or(correct_trends_buy, correct_trends_sell)
 
-    max_inside_but_not_band = K.all(
-        [
-            max_true >= max_pred_s,
-            max_pred_s >= min_true,
-            min_pred_s <= min_true,
-        ],
-        axis=0,
-    )
+#     max_inside_but_not_band = K.all(
+#         [
+#             max_true >= max_pred_s,
+#             max_pred_s >= min_true,
+#             min_pred_s <= min_true,
+#         ],
+#         axis=0,
+#     )
 
-    min_inside_but_not_band = K.all(
-        [
-            max_true <= max_pred_s,
-            max_true >= min_pred_s,
-            min_pred_s >= min_true,
-        ],
-        axis=0,
-    )
+#     min_inside_but_not_band = K.all(
+#         [
+#             max_true <= max_pred_s,
+#             max_true >= min_pred_s,
+#             min_pred_s >= min_true,
+#         ],
+#         axis=0,
+#     )
 
-    # loss captured, when trade taken, but other side of trade no inside band, also considering here that risk_to_reward_ratio is unbounded.
+#     # loss captured, when trade taken, but other side of trade no inside band, also considering here that risk_to_reward_ratio is unbounded.
 
-    # case 1: when max inside, and sell trade
-    # case 2: when min inside, and buy trade
-    # closing both trades at the last closing tick price.
+#     # case 1: when max inside, and sell trade
+#     # case 2: when min inside, and buy trade
+#     # closing both trades at the last closing tick price.
 
-    # stoploss vs open_trade_till_last_tick
+#     # stoploss vs open_trade_till_last_tick
 
-    last_tick = (y_true[:, -1, 0] + y_true[:, -1, 1]) / 2
+#     last_tick = (y_true[:, -1, 0] + y_true[:, -1, 1]) / 2
 
-    stoploss_open_sell_trade = K.maximum(
-        (max_pred_s - last_tick),
-        K.abs(max_true - min_true) * RISK_TO_REWARD_RATIO * -1,
-    )
+#     stoploss_open_sell_trade = K.maximum(
+#         (max_pred_s - last_tick),
+#         K.abs(max_true - min_true) * RISK_TO_REWARD_RATIO * -1,
+#     )
 
-    stoploss_open_buy_trade = K.maximum(
-        (last_tick - min_pred_s),
-        K.abs(max_true - min_true) * RISK_TO_REWARD_RATIO * -1,
-    )
+#     stoploss_open_buy_trade = K.maximum(
+#         (last_tick - min_pred_s),
+#         K.abs(max_true - min_true) * RISK_TO_REWARD_RATIO * -1,
+#     )
 
-    open_trade_capture_new = (
-        K.mean(
-            stoploss_open_sell_trade
-            * K.cast(max_inside_but_not_band, dtype=K.floatx())
-            * K.cast(max_pred_index < min_pred_index, dtype=K.floatx()),
-        )
-        # open sell trade
-        + K.mean(
-            stoploss_open_buy_trade
-            * K.cast(min_inside_but_not_band, dtype=K.floatx())
-            * K.cast(max_pred_index > min_pred_index, dtype=K.floatx()),
-        )
-        # open buy trade
-    )
+#     open_trade_capture_new = (
+#         K.mean(
+#             stoploss_open_sell_trade
+#             * K.cast(max_inside_but_not_band, dtype=K.floatx())
+#             * K.cast(max_pred_index < min_pred_index, dtype=K.floatx()),
+#         )
+#         # open sell trade
+#         + K.mean(
+#             stoploss_open_buy_trade
+#             * K.cast(min_inside_but_not_band, dtype=K.floatx())
+#             * K.cast(max_pred_index > min_pred_index, dtype=K.floatx()),
+#         )
+#         # open buy trade
+#     )
 
-    pred_capture_new = K.mean(
-        (max_pred_s - min_pred_s) * K.cast(band_inside, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()),
-    )
+#     pred_capture_new = K.mean(
+#         (max_pred_s - min_pred_s) * K.cast(band_inside, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()),
+#     )
 
-    total_capture_possible = K.mean(K.abs(max_true - min_true))
+#     total_capture_possible = K.mean(K.abs(max_true - min_true))
 
-    return total_capture_possible - (open_trade_capture_new + pred_capture_new * 2)
+#     return total_capture_possible - (open_trade_capture_new + pred_capture_new * 2)
 
 
 def metric_win_checkpoint(y_true, y_pred):
