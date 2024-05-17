@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from datetime import datetime, time, timedelta
 
@@ -206,10 +207,13 @@ class DataCleanerZero:
     def save_cleaned_data(self) -> None:
         print(self.symbol, "\t= ", len(self.data_cleaned) / 375)
 
-        self.data_cleaned.to_csv(
-            f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv",
-            index=False,
+        file_path: str = os.path.join(
+            "./data_cleaned",
+            self.interval,
+            f"{self.symbol} - {self.interval}.csv",
         )
+
+        self.data_cleaned.to_csv(file_path, index=False)
 
     def is_in_regular_hours(self, check_datetime) -> bool:
         time_open = time(9, 15, 0)
