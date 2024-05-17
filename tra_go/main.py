@@ -27,7 +27,7 @@ TEST_SIZE: float = 0.2
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2
 
-TICKER: TickerOne = TickerOne.BRITANNIA
+TICKER: TickerOne = TickerOne.SUNPHARMA
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
@@ -80,7 +80,7 @@ def main():
                 ],
             )
 
-            log_dir: str = f"training/logs/{now_datetime} - {Y_TYPE}"
+            log_dir: str = os.path.join("training", "logs", f"{now_datetime} - {Y_TYPE}")
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
             terNan = TerminateOnNaN()
@@ -222,50 +222,58 @@ def main():
                 ],
             )
 
-            log_dir: str = f"training/logs/{now_datetime} - {Y_TYPE.value.lower()}"
+            log_dir: str = os.path.join(
+                "training",
+                "logs",
+                f"{now_datetime} - {Y_TYPE.value.lower()}",
+            )
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
             terNan = TerminateOnNaN()
 
-            file_path_prefix: str = f"training/models/model - {now_datetime} - {X_TYPE.value.lower()} - {Y_TYPE.value.lower()} - {TICKER.name}"
+            checkpoint_path_prefix: str = os.path.join(
+                "training",
+                "models",
+                f"model - {now_datetime} - {X_TYPE.value.lower()} - {Y_TYPE.value.lower()} - {TICKER.name}",
+            )
 
             mcp_save_1 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-1.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-1.keras",
                 save_best_only=True,
                 monitor="loss",
                 mode="min",
             )
 
             mcp_save_2 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-2.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-2.keras",
                 save_best_only=True,
                 monitor="val_loss",
                 mode="min",
             )
 
             mcp_save_3 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-3.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
                 save_best_only=True,
                 monitor="metric_pred_capture_percent",
                 mode="max",
             )
 
             mcp_save_4 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-4.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
                 save_best_only=True,
                 monitor="val_metric_pred_capture_percent",
                 mode="max",
             )
 
             mcp_save_5 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-5.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-5.keras",
                 save_best_only=True,
                 monitor="metric_pred_trend_capture_percent",
                 mode="max",
             )
 
             mcp_save_6 = ModelCheckpoint(
-                f"{file_path_prefix} - modelCheckPoint-6.keras",
+                f"{checkpoint_path_prefix} - modelCheckPoint-6.keras",
                 save_best_only=True,
                 monitor="val_metric_pred_trend_capture_percent",
                 mode="max",
@@ -293,14 +301,18 @@ def main():
                 callbacks=callbacks,
             )
 
-            model.save(f"{file_path_prefix}.keras")
+            model.save(f"{checkpoint_path_prefix}.keras")
 
             print("\nmodel : training done. \n")
 
         print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        for model_num in range(1, 7):
+        NUMBER_OF_MODEL_CHECKPOINTS: int = 6
+
+        models_worth_saving: list[int] = []
+
+        for model_num in range(1, NUMBER_OF_MODEL_CHECKPOINTS + 1):
             training_data_custom_evaluation = CustomEvaluation(
                 ticker=TICKER,
                 X_data=X_train,
@@ -325,11 +337,19 @@ def main():
                 model_num=model_num,
             )
 
+            if (
+                training_data_custom_evaluation.is_model_worth_saving
+                or valid_data_custom_evaluation.is_model_worth_saving
+            ):
+                models_worth_saving.append(model_num)
+
     battery = psutil.sensors_battery()
 
     is_plugged = battery.power_plugged
 
     print("is batter on charging: ", is_plugged)
+
+    print("MODELS WORTH SAVING: ", models_worth_saving)
 
 
 def suppress_cpu_usage():
@@ -341,10 +361,10 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    suppress_level: int = 10
+    SUPPRESSION_LEVEL: int = 11
 
     # The command you want to run
-    command = f"cpulimit -l {suppress_level} -p {pid}"
+    command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
 
     # quit terminal app
     # subprocess.run(["osascript", "-e", 'quit app "Terminal"'])
@@ -404,6 +424,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             IS_TRAINING_MODEL = True
+
             suppress_cpu_usage()
 
         elif sys.argv[1] == "new":
