@@ -6,17 +6,22 @@ def simulation(
     sell_price_arr: np.ndarray,
     order_type_buy_arr: np.array,
     real_price_arr: np.ndarray,
-) -> None:
-    # 3 order are placed when the similation starts
+) -> bool:
+    # 3 order are placed when the simulation starts
     #   buy order
     #   sell order
     #   stop_loss_order - based on what type of whole order this is - buy/sell
     #       or trend whether max comes first or the min.
     #
-    #   when the last tick happends. any pending order remain, the position is closed at market price..
+    #   when the last tick happens. any pending order remain, the position is closed at market price..
     #       it will be either partial reward or partial stop_loss
     #
     #
+
+    PERCENT_250_DAYS: int = 1
+    PERCENT_250_DAYS_WORTH_SAVING: int = 4
+
+    is_worth_saving: bool = False
 
     print("simulation started....")
 
@@ -96,9 +101,7 @@ def simulation(
 
             # if trade is still active at closing time, then closing the position at the closing price of the interval.
             if trade_taken and not trade_taken_and_out:
-                avg_close_price = (
-                    real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]
-                ) / 2
+                avg_close_price = (real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]) / 2
                 if is_trade_type_buy:
                     # buy trade
                     net_day_reward = avg_close_price - buy_price
@@ -192,9 +195,9 @@ def simulation(
         # if self.test_size != 0:
         #     print(f"\n work: data = VALIDATION DATA, model={self.model_num} \n")
         # else:
-        #     print(f"\n work: data = TRANING DATA, model={self.model_num} \n")
+        #     print(f"\n work: data = TRAINING DATA, model={self.model_num} \n")
 
-        if days_250 > 1:
+        if days_250 > PERCENT_250_DAYS:
             print(
                 "\t\t",
                 "risk_to_reward_ratio:",
@@ -204,7 +207,10 @@ def simulation(
                 "{:.2f}".format(days_250),
                 " %",
                 "\t" * 2,
-                "\033[92m++\033[0m" if days_250 > 4 else "",
+                "\033[92m++\033[0m" if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
             )
 
-    return
+        if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
+            is_worth_saving = True
+
+    return is_worth_saving
