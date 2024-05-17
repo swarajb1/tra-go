@@ -54,6 +54,8 @@ class CustomEvaluation:
 
         self.number_of_days = self.X_data.shape[0]
 
+        self.is_model_worth_saving = False
+
         print("\n" * 4, "*" * 200, "\n" * 4, sep="")
 
         if self.test_size > 0:
@@ -66,10 +68,10 @@ class CustomEvaluation:
     def custom_evaluate_safety_factor(self):
         self.model_file_name: str = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
-        file_path: str = "training/models/" + self.model_file_name
+        file_path: str = os.path.join("training", "models", self.model_file_name)
 
         if not os.path.exists(file_path):
-            file_path: str = "training/models_saved/" + self.model_file_name
+            file_path = os.path.join("training", "models_saved", self.model_file_name)
 
         if not os.path.exists(file_path):
             print(
@@ -89,6 +91,7 @@ class CustomEvaluation:
                 "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
                 "metric_pred_capture": km_2.metric_pred_capture,
                 "metric_win_checkpoint": km_2.metric_win_checkpoint,
+                "metric_win_correct_trend_percent": km_2.metric_win_correct_trend_percent,
                 "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
             },
         ):
@@ -331,7 +334,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(
+        self.is_model_worth_saving = simulation(
             buy_price_arr=min_pred,
             sell_price_arr=max_pred,
             order_type_buy_arr=buy_order_pred,
@@ -352,7 +355,7 @@ class CustomEvaluation:
         all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
         all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
 
-        all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
+        all_days_pro_cumulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
         pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
             np.float32,
@@ -370,7 +373,7 @@ class CustomEvaluation:
 
         average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
 
-        cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
+        cdgr: float = pow(all_days_pro_cumulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
