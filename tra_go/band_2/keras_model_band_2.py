@@ -2,8 +2,8 @@ import tensorflow as tf
 from keras import backend as K
 from keras_model import metric_abs, metric_rmse
 
-SKIP_FIRST_PERCENTILE: float = 0.1
-SKIP_LAST_PERCENTILE: float = 0.1
+SKIP_FIRST_PERCENTILE: float = 0.15
+SKIP_LAST_PERCENTILE: float = 0.15
 
 
 # RISK_TO_REWARD_RATIO: float = 0.2
@@ -11,9 +11,9 @@ SKIP_LAST_PERCENTILE: float = 0.1
 
 def metric_new_idea(y_true, y_pred):
     return (
-        metric_rmse(y_true, y_pred)
-        + metric_abs(y_true, y_pred) / 3
-        + metric_average_in(y_true, y_pred) / 3
+        metric_rmse(y_true, y_pred) * 2
+        + metric_abs(y_true, y_pred) * 2 / 3
+        + metric_average_in(y_true, y_pred) * 2 / 3
         + metric_loss_comp_2(y_true, y_pred)
         # + metric_pred_capture(y_true, y_pred) * 10
         # + metric_win_checkpoint(y_true, y_pred) * 20
@@ -190,7 +190,9 @@ def metric_win_pred_capture_percent(y_true, y_pred):
 
     pred_capture = K.mean(K.abs(max_pred - min_pred) * K.cast(wins, dtype=K.floatx()))
 
-    total_win_pred_capture_possible = K.mean((max_true - min_true) * K.cast(wins, dtype=K.floatx()))
+    total_win_pred_capture_possible = K.mean(
+        (max_true - min_true) * K.cast(wins, dtype=K.floatx()),
+    )
 
     x = pred_capture / total_win_pred_capture_possible
 
@@ -204,7 +206,9 @@ def metric_win_correct_trend_percent(y_true, y_pred):
 
     correct_trends = get_correct_trends(y_true, y_pred)
 
-    correct_win_trend = K.mean(K.cast(correct_trends, dtype=K.floatx()) * K.cast(wins, dtype=K.floatx())) / K.mean(
+    correct_win_trend = K.mean(
+        K.cast(correct_trends, dtype=K.floatx()) * K.cast(wins, dtype=K.floatx()),
+    ) / K.mean(
         K.cast(wins, dtype=K.floatx()),
     )
 
