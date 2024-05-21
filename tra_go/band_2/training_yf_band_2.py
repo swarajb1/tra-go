@@ -54,7 +54,9 @@ class CustomEvaluation:
 
         self.number_of_days = self.X_data.shape[0]
 
-        self.is_model_worth_saving = False
+        self.is_model_worth_saving: bool = False
+
+        self.win_250_days: float = 0
 
         print("\n" * 4, "*" * 200, "\n" * 4, sep="")
 
@@ -91,7 +93,7 @@ class CustomEvaluation:
                 "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
                 "metric_pred_capture": km_2.metric_pred_capture,
                 "metric_win_checkpoint": km_2.metric_win_checkpoint,
-                "metric_win_correct_trend_percent": km_2.metric_win_correct_trend_percent,
+                "metric_win_checkpoint_open": km_2.metric_win_correct_trend_percent,
                 "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
             },
         ):
@@ -548,7 +550,12 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(min_pred, max_pred, buy_order_pred, y_true)
+        self.is_model_worth_saving = simulation(
+            min_pred,
+            max_pred,
+            buy_order_pred,
+            y_true,
+        )
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 
@@ -587,6 +594,8 @@ class CustomEvaluation:
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
         pro_250_str: str = "{:.2f}".format(pro_250 * 100)
         pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+
+        self.win_250_days = round(pro_250 * 100, 2)
 
         print("\n\n")
         print("valid_pred\t", round(fraction_valid_pred * 100, 2), " %")
