@@ -27,7 +27,7 @@ TEST_SIZE: float = 0.2
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2
 
-TICKER: TickerOne = TickerOne.SUNPHARMA
+TICKER: TickerOne = TickerOne.ITC
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
@@ -312,6 +312,8 @@ def main():
 
         models_worth_saving: list[int] = []
 
+        max_250_days_win_value: float = 0
+
         for model_num in range(1, NUMBER_OF_MODEL_CHECKPOINTS + 1):
             training_data_custom_evaluation = CustomEvaluation(
                 ticker=TICKER,
@@ -343,13 +345,21 @@ def main():
             ):
                 models_worth_saving.append(model_num)
 
+            max_250_days_win_value = max(
+                max_250_days_win_value,
+                training_data_custom_evaluation.win_250_days,
+                valid_data_custom_evaluation.win_250_days,
+            )
+
     battery = psutil.sensors_battery()
 
     is_plugged = battery.power_plugged
 
     print("is batter on charging: ", is_plugged)
 
-    print("MODELS WORTH SAVING: ", models_worth_saving)
+    print("\nMAX 250 days Win Value acheived: ", max_250_days_win_value, " %")
+
+    print("\n\nMODELS WORTH SAVING: ", models_worth_saving)
 
 
 def suppress_cpu_usage():
