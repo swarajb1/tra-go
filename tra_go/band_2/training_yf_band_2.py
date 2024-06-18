@@ -95,6 +95,7 @@ class CustomEvaluation:
                 "metric_win_checkpoint": km_2.metric_win_checkpoint,
                 "metric_win_checkpoint_open": km_2.metric_win_correct_trend_percent,
                 "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
+                "metric_win_correct_trend_percent": km_2.metric_pred_trend_capture_percent,
             },
         ):
             model = load_model(file_path)
