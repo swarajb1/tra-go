@@ -82,3 +82,8 @@ class ModelLocationType(Enum):
 class XDataType(Enum):
     PART_DATA = "part_data"
     FULL_DATA = "full_data"
+
+
+class IODataType(Enum):
+    INPUT_DATA = "input_data"
+    OUTPUT_DATA = "ouput_data"
