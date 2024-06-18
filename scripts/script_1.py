@@ -24,8 +24,6 @@ if __name__ == "__main__":
 
         print(instrument_df.head())
 
-        filtered_df = instrument_df[
-            instrument_df["tradingsymbol"].isin(nifty50_symbols)
-        ]
+        filtered_df = instrument_df[instrument_df["tradingsymbol"].isin(nifty50_symbols)]
 
         filtered_df.to_csv(f"data_z/selected_stocks_{exchange}.csv", index=False)
