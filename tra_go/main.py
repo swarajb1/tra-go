@@ -13,9 +13,9 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_2.keras_model_band_2 as km_2
 import tra_go.band_4.keras_model_band_4 as km_4
-from database.enums import BandType, TickerOne
+from database.enums import BandType, ModelLocationType, TickerOne
 
-IS_TRAINING_MODEL: bool = True
+IS_TRAINING_MODEL: bool = False
 prev_model: str = "2024-04-08 11-50"
 
 
@@ -24,10 +24,10 @@ BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
-X_TYPE: BandType = BandType.BAND_4
+X_TYPE: BandType = BandType.BAND_5
 Y_TYPE: BandType = BandType.BAND_2
 
-TICKER: TickerOne = TickerOne.ITC
+TICKER: TickerOne = TickerOne.ASIANPAINT
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
@@ -351,15 +351,15 @@ def main():
                 valid_data_custom_evaluation.win_250_days,
             )
 
+        print("\nMAX 250 days Win Value acheived: ", max_250_days_win_value, " %")
+
+        print("\n\nMODELS WORTH SAVING: ", models_worth_saving)
+
     battery = psutil.sensors_battery()
 
     is_plugged = battery.power_plugged
 
     print("is batter on charging: ", is_plugged)
-
-    print("\nMAX 250 days Win Value acheived: ", max_250_days_win_value, " %")
-
-    print("\n\nMODELS WORTH SAVING: ", models_worth_saving)
 
 
 def suppress_cpu_usage():
@@ -371,7 +371,7 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    SUPPRESSION_LEVEL: int = 11
+    SUPPRESSION_LEVEL: int = 9
 
     # The command you want to run
     command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
@@ -428,6 +428,21 @@ def set_globals(file_index_from_end: int):
         raise FileNotFoundError("File not found in folder")
 
 
+def get_list_of_files(model_type: ModelLocationType, number_of_files: int = 6) -> list[str]:
+    list_of_files = os.listdir("training/models")
+
+    list_of_files = [file for file in list_of_files if not file.startswith(".")]
+
+    folder_name = model_type.value
+
+    list_of_files = sorted(
+        list_of_files,
+        key=lambda x: os.path.getmtime(folder_name + "/" + x),
+    )
+
+    return list_of_files[:number_of_files]
+
+
 if __name__ == "__main__":
     os.system("clear")
 
@@ -437,15 +452,10 @@ if __name__ == "__main__":
 
             suppress_cpu_usage()
 
-        elif sys.argv[1] == "new":
+        elif sys.argv[1] == "training":
             IS_TRAINING_MODEL = False
 
             set_globals(1)
-
-        elif sys.argv[1] == "new_prev":
-            IS_TRAINING_MODEL = False
-
-            set_globals(7)
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
         suppress_cpu_usage()
