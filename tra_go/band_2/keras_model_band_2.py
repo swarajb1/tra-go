@@ -166,10 +166,33 @@ def metric_loss_comp_2(y_true, y_pred):
         - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
     )
 
+    # max_inside_but_not_band = K.all(
+    #     [
+    #         max_true >= max_pred,
+    #         max_pred >= min_true,
+    #         min_pred <= min_true,
+    #     ],
+    #     axis=0,
+    # )
+
+    # min_inside_but_not_band = K.all(
+    #     [
+    #         max_true <= max_pred,
+    #         max_true >= min_pred,
+    #         min_pred >= min_true,
+    #     ],
+    #     axis=0,
+    # )
+
+    # open_trade_error = K.mean(K.cast(max_inside_but_not_band, dtype=K.floatx()) * K.abs(max_true - min_true)) + K.mean(
+    #     K.cast(min_inside_but_not_band, dtype=K.floatx()) * K.abs(max_true - min_true)
+    # )
+
     return (
         z_max_above_error
         + z_pred_valid_error
         + z_min_below_error
+        # + open_trade_error
         + win_amt_true_error * 2
         + win_amt_pred_error * 4
         + trend_error_win * 8
