@@ -1,6 +1,7 @@
-from kiteconnect import KiteConnect
-import webbrowser
 import configparser
+import webbrowser
+
+from kiteconnect import KiteConnect
 
 # Read API credentials from the configuration file
 config = configparser.ConfigParser()

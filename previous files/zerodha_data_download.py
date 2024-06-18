@@ -1,6 +1,7 @@
-from kiteconnect import KiteConnect
-import pandas as pd
 from datetime import datetime, timedelta
+
+import pandas as pd
+from kiteconnect import KiteConnect
 
 # API credentials
 api_key = "your_api_key"
@@ -24,7 +25,10 @@ end_timestamp = int(end_date.timestamp() * 1000)
 
 # Fetch historical data
 data = kite.historical_data(
-    instrument_token, start_timestamp, end_timestamp, interval="minute"
+    instrument_token,
+    start_timestamp,
+    end_timestamp,
+    interval="minute",
 )
 
 # Convert the data to a pandas DataFrame
