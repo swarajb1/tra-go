@@ -24,7 +24,7 @@ BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
-X_TYPE: BandType = BandType.BAND_5
+X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2
 
 TICKER: TickerOne = TickerOne.ASIANPAINT
@@ -178,10 +178,9 @@ def main():
             )
 
     elif Y_TYPE == BandType.BAND_2:
-        (X_train, Y_train, train_prev_close), (
-            X_test,
-            Y_test,
-            test_prev_close,
+        (
+            (X_train, Y_train, train_prev_close),
+            (X_test, Y_test, test_prev_close),
         ) = an.train_test_split(
             data_df=df,
             test_size=TEST_SIZE,
@@ -196,10 +195,10 @@ def main():
             now_datetime = prev_model
 
         if IS_TRAINING_MODEL:
-            model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
+            print("training x data shape\t", X_train.shape)
+            print("training y data shape\t", Y_train.shape)
 
-            print("training data shape\t", X_train.shape)
-            print("training element shape\t", X_train[0].shape)
+            model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
             print("model output shape\t", model.output_shape)
 
@@ -310,56 +309,147 @@ def main():
 
         NUMBER_OF_MODEL_CHECKPOINTS: int = 6
 
-        models_worth_saving: list[int] = []
-
-        max_250_days_win_value: float = 0
-
-        for model_num in range(1, NUMBER_OF_MODEL_CHECKPOINTS + 1):
-            training_data_custom_evaluation = CustomEvaluation(
-                ticker=TICKER,
-                X_data=X_train,
-                Y_data=Y_train,
-                prev_close=train_prev_close,
-                x_type=X_TYPE,
-                y_type=Y_TYPE,
-                test_size=TEST_SIZE,
-                now_datetime=now_datetime,
-                model_num=model_num,
-            )
-
-            valid_data_custom_evaluation = CustomEvaluation(
-                ticker=TICKER,
-                X_data=X_test,
-                Y_data=Y_test,
-                prev_close=test_prev_close,
-                x_type=X_TYPE,
-                y_type=Y_TYPE,
-                test_size=0,
-                now_datetime=now_datetime,
-                model_num=model_num,
-            )
-
-            if (
-                training_data_custom_evaluation.is_model_worth_saving
-                or valid_data_custom_evaluation.is_model_worth_saving
-            ):
-                models_worth_saving.append(model_num)
-
-            max_250_days_win_value = max(
-                max_250_days_win_value,
-                training_data_custom_evaluation.win_250_days,
-                valid_data_custom_evaluation.win_250_days,
-            )
-
-        print("\nMAX 250 days Win Value acheived: ", max_250_days_win_value, " %")
-
-        print("\n\nMODELS WORTH SAVING: ", models_worth_saving)
+        evaluate_models(model_type=ModelLocationType.TRAINED_NEW, number_of_models=NUMBER_OF_MODEL_CHECKPOINTS)
 
     battery = psutil.sensors_battery()
 
     is_plugged = battery.power_plugged
 
-    print("is batter on charging: ", is_plugged)
+    print("is battery on charging: ", is_plugged)
+
+
+def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> None:
+    model_location_prefix: str = model_type.value
+
+    list_of_files = os.listdir(model_location_prefix)
+
+    list_of_files = [file for file in list_of_files if not file.startswith(".")]
+
+    list_of_files = sorted(
+        list_of_files,
+        key=lambda x: x,
+    )
+
+    if not list_of_files:
+        print("\n\nNo models found in the folder: ", model_location_prefix)
+        return
+
+    if len(list_of_files) >= number_of_models:
+        list_of_files = list_of_files[:number_of_models]
+
+    models_worth_saving: list[str] = []
+    models_worth_double_saving: list[str] = []
+    models_worth_not_saving: list[str] = []
+
+    max_250_days_win_value: float = 0
+
+    for file in list_of_files:
+        # print("\n\nEvaluating model:\t", file)
+
+        print("\n" * 4, "*" * 280, "\n" * 4, sep="")
+
+        model_x_type: BandType
+        model_y_type: BandType
+        model_ticker: TickerOne
+        model_datetime: str
+        model_checkpoint_num: int
+
+        model_datetime = file.split(" - ")[1]
+
+        x_type_str = file.split(" - ")[2]
+        for band_type in BandType:
+            if band_type.value == x_type_str:
+                model_x_type = band_type
+                break
+
+        y_type_str = file.split(" - ")[3]
+        for band_type in BandType:
+            if band_type.value == y_type_str:
+                model_y_type = band_type
+                break
+
+        ticker_str = file.split(" - ")[4]
+        for ticker in TickerOne:
+            if ticker.name == ticker_str:
+                model_ticker = ticker
+                break
+
+        model_checkpoint_num_str = file.split(" - ")[5]
+        if "modelCheckPoint" not in model_checkpoint_num_str:
+            raise ValueError("modelCheckpoint not found in file name")
+
+        model_checkpoint_num = int(model_checkpoint_num_str.split("-")[1].split(".keras")[0])
+
+        df = an.get_data_all_df(ticker=model_ticker, interval=INTERVAL)
+
+        (
+            (X_train, Y_train, train_prev_close),
+            (X_test, Y_test, test_prev_close),
+        ) = an.train_test_split(
+            data_df=df,
+            test_size=TEST_SIZE,
+            x_type=model_x_type,
+            y_type=model_y_type,
+            interval=INTERVAL,
+        )
+
+        training_data_custom_evaluation = CustomEvaluation(
+            ticker=model_ticker,
+            X_data=X_train,
+            Y_data=Y_train,
+            prev_close=train_prev_close,
+            x_type=model_x_type,
+            y_type=model_y_type,
+            test_size=TEST_SIZE,
+            now_datetime=model_datetime,
+            model_num=model_checkpoint_num,
+        )
+
+        valid_data_custom_evaluation = CustomEvaluation(
+            ticker=model_ticker,
+            X_data=X_test,
+            Y_data=Y_test,
+            prev_close=test_prev_close,
+            x_type=model_x_type,
+            y_type=model_y_type,
+            test_size=0,
+            now_datetime=model_datetime,
+            model_num=model_checkpoint_num,
+        )
+
+        if (
+            training_data_custom_evaluation.is_model_worth_saving
+            and valid_data_custom_evaluation.is_model_worth_saving
+        ):
+            models_worth_double_saving.append(training_data_custom_evaluation.model_file_name)
+        elif (
+            training_data_custom_evaluation.is_model_worth_saving or valid_data_custom_evaluation.is_model_worth_saving
+        ):
+            models_worth_saving.append(training_data_custom_evaluation.model_file_name)
+        else:
+            models_worth_not_saving.append(training_data_custom_evaluation.model_file_name)
+
+        max_250_days_win_value = max(
+            max_250_days_win_value,
+            training_data_custom_evaluation.win_250_days,
+            valid_data_custom_evaluation.win_250_days,
+        )
+
+    print("\n\n", "-" * 280, "\n", sep="")
+
+    print("\nMAX 250 days Win Value achieved: ", max_250_days_win_value, " %")
+
+    print("\n\nMODELS NOT WORTH SAVING:")
+    for model_file_name in models_worth_not_saving:
+        print("\t", model_file_name, "\t" * 2, "\033[91m--\033[0m")
+
+    print("\n\nMODELS WORTH SAVING:")
+    for model_file_name in models_worth_saving:
+        print("\t", model_file_name, "\t" * 2, "\033[92m++\033[0m")
+
+    print("\n\nMODELS WORTH DOUBLE SAVING:")
+    for model_file_name in models_worth_double_saving:
+        print("\t", model_file_name, "\t" * 2, "\033[92m+++++++++++++++\033[0m")
 
 
 def suppress_cpu_usage():
@@ -371,7 +461,7 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    SUPPRESSION_LEVEL: int = 9
+    SUPPRESSION_LEVEL: int = 10
 
     # The command you want to run
     command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
@@ -383,49 +473,6 @@ def suppress_cpu_usage():
     subprocess.Popen(
         ["osascript", "-e", f'tell app "Terminal" to do script "{command}"'],
     )
-
-
-def set_globals(file_index_from_end: int):
-    global X_TYPE, Y_TYPE, prev_model, TICKER
-
-    # get prev_model
-    list_of_files = os.listdir("training/models")
-
-    list_of_files.remove(".DS_Store")
-
-    list_of_files = sorted(
-        list_of_files,
-        key=lambda x: os.path.getmtime("training/models/" + x),
-    )
-
-    if list_of_files:
-        latest_file = list_of_files[-file_index_from_end]
-
-        print(latest_file)
-
-        date_str: str = latest_file.split(" - ")[1]
-        prev_model = date_str
-
-        x_type_str = latest_file.split(" - ")[2]
-        for band_type in BandType:
-            if band_type.value == x_type_str:
-                X_TYPE = band_type
-                break
-
-        y_type_str = latest_file.split(" - ")[3]
-        for band_type in BandType:
-            if band_type.value == y_type_str:
-                Y_TYPE = band_type
-                break
-
-        ticker_str = latest_file.split(" - ")[4]
-        for ticker in TickerOne:
-            if ticker.name == ticker_str:
-                TICKER = ticker
-                break
-
-    else:
-        raise FileNotFoundError("File not found in folder")
 
 
 def get_list_of_files(model_type: ModelLocationType, number_of_files: int = 6) -> list[str]:
@@ -445,21 +492,24 @@ def get_list_of_files(model_type: ModelLocationType, number_of_files: int = 6) -
 
 if __name__ == "__main__":
     os.system("clear")
+    time_1 = time.time()
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             IS_TRAINING_MODEL = True
 
-            suppress_cpu_usage()
-
         elif sys.argv[1] == "training":
             IS_TRAINING_MODEL = False
 
-            set_globals(1)
+            evaluate_models(model_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
+
+        elif sys.argv[1] == "saved":
+            IS_TRAINING_MODEL = False
+
+            evaluate_models(model_type=ModelLocationType.SAVED, number_of_models=6)
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
         suppress_cpu_usage()
+        main()
 
-    time_1 = time.time()
-    main()
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
