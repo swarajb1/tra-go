@@ -1,9 +1,9 @@
 import keras
 import keras.backend as K
-from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input
+from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
 
-NUMBER_OF_NEURONS: int = 1024
-NUMBER_OF_LAYERS: int = 3
+NUMBER_OF_NEURONS: int = 1500
+NUMBER_OF_LAYERS: int = 6
 INITIAL_DROPOUT_PERCENT: float = 0
 
 
@@ -25,7 +25,9 @@ def get_untrained_model(X_train, Y_train):
         #  dropout value decreases in exponential fashion.
         model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-    model.add(Dense(Y_train[0].shape[1]))
+    model.add(TimeDistributed(Dense(units=Y_train[0].shape[1])))
+
+    # model.add(Dense(units=Y_train[0].shape[1]))
 
     model.summary()
 
