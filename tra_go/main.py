@@ -309,7 +309,10 @@ def main():
 
         NUMBER_OF_MODEL_CHECKPOINTS: int = 6
 
-        evaluate_models(model_type=ModelLocationType.TRAINED_NEW, number_of_models=NUMBER_OF_MODEL_CHECKPOINTS)
+        evaluate_models(
+            model_location_type=ModelLocationType.TRAINED_NEW,
+            number_of_models=NUMBER_OF_MODEL_CHECKPOINTS,
+        )
 
     battery = psutil.sensors_battery()
 
@@ -318,8 +321,8 @@ def main():
     print("is battery on charging: ", is_plugged)
 
 
-def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> None:
-    model_location_prefix: str = model_type.value
+def evaluate_models(model_location_type: ModelLocationType, number_of_models: int) -> None:
+    model_location_prefix: str = model_location_type.value
 
     list_of_files = os.listdir(model_location_prefix)
 
@@ -344,9 +347,8 @@ def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> Non
     max_250_days_win_value: float = 0
 
     for file in list_of_files:
-        # print("\n\nEvaluating model:\t", file)
-
         print("\n" * 4, "*" * 280, "\n" * 4, sep="")
+        print("Evaluating model:\t", file)
 
         model_x_type: BandType
         model_y_type: BandType
@@ -403,6 +405,7 @@ def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> Non
             test_size=TEST_SIZE,
             now_datetime=model_datetime,
             model_num=model_checkpoint_num,
+            model_location_type=model_location_type,
         )
 
         valid_data_custom_evaluation = CustomEvaluation(
@@ -415,6 +418,7 @@ def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> Non
             test_size=0,
             now_datetime=model_datetime,
             model_num=model_checkpoint_num,
+            model_location_type=model_location_type,
         )
 
         if (
@@ -437,7 +441,7 @@ def evaluate_models(model_type: ModelLocationType, number_of_models: int) -> Non
 
     print("\n\n", "-" * 280, "\n", sep="")
 
-    print("\nMAX 250 days Win Value achieved: ", max_250_days_win_value, " %")
+    print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
 
     print("\n\nMODELS NOT WORTH SAVING:")
     for model_file_name in models_worth_not_saving:
@@ -501,12 +505,12 @@ if __name__ == "__main__":
         elif sys.argv[1] == "training":
             IS_TRAINING_MODEL = False
 
-            evaluate_models(model_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
+            evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
 
         elif sys.argv[1] == "saved":
             IS_TRAINING_MODEL = False
 
-            evaluate_models(model_type=ModelLocationType.SAVED, number_of_models=6)
+            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=10)
 
     if IS_TRAINING_MODEL and len(sys.argv) == 1:
         suppress_cpu_usage()
