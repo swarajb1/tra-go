@@ -11,7 +11,6 @@ from training_yf import round_to_nearest_0_05
 import tra_go.band_2.keras_model_band_2 as km_2
 from database.enums import BandType, TickerOne
 
-RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
 
 
@@ -46,11 +45,13 @@ class CustomEvaluation:
         self.x_type = x_type
         self.y_type = y_type
 
+        self.model_file_name: str
+
         self.test_size = test_size
         self.now_datetime = now_datetime
         self.model_num = model_num
 
-        self.SAFETY_FACTOR = SAFETY_FACTOR
+        self.safety_factor = SAFETY_FACTOR
 
         self.number_of_days = self.X_data.shape[0]
 
@@ -58,17 +59,16 @@ class CustomEvaluation:
 
         self.win_250_days: float = 0
 
-        print("\n" * 4, "*" * 200, "\n" * 4, sep="")
-
         if self.test_size > 0:
             print("TRAINING data now ...")
         else:
+            print("\n" * 2, "_" * 140, "\n" * 2, sep="")
             print("VALIDATION data now ...")
 
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
         file_path: str = os.path.join("training", "models", self.model_file_name)
 
@@ -140,9 +140,7 @@ class CustomEvaluation:
         return
 
     def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eliminated_element_index: int = int(
-            km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
-        )
+        first_non_eliminated_element_index: int = int(km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
         last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
         last_skipped_elements: int = int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1])
@@ -155,9 +153,9 @@ class CustomEvaluation:
         for i in range(last_skipped_elements):
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
-        if self.SAFETY_FACTOR < 1:
-            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
+        if self.safety_factor < 1:
+            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
 
         return res
 
@@ -240,7 +238,7 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
+        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.safety_factor} - model_{self.model_num}.png"
         if self.test_size == 0:
             filename = filename[:-4] + "- valid.png"
 
@@ -617,7 +615,7 @@ class CustomEvaluation:
         # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
 
-        print("folder_name\t", self.model_file_name)
+        print("file_name\t", self.model_file_name)
 
         return
 
