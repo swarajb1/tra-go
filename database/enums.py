@@ -77,6 +77,7 @@ class ModelLocationType(Enum):
     TRAINED_NEW = "training/models"
     SAVED = "training/models_saved"
     SAVED_DOUBLE = "training/models_saved_double"
+    SAVED_TRIPLE = "training/models_saved_triple"
 
 
 class XDataType(Enum):
