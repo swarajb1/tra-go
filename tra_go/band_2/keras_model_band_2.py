@@ -196,7 +196,7 @@ def metric_loss_comp_2(y_true, y_pred):
         + win_amt_true_error * 2
         + win_amt_pred_error * 4
         + trend_error_win * 8
-        + trend_error_win_pred_error * 16
+        + trend_error_win_pred_error * 24
     )
 
 
