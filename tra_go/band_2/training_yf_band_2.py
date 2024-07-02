@@ -9,7 +9,7 @@ from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 import tra_go.band_2.keras_model_band_2 as km_2
-from database.enums import BandType, TickerOne
+from database.enums import BandType, ModelLocationType, TickerOne
 
 SAFETY_FACTOR: float = 0.8
 
@@ -31,6 +31,7 @@ class CustomEvaluation:
         y_type: BandType,
         test_size: float,
         now_datetime: str,
+        model_location_type: ModelLocationType,
         model_num: int = 1,
         skip_first_percentile: float = 0.18,
         skip_last_percentile: float = 0.18,
@@ -50,6 +51,7 @@ class CustomEvaluation:
         self.test_size = test_size
         self.now_datetime = now_datetime
         self.model_num = model_num
+        self.model_location_type = model_location_type
 
         self.safety_factor = SAFETY_FACTOR
 
@@ -68,12 +70,9 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name = f"model - {self.now_datetime} - {self.x_type.value} - {self.y_type.value} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
-        file_path: str = os.path.join("training", "models", self.model_file_name)
-
-        if not os.path.exists(file_path):
-            file_path = os.path.join("training", "models_saved", self.model_file_name)
+        file_path: str = os.path.join(self.model_location_type.value, self.model_file_name)
 
         if not os.path.exists(file_path):
             print(
