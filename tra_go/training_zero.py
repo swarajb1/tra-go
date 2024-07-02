@@ -5,7 +5,7 @@ from database.enums import BandType, IODataType, TickerOne
 
 TOTAL_POINTS_IN_ONE_DAY: int = 375
 
-NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 178
+NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 132
 NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 132
 
 NUMBER_OF_POINTS_IN_ZONE_DAY: int = NUMBER_OF_POINTS_IN_ZONE_1_ST + NUMBER_OF_POINTS_IN_ZONE_2_ND
@@ -46,8 +46,8 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
 
 
 def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_type: BandType) -> pd.DataFrame:
-    """Splits the data into input and output dataframes, and also the previous
-    close price dataframe."""
+    """Splits the data into input, output dataframe, and the previous close
+    price dataframe."""
 
     df_i = pd.DataFrame()
     df_o = pd.DataFrame()
@@ -72,8 +72,8 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
     df_i.reset_index(drop=True, inplace=True)
     df_o.reset_index(drop=True, inplace=True)
 
-    columns_x: list[str] = []
-    columns_y: list[str] = []
+    columns_x: list[str]
+    columns_y: list[str]
 
     if x_type == BandType.BAND_4:
         columns_x = ["open", "high", "low", "close"]
@@ -168,9 +168,9 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
     )
 
     train_x = by_date_df_array(df_train_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
-    test_x = by_date_df_array(df_test_x, band_type=x_type, io_type=IODataType.OUTPUT_DATA)
+    test_x = by_date_df_array(df_test_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
 
-    train_y = by_date_df_array(df_train_y, band_type=y_type, io_type=IODataType.INPUT_DATA)
+    train_y = by_date_df_array(df_train_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
     test_y = by_date_df_array(df_test_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
 
     train_prev_close = df_train_close.values
