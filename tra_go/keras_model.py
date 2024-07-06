@@ -2,7 +2,7 @@ import keras
 import keras.backend as K
 from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
 
-NUMBER_OF_NEURONS: int = 1500
+NUMBER_OF_NEURONS: int = 1024
 NUMBER_OF_LAYERS: int = 6
 INITIAL_DROPOUT_PERCENT: float = 0
 
