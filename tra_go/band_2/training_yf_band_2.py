@@ -3,7 +3,7 @@ import os
 import keras_model as km
 import matplotlib.pyplot as plt
 import numpy as np
-from core.simulation import simulation
+from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
@@ -263,7 +263,7 @@ class CustomEvaluation:
         min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 0], axis=1)
         max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
 
-        buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: np.ndarray[bool] = np.all([max_pred_index > min_pred_index], axis=0)
 
         valid_actual: np.ndarray = np.all([max_true > min_true], axis=0)
 
@@ -334,12 +334,15 @@ class CustomEvaluation:
             axis=0,
         )
 
-        self.is_model_worth_saving = simulation(
+        simulation = Simulation(
             buy_price_arr=min_pred,
             sell_price_arr=max_pred,
             order_type_buy_arr=buy_order_pred,
             real_price_arr=y_true,
         )
+
+        self.is_model_worth_saving = simulation.is_worth_saving
+
         fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
