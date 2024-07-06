@@ -31,7 +31,7 @@ clean:
 
 
 clean_logs:
-	PYTHONPATH=$(WORKDIR)/ $(PYTHON) utils/clean_logs.py
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) support/clean_logs.py
 
 
 new-yf-data:
