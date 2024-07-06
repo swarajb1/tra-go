@@ -548,7 +548,12 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(min_pred, max_pred, buy_order_pred, y_true)
+        simulation = Simulation(
+            buy_price_arr=min_pred,
+            sell_price_arr=max_pred,
+            order_type_buy_arr=buy_order_pred,
+            real_price_arr=y_true,
+        )
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 
