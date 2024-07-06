@@ -217,7 +217,7 @@ class Simulation:
                 "\t",
                 "250_days_s: ",
                 "{:.2f}".format(days_250) if days_250 > PERCENT_250_DAYS else "--",
-                " %",
+                " %" if days_250 > PERCENT_250_DAYS else "",
                 "\t" * 2,
                 "\033[92m++\033[0m" if self.is_worth_saving else "",
             )

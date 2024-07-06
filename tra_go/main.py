@@ -27,7 +27,7 @@ TEST_SIZE: float = 0.2
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2
 
-TICKER: TickerOne = TickerOne.ASIANPAINT
+TICKER: TickerOne = TickerOne.ICICIBANK
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
@@ -328,10 +328,7 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
 
     list_of_files = [file for file in list_of_files if not file.startswith(".")]
 
-    list_of_files = sorted(
-        list_of_files,
-        key=lambda x: x,
-    )
+    list_of_files = sorted(list_of_files, key=lambda x: x)
 
     if not list_of_files:
         print("\n\nNo models found in the folder: ", model_location_prefix)
@@ -465,13 +462,10 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    SUPPRESSION_LEVEL: int = 10
+    SUPPRESSION_LEVEL: int = 14
 
     # The command you want to run
     command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
-
-    # quit terminal app
-    # subprocess.run(["osascript", "-e", 'quit app "Terminal"'])
 
     # Open a new terminal and run the command
     subprocess.Popen(
@@ -501,6 +495,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             IS_TRAINING_MODEL = True
+
+            suppress_cpu_usage()
+            main()
 
         elif sys.argv[1] == "training":
             IS_TRAINING_MODEL = False
