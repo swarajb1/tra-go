@@ -6,10 +6,10 @@ RISK_TO_REWARD_RATIO: float = 0.3
 class Simulation:
     def __init__(
         self,
-        buy_price_arr: np.ndarray,
-        sell_price_arr: np.ndarray,
-        order_type_buy_arr: np.array,
-        real_price_arr: np.ndarray,
+        buy_price_arr: np.ndarray[float],
+        sell_price_arr: np.ndarray[float],
+        order_type_buy_arr: np.ndarray[bool],
+        real_price_arr: np.ndarray[float],
     ):
         self.buy_price_arr = buy_price_arr
         self.sell_price_arr = sell_price_arr
@@ -20,12 +20,7 @@ class Simulation:
 
         self.simulation()
 
-    def simulation(
-        buy_price_arr: np.ndarray,
-        sell_price_arr: np.ndarray,
-        order_type_buy_arr: np.array,
-        real_price_arr: np.ndarray,
-    ) -> bool:
+    def simulation(self) -> bool:
         # 3 orders are placed when the simulation starts
         #   buy order
         #   sell order
@@ -36,12 +31,12 @@ class Simulation:
         #       it will be either partial reward or partial stop_loss
 
         PERCENT_250_DAYS: int = 1
-        PERCENT_250_DAYS_WORTH_SAVING: int = 12
+        PERCENT_250_DAYS_WORTH_SAVING: int = 18
 
         print("simulation started....")
 
         for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            number_of_days: int = real_price_arr.shape[0]
+            number_of_days: int = self.real_price_arr.shape[0]
 
             wins_day_wise_list: np.array = np.zeros(number_of_days)
             invested_day_wise_list: np.array = np.zeros(number_of_days)
@@ -57,10 +52,10 @@ class Simulation:
                 trade_taken_and_out: bool = False
                 stop_loss_hit: bool = False
 
-                is_trade_type_buy: bool = order_type_buy_arr[i_day]
+                is_trade_type_buy: bool = self.order_type_buy_arr[i_day]
 
-                buy_price: float = buy_price_arr[i_day]
-                sell_price: float = sell_price_arr[i_day]
+                buy_price: float = self.buy_price_arr[i_day]
+                sell_price: float = self.sell_price_arr[i_day]
                 stop_loss: float = 0
 
                 expected_reward: float = sell_price - buy_price
@@ -76,9 +71,9 @@ class Simulation:
                     stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
 
                 # step 2 - similating each tick inside the interval
-                for i_tick in range(real_price_arr.shape[1]):
-                    tick_min = real_price_arr[i_day, i_tick, 0]
-                    tick_max = real_price_arr[i_day, i_tick, 1]
+                for i_tick in range(self.real_price_arr.shape[1]):
+                    tick_min = self.real_price_arr[i_day, i_tick, 0]
+                    tick_max = self.real_price_arr[i_day, i_tick, 1]
 
                     if is_trade_type_buy:
                         # buy trade
@@ -116,7 +111,7 @@ class Simulation:
 
                 # if trade is still active at closing time, then closing the position at the closing price of the interval.
                 if trade_taken and not trade_taken_and_out:
-                    avg_close_price = (real_price_arr[i_day, -1, 0] + real_price_arr[i_day, -1, 1]) / 2
+                    avg_close_price = (self.real_price_arr[i_day, -1, 0] + self.real_price_arr[i_day, -1, 1]) / 2
                     if is_trade_type_buy:
                         # buy trade
                         net_day_reward = avg_close_price - buy_price
@@ -212,18 +207,17 @@ class Simulation:
             # else:
             #     print(f"\n work: data = TRAINING DATA, model={self.model_num} \n")
 
-            if days_250 > PERCENT_250_DAYS:
-                print(
-                    "\t\t",
-                    "risk_to_reward_ratio:",
-                    "{:.2f}".format(RISK_TO_REWARD_RATIO),
-                    "\t",
-                    "250_days_s: ",
-                    "{:.2f}".format(days_250),
-                    " %",
-                    "\t" * 2,
-                    "\033[92m++\033[0m" if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
-                )
-
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_worth_saving = True
+
+            print(
+                "\t\t",
+                "risk_to_reward_ratio:",
+                "{:.2f}".format(RISK_TO_REWARD_RATIO),
+                "\t",
+                "250_days_s: ",
+                "{:.2f}".format(days_250) if days_250 > PERCENT_250_DAYS else "--",
+                " %",
+                "\t" * 2,
+                "\033[92m++\033[0m" if self.is_worth_saving else "",
+            )
