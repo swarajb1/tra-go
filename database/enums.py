@@ -80,11 +80,11 @@ class ModelLocationType(Enum):
     SAVED_TRIPLE = "training/models_saved_triple"
 
 
-class XDataType(Enum):
-    PART_DATA = "part_data"
-    FULL_DATA = "full_data"
-
-
 class IODataType(Enum):
     INPUT_DATA = "input_data"
     OUTPUT_DATA = "ouput_data"
+
+
+class OrderType(Enum):
+    BUY = "buy"
+    SELL = "sell"
