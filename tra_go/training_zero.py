@@ -5,8 +5,8 @@ from database.enums import BandType, IODataType, TickerOne
 
 TOTAL_POINTS_IN_ONE_DAY: int = 375
 
-NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 132
-NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 132
+NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 150
+NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 150
 
 NUMBER_OF_POINTS_IN_ZONE_DAY: int = NUMBER_OF_POINTS_IN_ZONE_1_ST + NUMBER_OF_POINTS_IN_ZONE_2_ND
 
@@ -99,11 +99,14 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
 def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     res_df = pd.DataFrame()
 
-    # when taking from full starting
-    INITIAL_INDEX_OFFSET: int = 0
+    # # when taking from 915 (165, 165)
+    # INITIAL_INDEX_OFFSET: int = 0
 
-    # when taking from 1000
-    # INITIAL_OFFSET: int = 47
+    # when taking from 1000  (132, 132)
+    # INITIAL_INDEX_OFFSET: int = 47
+
+    # when taking from 951 (150, 150)
+    INITIAL_INDEX_OFFSET: int = 36
 
     number_of_days = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
