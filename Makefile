@@ -17,6 +17,7 @@ WORKDIR=tra_go
 
 
 install:  ## Install poetry to run on local
+	$(MAKE) generate_dot_env
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install poetry
 	$(PYTHON) -m poetry install
@@ -40,3 +41,9 @@ new-yf-data:
 
 script_1:
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) script_1.py
+
+
+generate_dot_env:  ## Create .env from template if it does not exist.
+	@if [[ ! -e .env ]]; then \
+		cp .env.template .env; \
+	fi
