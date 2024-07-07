@@ -1,11 +1,9 @@
-import pandas as pd
 import csv
-from datetime import datetime, timedelta
-
-from time import time
 import os
-import pytz
+from datetime import datetime, timedelta
+from time import time
 
+import pandas as pd
 
 nifty50_tickers = [
     "ADANIPORTS.NS",
@@ -280,7 +278,7 @@ def main_func(interval, n, work):
                     "total_percent_full_zone": z["total_percent"],
                     "daily_cgr_full_zone": z["daily_cgr"],
                     "sf_safety_factor": z["sf_safety_factor"],
-                }
+                },
             )
 
         folder_name = f"./work - {WORK}"
@@ -324,7 +322,3 @@ if __name__ == "__main__":
     time_1 = time()
     main()
     print(f"time taken = {round(time() - time_1, 2)} sec")
-
-
-# TODOO: check if length of stocks not same, when joining. - clean data, and place average values where there is none.
-# TODOO: data cleaning
