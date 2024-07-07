@@ -1,7 +1,5 @@
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
 from keras import layers
+from tensorflow import keras
 
 # Load the MNIST dataset
 (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
@@ -19,13 +17,15 @@ model = keras.Sequential(
     [
         layers.Flatten(input_shape=(28, 28)),  # Flatten 28x28 images to a 1D array
         layers.Dense(
-            128, activation="relu"
+            128,
+            activation="relu",
         ),  # Fully connected layer with 128 units and ReLU activation
         layers.Dropout(0.3),  # Dropout to prevent overfitting
         layers.Dense(
-            10, activation="softmax"
+            10,
+            activation="softmax",
         ),  # Output layer with 10 units for 10 classes and softmax activation
-    ]
+    ],
 )
 
 # Compile the model
