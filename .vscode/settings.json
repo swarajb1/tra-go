@@ -18,5 +18,8 @@
         "titleBar.activeForeground": "#e7e7e7",
         "titleBar.inactiveBackground": "#0000ff99",
         "titleBar.inactiveForeground": "#e7e7e799"
-    }
+    },
+    "python.analysis.extraPaths": [
+        "./tra_go"
+    ]
 }

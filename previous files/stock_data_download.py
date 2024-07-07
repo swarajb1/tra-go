@@ -2,12 +2,12 @@
 # NOTE:
 # Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
 
-import yfinance as yf
-import pandas as pd
-import time
 import datetime
 import os
+import time
 
+import pandas as pd
+import yfinance as yf
 
 other_config = {
     "1m": {"number of days": 30, "batch days": 7},
@@ -144,10 +144,6 @@ for INTERVAL in [
         print(all_data)
         print(all_data.columns)
 
-        # todoo: check what is the format of the datetime index, can it to desired format.
-        # ['Datetime'], format='%Y-%m-%d %H:%M:%S%z'
-        # ['Date'], format='%Y-%m-%d'
-
         def date_format(date_1):
             return
 
@@ -168,10 +164,9 @@ for INTERVAL in [
         filename = os.path.join(folder_name, f"{ticker} - {INTERVAL}.csv")
         if os.path.exists(filename):
             previous_data = pd.read_csv(filename, index_col=0)
-            # todoo: concat that data only that is after the last date in the alrady present data.
 
             final_data = pd.concat([previous_data, final_data]).drop_duplicates(
-                keep="first"
+                keep="first",
             )
 
         final_data.to_csv(filename, index=True)

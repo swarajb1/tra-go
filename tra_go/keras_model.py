@@ -1,61 +1,37 @@
-from tensorflow import keras
-from keras.layers import Dense, Flatten, LSTM, Dropout
-from keras import backend as K
-from keras.callbacks import TensorBoard
-import matplotlib.pyplot as plt
-import tensorflow as tf
+import keras
+import keras.backend as K
+from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
+
+NUMBER_OF_NEURONS: int = 1024
+NUMBER_OF_LAYERS: int = 6
+INITIAL_DROPOUT_PERCENT: float = 0
 
 
-def get_untrained_model(X_train, y_type):
-    model = keras.Sequential()
+def get_untrained_model(X_train, Y_train):
+    model = keras.models.Sequential()
 
-    model.add(
-        LSTM(
-            units=256,
-            input_shape=(X_train[0].shape),
-            return_sequences=True,
-            activation="relu",
+    model.add(Input(shape=(X_train[0].shape)))
+
+    for i in range(NUMBER_OF_LAYERS):
+        model.add(
+            Bidirectional(
+                LSTM(
+                    units=NUMBER_OF_NEURONS,
+                    return_sequences=True,
+                    activation="relu",
+                ),
+            ),
         )
-    )
-    model.add(Dropout(0.20))
+        #  dropout value decreases in exponential fashion.
+        model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(0.10))
+    model.add(TimeDistributed(Dense(units=Y_train[0].shape[1])))
 
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(0.20))
-
-    model.add(
-        LSTM(
-            units=256,
-            return_sequences=True,
-            activation="relu",
-        )
-    )
-    model.add(Dropout(0.10))
-
-    if y_type == "hl":
-        model.add(Flatten())
-
-    if y_type in ["band", "hl"]:
-        model.add(Dense(2))
-
-    if y_type == "2_mods":
-        model.add(Dense(1))
+    # model.add(Dense(units=Y_train[0].shape[1]))
 
     model.summary()
+
+    print("\n" * 2)
 
     return model
 
@@ -64,62 +40,29 @@ def get_optimiser(learning_rate: float):
     return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
-ERROR_AMPLIFICATION_FACTOR = 1
+def metric_rmse(y_true, y_pred):
+    # Calculate the root mean squared error (RMSE)
 
-
-def custom_loss_2_mods_high(y_true, y_pred):
     error = y_true - y_pred
-    negative_error = K.maximum(-error, 0)
-    positive_error = K.maximum(error, 0)
-    return K.sqrt(K.mean(K.square(error) + positive_error * ERROR_AMPLIFICATION_FACTOR))
 
-
-def custom_loss_2_mods_low(y_true, y_pred):
-    error = y_true - y_pred
-    negative_error = K.maximum(-error, 0)
-    positive_error = K.maximum(error, 0)
-    return K.sqrt(K.mean(K.square(error) + negative_error * ERROR_AMPLIFICATION_FACTOR))
-
-
-def custom_loss_band(y_true, y_pred):
-    error = y_true - y_pred
-    error_l = y_true[..., 0] - y_pred[..., 0]
-    error_h = y_true[..., 1] - y_pred[..., 1]
-
-    positive_error_h = K.maximum(error_h, 0)
-    negative_error_l = K.maximum(-error_l, 0)
-
-    squared_error = K.square(error)
-    error_amplified = (positive_error_h + negative_error_l) * ERROR_AMPLIFICATION_FACTOR
-    error_amplified = K.expand_dims(error_amplified, axis=-1)  # Reshape error_amplified
-
-    return K.sqrt(K.mean(squared_error + error_amplified))
-
-
-def metric_msr(y_true, y_pred):
-    error = y_true - y_pred
     return K.sqrt(K.mean(K.square(error)))
 
 
-class LossDifferenceCallback(tf.keras.callbacks.Callback):
-    def __init__(self, log_dir):
-        super(LossDifferenceCallback, self).__init__()
-        self.previous_loss = None
-        self.log_dir = log_dir
-        self.writer = tf.summary.create_file_writer(self.log_dir)
+def metric_abs(y_true, y_pred):
+    # Calculate the absolute mean error (MAE)
 
-    def on_train_begin(self, logs=None):
-        self.loss_difference_values = []
+    error = y_true - y_pred
 
-    def on_epoch_end(self, epoch, logs=None):
-        current_loss = logs.get("loss")
-        if self.previous_loss is not None:
-            loss_difference = current_loss - self.previous_loss
-            self.loss_difference_values.append(loss_difference)
-            self.update_tensorboard(epoch, loss_difference)
+    return K.mean(K.abs(error))
 
-        self.previous_loss = current_loss
 
-    def update_tensorboard(self, epoch, loss_difference):
-        with self.writer.as_default():
-            tf.summary.scalar("Loss Difference", loss_difference, step=epoch)
+def metric_abs_percent(y_true, y_pred):
+    error = y_true - y_pred
+
+    return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
+
+
+def metric_rmse_percent(y_true, y_pred):
+    error = y_true - y_pred
+
+    return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
