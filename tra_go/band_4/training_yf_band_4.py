@@ -3,7 +3,7 @@ import os
 import keras_model as km
 import matplotlib.pyplot as plt
 import numpy as np
-from core.simulation import simulation
+from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
@@ -56,7 +56,9 @@ class CustomEvaluation:
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name: str = (
+            f"model - {self.now_datetime} - {self.y_type} - modelCheckPoint-{self.model_num}.keras"
+        )
 
         file_path: str = "training/models/" + self.model_file_name
 
@@ -127,9 +129,7 @@ class CustomEvaluation:
         first_non_eliminated_element_index: int = int(
             km_4.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
         )
-        last_non_eliminated_element_index: int = (
-            y_arr.shape[1] - int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
-        )
+        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
         last_skipped_elements: int = int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
@@ -142,12 +142,8 @@ class CustomEvaluation:
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
         if self.SAFETY_FACTOR < 1:
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (
-                res[:, :, 1] - res[:, :, 2]
-            ) / 2 * self.SAFETY_FACTOR
-            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (
-                res[:, :, 1] - res[:, :, 2]
-            ) / 2 * self.SAFETY_FACTOR
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (res[:, :, 1] - res[:, :, 2]) / 2 * self.SAFETY_FACTOR
+            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (res[:, :, 1] - res[:, :, 2]) / 2 * self.SAFETY_FACTOR
 
         return res
 
@@ -335,12 +331,14 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(
+        simulation = Simulation(
             buy_price_arr=min_pred,
             sell_price_arr=max_pred,
             order_type_buy_arr=buy_order_pred,
             real_price_arr=y_true,
         )
+
+        self.is_model_worth_saving = simulation.is_worth_saving
 
         fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 
@@ -550,7 +548,12 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(min_pred, max_pred, buy_order_pred, y_true)
+        simulation = Simulation(
+            buy_price_arr=min_pred,
+            sell_price_arr=max_pred,
+            order_type_buy_arr=buy_order_pred,
+            real_price_arr=y_true,
+        )
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 

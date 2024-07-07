@@ -3,15 +3,14 @@ import os
 import keras_model as km
 import matplotlib.pyplot as plt
 import numpy as np
-from core.simulation import simulation
+from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 import tra_go.band_2.keras_model_band_2 as km_2
-from database.enums import BandType, TickerOne
+from database.enums import BandType, ModelLocationType, TickerOne
 
-RISK_TO_REWARD_RATIO: float = 0.3
 SAFETY_FACTOR: float = 0.8
 
 
@@ -32,6 +31,7 @@ class CustomEvaluation:
         y_type: BandType,
         test_size: float,
         now_datetime: str,
+        model_location_type: ModelLocationType,
         model_num: int = 1,
         skip_first_percentile: float = 0.18,
         skip_last_percentile: float = 0.18,
@@ -46,30 +46,33 @@ class CustomEvaluation:
         self.x_type = x_type
         self.y_type = y_type
 
+        self.model_file_name: str
+
         self.test_size = test_size
         self.now_datetime = now_datetime
         self.model_num = model_num
+        self.model_location_type = model_location_type
 
-        self.SAFETY_FACTOR = SAFETY_FACTOR
+        self.safety_factor = SAFETY_FACTOR
 
         self.number_of_days = self.X_data.shape[0]
 
-        print("\n" * 4, "*" * 200, "\n" * 4, sep="")
+        self.is_model_worth_saving: bool = False
+
+        self.win_250_days: float = 0
 
         if self.test_size > 0:
             print("TRAINING data now ...")
         else:
+            print("\n" * 2, "_" * 140, "\n" * 2, sep="")
             print("VALIDATION data now ...")
 
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        self.model_file_name: str = f"model - {self.now_datetime} - {self.x_type.value.lower()} - {self.y_type.value.lower()} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_name = f"model - {self.now_datetime} - {self.x_type.value} - {self.y_type.value} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
-        file_path: str = "training/models/" + self.model_file_name
-
-        if not os.path.exists(file_path):
-            file_path: str = "training/models_saved/" + self.model_file_name
+        file_path: str = os.path.join(self.model_location_type.value, self.model_file_name)
 
         if not os.path.exists(file_path):
             print(
@@ -86,8 +89,12 @@ class CustomEvaluation:
                 "metric_win_percent": km_2.metric_win_percent,
                 "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_2.metric_pred_capture_percent,
-                "metric_correct_win_trend_percent": km_2.metric_correct_win_trend_percent,
+                "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
+                "metric_pred_capture": km_2.metric_pred_capture,
                 "metric_win_checkpoint": km_2.metric_win_checkpoint,
+                "metric_win_checkpoint_open": km_2.metric_win_correct_trend_percent,
+                "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
+                "metric_win_correct_trend_percent": km_2.metric_pred_trend_capture_percent,
             },
         ):
             model = load_model(file_path)
@@ -132,9 +139,7 @@ class CustomEvaluation:
         return
 
     def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eliminated_element_index: int = int(
-            km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
-        )
+        first_non_eliminated_element_index: int = int(km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
         last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
         last_skipped_elements: int = int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1])
@@ -147,9 +152,9 @@ class CustomEvaluation:
         for i in range(last_skipped_elements):
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
-        if self.SAFETY_FACTOR < 1:
-            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.SAFETY_FACTOR
+        if self.safety_factor < 1:
+            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
 
         return res
 
@@ -232,7 +237,7 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.SAFETY_FACTOR} - model_{self.model_num}.png"
+        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.safety_factor} - model_{self.model_num}.png"
         if self.test_size == 0:
             filename = filename[:-4] + "- valid.png"
 
@@ -258,7 +263,7 @@ class CustomEvaluation:
         min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 0], axis=1)
         max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
 
-        buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: np.ndarray[bool] = np.all([max_pred_index > min_pred_index], axis=0)
 
         valid_actual: np.ndarray = np.all([max_true > min_true], axis=0)
 
@@ -329,12 +334,15 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(
+        simulation = Simulation(
             buy_price_arr=min_pred,
             sell_price_arr=max_pred,
             order_type_buy_arr=buy_order_pred,
             real_price_arr=y_true,
         )
+
+        self.is_model_worth_saving = simulation.is_worth_saving
+
         fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
@@ -350,7 +358,7 @@ class CustomEvaluation:
         all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
         all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
 
-        all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
+        all_days_pro_cumulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
         pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
             np.float32,
@@ -368,7 +376,7 @@ class CustomEvaluation:
 
         average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
 
-        cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
+        cdgr: float = pow(all_days_pro_cumulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
@@ -543,7 +551,14 @@ class CustomEvaluation:
             axis=0,
         )
 
-        simulation(min_pred, max_pred, buy_order_pred, y_true)
+        simulation = Simulation(
+            buy_price_arr=min_pred,
+            sell_price_arr=max_pred,
+            order_type_buy_arr=buy_order_pred,
+            real_price_arr=y_true,
+        )
+
+        self.is_model_worth_saving = simulation.is_worth_saving
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 
@@ -583,6 +598,8 @@ class CustomEvaluation:
         pro_250_str: str = "{:.2f}".format(pro_250 * 100)
         pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
 
+        self.win_250_days = round(pro_250 * 100, 2)
+
         print("\n\n")
         print("valid_pred\t", round(fraction_valid_pred * 100, 2), " %")
         print("max_inside\t", round(fraction_max_inside * 100, 2), " %")
@@ -602,7 +619,7 @@ class CustomEvaluation:
         # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
         # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
 
-        print("folder_name\t", self.model_file_name)
+        print("file_name\t", self.model_file_name)
 
         return
 
