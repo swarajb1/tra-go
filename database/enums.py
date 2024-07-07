@@ -71,3 +71,20 @@ class TickerOne(Enum):
     WIPRO = "WIPRO"
     NIFTY_50 = "NIFTY 50"
     NIFTY_BANK = "NIFTY BANK"
+
+
+class ModelLocationType(Enum):
+    TRAINED_NEW = "training/models"
+    SAVED = "training/models_saved"
+    SAVED_DOUBLE = "training/models_saved_double"
+    SAVED_TRIPLE = "training/models_saved_triple"
+
+
+class IODataType(Enum):
+    INPUT_DATA = "input_data"
+    OUTPUT_DATA = "ouput_data"
+
+
+class OrderType(Enum):
+    BUY = "buy"
+    SELL = "sell"
