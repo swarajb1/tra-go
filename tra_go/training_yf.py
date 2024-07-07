@@ -117,6 +117,8 @@ def get_data_all_df(ticker, interval) -> pd.DataFrame:
 
     df.rename(columns={"Datetime": "datetime"}, inplace=True)
 
+    print(df.columns)
+
     return df[
         [
             "datetime",
