@@ -14,9 +14,9 @@ def min_max_scaler(val: float, min_val: float, max_val: float) -> float:
 
 
 def with_leverage(val: float) -> float:
-    per_day: float = (pow(1 + val / 100, 1 / 250) - 1) * 100
+    per_day_percent: float = (pow(1 + val / 100, 1 / 250) - 1) * 100
 
-    return round((pow(per_day * 5 / 100 + 1, 250) - 1) * 100, 2)
+    return round((pow(per_day_percent * 5 / 100 + 1, 250) - 1) * 100, 2)
 
 
 if __name__ == "__main__":
