@@ -5,7 +5,7 @@ SKIP_FIRST_PERCENTILE: float = 0.15
 SKIP_LAST_PERCENTILE: float = 0.15
 
 
-def metric_new_idea(y_true, y_pred):
+def loss_function(y_true, y_pred):
     return (
         metric_rmse(y_true, y_pred)
         + metric_abs(y_true, y_pred) / 3
@@ -25,20 +25,20 @@ def metric_average_in(y_true, y_pred):
     )
 
 
-def get_band_inside(y_true, y_pred) -> tf.Tensor[bool]:
-    is_valid_pred: tf.Tensor[bool] = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+def get_band_inside(y_true, y_pred) -> tf.Tensor:
+    is_valid_pred: tf.Tensor = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
 
-    is_max_pred_less_than_max_true: tf.Tensor[bool] = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    is_max_pred_less_than_max_true: tf.Tensor = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
 
-    is_min_pred_more_than_min_true: tf.Tensor[bool] = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_min_pred_more_than_min_true: tf.Tensor = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
 
-    band_inside: tf.Tensor[bool] = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
+    band_inside: tf.Tensor = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
     return band_inside
 
 
-def get_correct_trends(y_true, y_pred) -> tf.Tensor[bool]:
-    correct_trends: tf.Tensor[bool] = y_pred[:2] == y_true[:2]
+def get_correct_trends(y_true, y_pred) -> tf.Tensor:
+    correct_trends: tf.Tensor = y_pred[:2] == y_true[:2]
 
     return correct_trends
 
@@ -50,13 +50,13 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
     min_pred = y_pred[:, 0]
     max_pred = y_pred[:, 1]
 
-    is_valid_pred: tf.Tensor[bool] = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+    is_valid_pred: tf.Tensor = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
 
-    is_max_pred_less_than_max_true: tf.Tensor[bool] = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    is_max_pred_less_than_max_true: tf.Tensor = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
 
-    is_min_pred_more_than_min_true: tf.Tensor[bool] = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_min_pred_more_than_min_true: tf.Tensor = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
 
-    band_inside: tf.Tensor[bool] = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
+    band_inside: tf.Tensor = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
     z_max_above_error = tf.reduce_mean(
         (1 - tf.cast(is_max_pred_less_than_max_true, dtype=tf.float32)) * tf.abs(max_true - max_pred),
