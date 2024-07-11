@@ -85,7 +85,7 @@ class CustomEvaluation:
                 "loss_function": km_21.loss_function,
                 "metric_rmse_percent": km.metric_rmse_percent,
                 "metric_abs_percent": km.metric_abs_percent,
-                # "metric_loss_comp_2": km_21.metric_loss_comp_2,
+                "metric_loss_comp_2": km_21.metric_loss_comp_2,
                 "metric_win_percent": km_21.metric_win_percent,
                 "metric_win_pred_capture_percent": km_21.metric_win_pred_capture_percent,
                 "metric_pred_capture_percent": km_21.metric_pred_capture_percent,
