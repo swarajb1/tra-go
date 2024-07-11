@@ -3,6 +3,7 @@ from enum import Enum
 
 class BandType(Enum):
     BAND_2 = "band_2"
+    BAND_2_1 = "band_2_1"
     BAND_4 = "band_4"
     BAND_5 = "band_5"
 
