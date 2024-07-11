@@ -10,7 +10,7 @@ def loss_function(y_true, y_pred):
         metric_rmse(y_true, y_pred)
         + metric_abs(y_true, y_pred) / 3
         + metric_average_in(y_true, y_pred) / 3
-        # + metric_loss_comp_2(y_true, y_pred)
+        + metric_loss_comp_2(y_true, y_pred)
     )
 
 
