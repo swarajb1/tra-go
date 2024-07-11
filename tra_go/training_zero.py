@@ -84,7 +84,7 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
 
     if y_type == BandType.BAND_4:
         columns_y = ["open", "high", "low", "close"]
-    elif y_type == BandType.BAND_2:
+    elif y_type in [BandType.BAND_2, BandType.BAND_2_1]:
         columns_y = ["low", "high"]
     elif x_type == BandType.BAND_5:
         columns_y = ["open", "high", "low", "close", "volume"]
@@ -134,7 +134,7 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     if band_type == BandType.BAND_4:
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 4)
 
-    elif band_type == BandType.BAND_2:
+    elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 2)
 
     elif band_type == BandType.BAND_5:
@@ -182,4 +182,65 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
     return (
         (train_x, train_y, train_prev_close),
         (test_x, test_y, test_prev_close),
+    )
+
+
+def df_data_into_3_feature_array(arr: np.ndarray) -> np.ndarray:
+    res = np.zeros((arr.shape[0], 3))
+
+    min_values = np.min(arr[:, :, 0], axis=1)
+    max_values = np.max(arr[:, :, 1], axis=1)
+    is_buy_trend = np.argmax(arr[:, :, 0], axis=1) > np.argmin(arr[:, :, 1], axis=1)
+
+    res[:, 0] = min_values
+    res[:, 1] = max_values
+    res[:, 2] = is_buy_trend.astype(int)
+
+    return res
+
+
+def train_test_split_lh(data_df, interval, x_type: BandType, test_size=0.2) -> pd.DataFrame:
+    # separate into 178, 132 entries df. for train and test df.
+    # # separate into 132, 132 entries df. for train and test df.
+
+    # divide the price data of that day by the closing price of the previous day.
+    # for the very first day of the dataset - divide the prices by the opening price.
+
+    y_type: BandType = BandType.BAND_2_1
+
+    df = data_df.copy(deep=True)
+
+    df = data_inside_zone(df=df, interval=interval)
+
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+
+    df_train_x, df_train_y, df_train_close = data_split_x_y_close(
+        df=df_train,
+        interval=interval,
+        x_type=x_type,
+        y_type=y_type,
+    )
+
+    df_test_x, df_test_y, df_test_close = data_split_x_y_close(
+        df=df_test,
+        interval=interval,
+        x_type=x_type,
+        y_type=y_type,
+    )
+
+    train_x = by_date_df_array(df_train_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
+    test_x = by_date_df_array(df_test_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
+
+    train_y = by_date_df_array(df_train_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
+    test_y = by_date_df_array(df_test_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
+
+    train_y_arr = df_data_into_3_feature_array(train_y)
+    test_y_arr = df_data_into_3_feature_array(test_y)
+
+    train_prev_close = df_train_close.values
+    test_prev_close = df_test_close.values
+
+    return (
+        (train_x, train_y_arr, train_prev_close),
+        (test_x, test_y_arr, test_prev_close),
     )
