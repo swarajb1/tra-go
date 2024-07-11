@@ -8,26 +8,28 @@ import keras_model as km
 import psutil
 import training_zero as an
 from band_2.training_yf_band_2 import CustomEvaluation
+from band_2_1.evaluation import CustomEvaluation as CustomEvaluation_2_1
 from band_4.training_yf_band_4 import CustomEvaluation as CustomEvaluation_4
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_2.keras_model_band_2 as km_2
+import tra_go.band_2_1.keras_model as km_21
 import tra_go.band_4.keras_model_band_4 as km_4
 from database.enums import BandType, ModelLocationType, TickerOne
 
-IS_TRAINING_MODEL: bool = False
+IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
 
-NUMBER_OF_EPOCHS: int = 3000
+NUMBER_OF_EPOCHS: int = 1
 BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
 
 X_TYPE: BandType = BandType.BAND_4
-Y_TYPE: BandType = BandType.BAND_2
+Y_TYPE: BandType = BandType.BAND_2_1
 
-TICKER: TickerOne = TickerOne.ICICIBANK
+TICKER: TickerOne = TickerOne.SBIN
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
@@ -314,11 +316,141 @@ def main():
             number_of_models=NUMBER_OF_MODEL_CHECKPOINTS,
         )
 
+    elif Y_TYPE == BandType.BAND_2_1:
+        (
+            (X_train, Y_train, train_prev_close),
+            (X_test, Y_test, test_prev_close),
+        ) = an.train_test_split_lh(
+            data_df=df,
+            test_size=TEST_SIZE,
+            x_type=X_TYPE,
+            interval=INTERVAL,
+        )
+
+        if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
+            now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
+        else:
+            now_datetime = prev_model
+
+        if IS_TRAINING_MODEL:
+            print("training x data shape\t", X_train.shape)
+            print("training y data shape\t", Y_train.shape)
+
+            model = km_21.get_untrained_model(X_train=X_train, Y_train=Y_train)
+
+            print("model output shape\t", model.output_shape)
+
+            log_dir: str = os.path.join(
+                "training",
+                "logs",
+                f"{now_datetime} - {Y_TYPE.value.lower()}",
+            )
+
+            tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+            terNan = TerminateOnNaN()
+
+            checkpoint_path_prefix: str = os.path.join(
+                "training",
+                "models",
+                f"model - {now_datetime} - {X_TYPE.value.lower()} - {Y_TYPE.value.lower()} - {TICKER.name}",
+            )
+
+            mcp_save_1 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-1.keras",
+                save_best_only=True,
+                monitor="loss",
+                mode="min",
+            )
+
+            mcp_save_2 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-2.keras",
+                save_best_only=True,
+                monitor="val_loss",
+                mode="min",
+            )
+
+            mcp_save_3 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
+                save_best_only=True,
+                monitor="metric_pred_capture_percent",
+                mode="max",
+            )
+
+            mcp_save_4 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
+                save_best_only=True,
+                monitor="val_metric_pred_capture_percent",
+                mode="max",
+            )
+
+            mcp_save_5 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-5.keras",
+                save_best_only=True,
+                monitor="metric_win_pred_trend_capture_percent",
+                mode="max",
+            )
+
+            mcp_save_6 = ModelCheckpoint(
+                f"{checkpoint_path_prefix} - modelCheckPoint-6.keras",
+                save_best_only=True,
+                monitor="val_metric_win_pred_trend_capture_percent",
+                mode="max",
+            )
+
+            callbacks_modelcheckpoint: list = [
+                mcp_save_1,
+                mcp_save_2,
+                mcp_save_3,
+                mcp_save_4,
+                mcp_save_5,
+                mcp_save_6,
+            ]
+
+            callbacks: list = [
+                tensorboard_callback,
+                terNan,
+            ].extend(callbacks_modelcheckpoint)
+
+            print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
+
+            history = model.fit(
+                x=X_train,
+                y=Y_train,
+                epochs=NUMBER_OF_EPOCHS,
+                batch_size=BATCH_SIZE,
+                validation_data=(X_test, Y_test),
+                callbacks=callbacks,
+            )
+
+            model.save(f"{checkpoint_path_prefix}.keras")
+
+            print("\nmodel : training done. \n")
+
+        print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
+        print("-" * 30)
+
+        number_of_model_checkpoints: int = len(callbacks_modelcheckpoint)
+
+        evaluate_models(
+            model_location_type=ModelLocationType.TRAINED_NEW,
+            number_of_models=number_of_model_checkpoints,
+        )
+
     battery = psutil.sensors_battery()
 
     is_plugged = battery.power_plugged
 
     print("is battery on charging: ", is_plugged)
+
+
+def get_custom_evaluation_class(x_type: BandType, y_type: BandType):
+    if y_type == BandType.BAND_4:
+        return CustomEvaluation_4
+    elif y_type == BandType.BAND_2_1:
+        return CustomEvaluation_2_1
+
+    # y_type == BandType.BAND_2:
+    return CustomEvaluation
 
 
 def evaluate_models(model_location_type: ModelLocationType, number_of_models: int) -> None:
@@ -392,7 +524,9 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
             interval=INTERVAL,
         )
 
-        training_data_custom_evaluation = CustomEvaluation(
+        evaluation_class = get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
+
+        training_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_train,
             Y_data=Y_train,
@@ -405,7 +539,7 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
             model_location_type=model_location_type,
         )
 
-        valid_data_custom_evaluation = CustomEvaluation(
+        valid_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_test,
             Y_data=Y_test,
@@ -509,8 +643,10 @@ if __name__ == "__main__":
 
             evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=10)
 
-    if IS_TRAINING_MODEL and len(sys.argv) == 1:
-        suppress_cpu_usage()
+    else:
+        if IS_TRAINING_MODEL:
+            suppress_cpu_usage()
+
         main()
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
