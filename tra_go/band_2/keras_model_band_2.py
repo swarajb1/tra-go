@@ -147,9 +147,7 @@ def metric_loss_comp_2(y_true, y_pred):
         (1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true),
     )
 
-    win_amt_true_error = K.mean(
-        (1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true),
-    )
+    win_amt_true_error = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
 
     win_amt_pred_error = K.mean(
         K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
@@ -157,13 +155,22 @@ def metric_loss_comp_2(y_true, y_pred):
 
     correct_trends = get_correct_trends(y_true, y_pred)
 
+    # trend_error_win = K.mean(
+    #     (1 - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()))) * K.abs(max_true - min_true),
+    # )
+
+    # trend_error_win_pred_error = K.mean(
+    #     K.abs(max_true - min_true)
+    #     - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
+    # )
+
     trend_error_win = K.mean(
-        (1 - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx()))) * K.abs(max_true - min_true),
+        K.cast(wins, dtype=K.floatx()) * (1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_true - min_true),
     )
 
     trend_error_win_pred_error = K.mean(
-        K.abs(max_true - min_true)
-        - (K.cast(wins, dtype=K.floatx()) * K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred),
+        K.cast(wins, dtype=K.floatx())
+        * (K.abs(max_true - min_true) - (1 - K.cast(correct_trends, dtype=K.floatx())) * K.abs(max_pred - min_pred)),
     )
 
     # max_inside_but_not_band = K.all(
@@ -194,9 +201,9 @@ def metric_loss_comp_2(y_true, y_pred):
         + z_min_below_error
         # + open_trade_error
         + win_amt_true_error * 2
-        + win_amt_pred_error * 4
-        + trend_error_win * 8
-        + trend_error_win_pred_error * 24
+        + win_amt_pred_error * 6
+        + trend_error_win * 16
+        + trend_error_win_pred_error * 39
     )
 
 
