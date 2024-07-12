@@ -68,6 +68,8 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> tf.keras.models.M
 
     model.add(GlobalAveragePooling1D())
 
+    model.add(Dense(units=3))
+
     model.add(CustomActivationLayer())
 
     compile_details = ModelCompileDetails()
