@@ -42,7 +42,7 @@ class CustomEvaluation:
         self.ticker = ticker
 
         self.X_data = X_data
-        self.Y_data = Y_data
+        self.y_data = Y_data
         self.prev_close = prev_close.reshape(len(prev_close))
 
         self.x_type = x_type
@@ -100,16 +100,20 @@ class CustomEvaluation:
 
         self.y_pred: NDArray = model.predict(self.X_data)
 
-        x_close: NDArray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+        if self.x_type == BandType.BAND_4:
+            x_close: NDArray = self.X_data[:, -1, 3]
+        elif self.x_type == BandType.BAND_2:
+            x_close: NDArray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+
         x_close_real: NDArray = round_to_nearest_0_05(x_close * self.prev_close)
 
-        # low, high
+        # (low, high) = (0, 1)
 
-        self.y_pred_new = self.truncated_y_pred(y_arr=self.y_pred)
+        self.y_pred_real = self.y_pred
+        self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_close)
+        self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_close)
 
-        self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis])
-
-        self.y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
+        self.y_data_real = round_to_nearest_0_05(self.y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
         self.function_make_win_graph(
             y_true=self.y_data_real,
@@ -132,26 +136,6 @@ class CustomEvaluation:
                         res[i_day, i_tick, 0],
                     )
 
-        # comment - step 2, in current environment not giving better results
-        # step 2 - correct values of open/close so that they are inside the low/high
-        # for i_day in range(res.shape[0]):
-        #     for i_tick in range(res.shape[1]):
-        #         min_val_index: int = np.argmin(res[i_day, i_tick, :])
-        #         max_val_index: int = np.argmax(res[i_day, i_tick, :])
-
-        #         # swapping min/max values
-        #         if min_val_index != 0:
-        #             (res[i_day, i_tick, 0], res[i_day, i_tick, min_val_index]) = (
-        #                 res[i_day, i_tick, min_val_index],
-        #                 res[i_day, i_tick, 0],
-        #             )
-
-        #         if max_val_index != 1:
-        #             (res[i_day, i_tick, 1], res[i_day, i_tick, max_val_index]) = (
-        #                 res[i_day, i_tick, max_val_index],
-        #                 res[i_day, i_tick, 1],
-        #             )
-
         return res
 
     def function_make_win_graph(
@@ -163,13 +147,10 @@ class CustomEvaluation:
         min_true: NDArray = np.min(y_true[:, :, 0], axis=1)
         max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
-        min_pred: NDArray = np.min(y_pred[:, :, 0], axis=1)
-        max_pred: NDArray = np.max(y_pred[:, :, 1], axis=1)
+        min_pred: NDArray = y_pred[:, 0]
+        max_pred: NDArray = y_pred[:, 1]
 
-        min_pred_index: NDArray = np.argmin(y_pred[:, :, 0], axis=1)
-        max_pred_index: NDArray = np.argmax(y_pred[:, :, 1], axis=1)
-
-        buy_order_pred: NDArray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: NDArray = y_pred[:, 2]
 
         valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
 
