@@ -1,4 +1,7 @@
+import os
+
 import tensorflow as tf
+from dotenv import load_dotenv
 from tensorflow.keras.layers import (
     LSTM,
     Bidirectional,
@@ -9,9 +12,12 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Sequential
 
-NUMBER_OF_NEURONS: int = 1024
-NUMBER_OF_LAYERS: int = 6
-INITIAL_DROPOUT_PERCENT: float = 0
+load_dotenv()
+
+
+NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
+NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
+INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 def get_untrained_model(X_train, Y_train):

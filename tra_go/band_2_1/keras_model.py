@@ -1,5 +1,8 @@
+import os
+
 import keras_model_tf as km_tf
 import tensorflow as tf
+from dotenv import load_dotenv
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (
     LSTM,
@@ -14,6 +17,13 @@ from tensorflow.keras.layers import (
 
 import tra_go.band_2_1.model_metrics as km_21_metrics
 
+load_dotenv()
+
+
+NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
+NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
+INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
+
 
 class ModelCompileDetails:
     def __init__(self):
@@ -23,8 +33,10 @@ class ModelCompileDetails:
         self.loss = km_21_metrics.loss_function
 
         self.metrics = [
-            km_tf.metric_rmse_percent,
-            km_tf.metric_abs_percent,
+            # km_tf.metric_rmse_percent,
+            # km_tf.metric_abs_percent,
+            km_21_metrics.metric_rmse_percent,
+            km_21_metrics.metric_abs_percent,
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
             km_21_metrics.metric_win_pred_capture_percent,
@@ -42,7 +54,8 @@ class CustomActivationLayer(Layer):
         first_two_features = inputs[:, :2]
 
         # Apply sigmoid activation and then round to the third feature
-        third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
+        # third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
+        third_feature = tf.sigmoid(inputs[:, 2:3])
 
         # Concatenate the features back together
         return tf.concat([first_two_features, third_feature], axis=-1)
