@@ -9,7 +9,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Sequential
 
-NUMBER_OF_NEURONS: int = 10
+NUMBER_OF_NEURONS: int = 1024
 NUMBER_OF_LAYERS: int = 6
 INITIAL_DROPOUT_PERCENT: float = 0
 
