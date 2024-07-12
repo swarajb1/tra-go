@@ -40,8 +40,10 @@ class CustomActivationLayer(Layer):
     def call(self, inputs):
         # Apply linear activation to the first two features
         first_two_features = inputs[:, :2]
-        # Apply sigmoid activation to the third feature
-        third_feature = tf.sigmoid(inputs[:, 2:3])
+
+        # Apply sigmoid activation and then round to the third feature
+        third_feature = tf.round(tf.sigmoid(inputs[:, 2]))
+
         # Concatenate the features back together
         return tf.concat([first_two_features, third_feature], axis=-1)
 
