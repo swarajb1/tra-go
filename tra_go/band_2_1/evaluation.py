@@ -1,14 +1,16 @@
 import os
 
-import keras_model as km
+import keras_model_tf as km_tf
 import matplotlib.pyplot as plt
 import numpy as np
 from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
+from numpy.typing import NDArray
 from training_yf import round_to_nearest_0_05
 
-import tra_go.band_2_1.model_metrics as km_21
+import tra_go.band_2_1.keras_model as km_21_model
+import tra_go.band_2_1.model_metrics as km_21_metrics
 from database.enums import BandType, ModelLocationType, TickerOne
 
 SAFETY_FACTOR: float = 0.8
@@ -24,9 +26,9 @@ class CustomEvaluation:
     def __init__(
         self,
         ticker: TickerOne,
-        X_data: np.ndarray[float],
-        Y_data: np.ndarray[float],
-        prev_close: np.ndarray[float],
+        X_data: NDArray[np.float32],
+        Y_data: NDArray[np.float32],
+        prev_close: NDArray[np.float32],
         x_type: BandType,
         y_type: BandType,
         test_size: float,
@@ -82,39 +84,32 @@ class CustomEvaluation:
 
         with custom_object_scope(
             {
-                "loss_function": km_21.loss_function,
-                "metric_rmse_percent": km.metric_rmse_percent,
-                "metric_abs_percent": km.metric_abs_percent,
-                "metric_loss_comp_2": km_21.metric_loss_comp_2,
-                "metric_win_percent": km_21.metric_win_percent,
-                "metric_win_pred_capture_percent": km_21.metric_win_pred_capture_percent,
-                "metric_pred_capture_percent": km_21.metric_pred_capture_percent,
-                "metric_pred_trend_capture_percent": km_21.metric_win_pred_trend_capture_percent,
+                "loss_function": km_21_metrics.loss_function,
+                "metric_rmse_percent": km_tf.metric_rmse_percent,
+                "metric_abs_percent": km_tf.metric_abs_percent,
+                "metric_loss_comp_2": km_21_metrics.metric_loss_comp_2,
+                "metric_win_percent": km_21_metrics.metric_win_percent,
+                "metric_win_pred_capture_percent": km_21_metrics.metric_win_pred_capture_percent,
+                "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
+                "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
+                "CustomActivationLayer": km_21_model.CustomActivationLayer,
             },
         ):
             model = load_model(file_path)
             # model.summary()
 
-        self.y_pred: np.ndarray = model.predict(self.X_data)
+        self.y_pred: NDArray = model.predict(self.X_data)
 
-        x_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
-        x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
+        x_close: NDArray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+        x_close_real: NDArray = round_to_nearest_0_05(x_close * self.prev_close)
 
         # low, high
 
-        # Y_data = self.transform_y_array(y_arr=self.Y_data)
-
         self.y_pred_new = self.truncated_y_pred(y_arr=self.y_pred)
 
-        # temporary - not correcting the pred values
-        # self.y_pred_new = self.correct_pred_values(self.y_pred_new)
+        self.y_pred_real = round_to_nearest_0_05(self.y_pred_new * self.prev_close[:, np.newaxis])
 
-        self.y_pred_real = round_to_nearest_0_05(
-            self.y_pred_new * self.prev_close[:, np.newaxis],
-        )
-        self.y_data_real = round_to_nearest_0_05(
-            self.Y_data * self.prev_close[:, np.newaxis, np.newaxis],
-        )
+        self.y_data_real = round_to_nearest_0_05(self.Y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
         self.function_make_win_graph(
             y_true=self.y_data_real,
@@ -124,27 +119,7 @@ class CustomEvaluation:
 
         return
 
-    def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
-        first_non_eliminated_element_index: int = int(km_21.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
-        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_21.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
-
-        last_skipped_elements: int = int(km_21.SKIP_LAST_PERCENTILE * y_arr.shape[1])
-
-        res: np.ndarray = y_arr.copy()
-
-        for i in range(first_non_eliminated_element_index):
-            res[:, i, :] = y_arr[:, first_non_eliminated_element_index, :]
-
-        for i in range(last_skipped_elements):
-            res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
-
-        if self.safety_factor < 1:
-            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
-
-        return res
-
-    def correct_pred_values(self, y_arr: np.ndarray) -> np.ndarray:
+    def correct_pred_values(self, y_arr: NDArray) -> NDArray:
         res = y_arr.copy()
         # step 1 - correct /exchange low/high values if needed., for each candle
 
@@ -181,28 +156,28 @@ class CustomEvaluation:
 
     def function_make_win_graph(
         self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        x_close: np.ndarray,
+        y_true: NDArray,
+        y_pred: NDArray,
+        x_close: NDArray,
     ):
-        min_true: np.ndarray = np.min(y_true[:, :, 0], axis=1)
-        max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
+        min_true: NDArray = np.min(y_true[:, :, 0], axis=1)
+        max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
-        min_pred: np.ndarray = np.min(y_pred[:, :, 0], axis=1)
-        max_pred: np.ndarray = np.max(y_pred[:, :, 1], axis=1)
+        min_pred: NDArray = np.min(y_pred[:, :, 0], axis=1)
+        max_pred: NDArray = np.max(y_pred[:, :, 1], axis=1)
 
-        min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 0], axis=1)
-        max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
+        min_pred_index: NDArray = np.argmin(y_pred[:, :, 0], axis=1)
+        max_pred_index: NDArray = np.argmax(y_pred[:, :, 1], axis=1)
 
-        buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: NDArray = np.all([max_pred_index > min_pred_index], axis=0)
 
-        valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
+        valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
 
-        close_below_band: np.ndarray = np.all([x_close <= min_pred], axis=0)
+        close_below_band: NDArray = np.all([x_close <= min_pred], axis=0)
 
-        close_above_band: np.ndarray = np.all([x_close >= max_pred], axis=0)
+        close_above_band: NDArray = np.all([x_close >= max_pred], axis=0)
 
-        close_in_band: np.ndarray = np.all(
+        close_in_band: NDArray = np.all(
             [
                 x_close >= min_pred,
                 x_close <= max_pred,
@@ -224,13 +199,13 @@ class CustomEvaluation:
                     min_pred[i] = x_close[i] - band_val
                     max_pred[i] = x_close[i]
 
-        pred_average: np.ndarray = (max_pred + min_pred) / 2
+        pred_average: NDArray = (max_pred + min_pred) / 2
 
-        valid_min: np.ndarray = np.all([min_pred > min_true], axis=0)
+        valid_min: NDArray = np.all([min_pred > min_true], axis=0)
 
-        valid_max: np.ndarray = np.all([max_true > max_pred], axis=0)
+        valid_max: NDArray = np.all([max_true > max_pred], axis=0)
 
-        min_inside: np.ndarray = np.all(
+        min_inside: NDArray = np.all(
             [
                 max_true > min_pred,
                 valid_min,
@@ -238,7 +213,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        max_inside: np.ndarray = np.all(
+        max_inside: NDArray = np.all(
             [
                 max_pred > min_true,
                 valid_max,
@@ -246,7 +221,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        wins: np.ndarray = np.all(
+        wins: NDArray = np.all(
             [
                 min_inside,
                 max_inside,
@@ -255,7 +230,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        average_in: np.ndarray = np.all(
+        average_in: NDArray = np.all(
             [
                 max_true > pred_average,
                 pred_average > min_true,
@@ -282,16 +257,16 @@ class CustomEvaluation:
 
         fraction_win: float = np.mean(wins.astype(np.float32))
 
-        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
-        all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
+        all_days_pro_arr: NDArray = (max_pred / min_pred) * wins.astype(np.float32)
+        all_days_pro_arr_non_zero: NDArray = all_days_pro_arr[all_days_pro_arr != 0]
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
+        pred_capture_arr: NDArray = (max_pred / min_pred - 1) * wins.astype(
             np.float32,
         )
 
-        total_capture_possible_arr: np.ndarray = max_true / min_true - 1
+        total_capture_possible_arr: NDArray = max_true / min_true - 1
 
         pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
             total_capture_possible_arr,
