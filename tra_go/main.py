@@ -13,7 +13,7 @@ from band_4.training_yf_band_4 import CustomEvaluation as CustomEvaluation_4
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_2.keras_model_band_2 as km_2
-import tra_go.band_2_1.keras_model as km_21
+import tra_go.band_2_1.keras_model as km_21_model
 import tra_go.band_4.keras_model_band_4 as km_4
 from database.enums import BandType, ModelLocationType, TickerOne
 
@@ -21,7 +21,7 @@ IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
 
-NUMBER_OF_EPOCHS: int = 100
+NUMBER_OF_EPOCHS: int = 3
 BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -321,8 +321,8 @@ def main():
 
     elif Y_TYPE == BandType.BAND_2_1:
         (
-            (X_train, Y_train, train_prev_close),
-            (X_test, Y_test, test_prev_close),
+            (X_train, Y_train, Y_train_full, train_prev_close),
+            (X_test, Y_test, Y_test_full, test_prev_close),
         ) = an.train_test_split_lh(
             data_df=df,
             test_size=TEST_SIZE,
@@ -339,7 +339,7 @@ def main():
             print("training x data shape\t", X_train.shape)
             print("training y data shape\t", Y_train.shape)
 
-            model = km_21.get_untrained_model(X_train=X_train, Y_train=Y_train)
+            model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
             print("model output shape\t", model.output_shape)
 
@@ -430,10 +430,11 @@ def main():
 
         number_of_model_checkpoints: int = 6
 
-        # evaluate_models(
-        #     model_location_type=ModelLocationType.TRAINED_NEW,
-        #     number_of_models=number_of_model_checkpoints,
-        # )
+        evaluate_models(
+            model_location_type=ModelLocationType.TRAINED_NEW,
+            number_of_models=number_of_model_checkpoints,
+            newly_trained_models=True,
+        )
 
     battery = psutil.sensors_battery()
 
@@ -452,14 +453,18 @@ def get_custom_evaluation_class(x_type: BandType, y_type: BandType):
     return CustomEvaluation
 
 
-def evaluate_models(model_location_type: ModelLocationType, number_of_models: int) -> None:
+def evaluate_models(
+    model_location_type: ModelLocationType,
+    number_of_models: int,
+    newly_trained_models: bool = False,
+) -> None:
     model_location_prefix: str = model_location_type.value
 
     list_of_files = os.listdir(model_location_prefix)
 
     list_of_files = [file for file in list_of_files if not file.startswith(".")]
 
-    list_of_files = sorted(list_of_files, key=lambda x: x)
+    list_of_files = sorted(list_of_files, key=lambda x: x, reverse=newly_trained_models)
 
     if not list_of_files:
         print("\n\nNo models found in the folder: ", model_location_prefix)
@@ -477,6 +482,10 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
     for file in list_of_files:
         print("\n" * 4, "*" * 280, "\n" * 4, sep="")
         print("Evaluating model:\t", file)
+
+        if "modelCheckPoint" not in file:
+            print(ValueError("modelCheckpoint not found in file name"))
+            continue
 
         model_x_type: BandType
         model_y_type: BandType
@@ -512,23 +521,34 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
 
         df = an.get_data_all_df(ticker=model_ticker, interval=INTERVAL)
 
-        (
-            (X_train, Y_train, train_prev_close),
-            (X_test, Y_test, test_prev_close),
-        ) = an.train_test_split(
-            data_df=df,
-            test_size=TEST_SIZE,
-            x_type=model_x_type,
-            y_type=model_y_type,
-            interval=INTERVAL,
-        )
+        if Y_TYPE == BandType.BAND_2_1:
+            (
+                (X_train, Y_train, Y_train_full, train_prev_close),
+                (X_test, Y_test, Y_test_full, test_prev_close),
+            ) = an.train_test_split_lh(
+                data_df=df,
+                test_size=TEST_SIZE,
+                x_type=X_TYPE,
+                interval=INTERVAL,
+            )
+        else:
+            (
+                (X_train, Y_train, train_prev_close),
+                (X_test, Y_test, test_prev_close),
+            ) = an.train_test_split(
+                data_df=df,
+                test_size=TEST_SIZE,
+                x_type=model_x_type,
+                y_type=model_y_type,
+                interval=INTERVAL,
+            )
 
         evaluation_class = get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
 
         training_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_train,
-            Y_data=Y_train,
+            Y_data=Y_train_full,
             prev_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
@@ -541,7 +561,7 @@ def evaluate_models(model_location_type: ModelLocationType, number_of_models: in
         valid_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_test,
-            Y_data=Y_test,
+            Y_data=Y_test_full,
             prev_close=test_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
@@ -636,6 +656,15 @@ if __name__ == "__main__":
             IS_TRAINING_MODEL = False
 
             evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
+
+        elif sys.argv[1] == "training_new":
+            IS_TRAINING_MODEL = False
+
+            evaluate_models(
+                model_location_type=ModelLocationType.TRAINED_NEW,
+                number_of_models=6,
+                newly_trained_models=True,
+            )
 
         elif sys.argv[1] == "saved":
             IS_TRAINING_MODEL = False
