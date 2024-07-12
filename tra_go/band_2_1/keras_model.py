@@ -12,7 +12,7 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 
-import tra_go.band_2_1.model_metrics as km_21
+import tra_go.band_2_1.model_metrics as km_21_metrics
 
 
 class ModelCompileDetails:
@@ -20,16 +20,16 @@ class ModelCompileDetails:
         self.learning_rate: float = 0.001
         self.optimizer = km_tf.get_optimiser(self.learning_rate)
 
-        self.loss = km_21.loss_function
+        self.loss = km_21_metrics.loss_function
 
         self.metrics = [
             km_tf.metric_rmse_percent,
             km_tf.metric_abs_percent,
-            km_21.metric_loss_comp_2,
-            km_21.metric_win_percent,
-            km_21.metric_win_pred_capture_percent,
-            km_21.metric_win_correct_trend_percent,
-            km_21.metric_win_pred_trend_capture_percent,
+            km_21_metrics.metric_loss_comp_2,
+            km_21_metrics.metric_win_percent,
+            km_21_metrics.metric_win_pred_capture_percent,
+            km_21_metrics.metric_win_correct_trend_percent,
+            km_21_metrics.metric_win_pred_trend_capture_percent,
         ]
 
 
