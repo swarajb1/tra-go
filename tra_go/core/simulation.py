@@ -1,6 +1,12 @@
-import numpy as np
+import os
 
-RISK_TO_REWARD_RATIO: float = 0.3
+import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 
 class Simulation:

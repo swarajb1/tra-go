@@ -21,7 +21,7 @@ IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
 
-NUMBER_OF_EPOCHS: int = 3
+NUMBER_OF_EPOCHS: int = 3000
 BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -33,6 +33,9 @@ TICKER: TickerOne = TickerOne.SBIN
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
+import os
+
+NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
 
 
 def main():
@@ -605,10 +608,10 @@ def evaluate_models(
     for model_file_name in models_worth_double_saving:
         print("\t", model_file_name, "\t" * 2, "\033[92m+++++++++++++++\033[0m")
 
+    print("\n\n")
+
 
 def suppress_cpu_usage():
-    from keras_model import NUMBER_OF_NEURONS
-
     if NUMBER_OF_NEURONS <= 128:
         return
 
