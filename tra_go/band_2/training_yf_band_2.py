@@ -102,7 +102,7 @@ class CustomEvaluation:
 
         self.y_pred: np.ndarray = model.predict(self.X_data)
 
-        x_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+        x_close: np.ndarray = self.X_data[:, -1, 3]
         x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
 
         # low, high
