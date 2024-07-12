@@ -42,7 +42,7 @@ class CustomActivationLayer(Layer):
         first_two_features = inputs[:, :2]
 
         # Apply sigmoid activation and then round to the third feature
-        third_feature = tf.round(tf.sigmoid(inputs[:, 2]))
+        third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
 
         # Concatenate the features back together
         return tf.concat([first_two_features, third_feature], axis=-1)
