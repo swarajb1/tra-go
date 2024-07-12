@@ -25,7 +25,7 @@ def metric_average_in(y_true, y_pred):
     )
 
 
-def get_band_inside(y_true, y_pred) -> tf.Tensor:
+def _get_band_inside(y_true, y_pred) -> tf.Tensor:
     is_valid_pred: tf.Tensor = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
 
     is_max_pred_less_than_max_true: tf.Tensor = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
@@ -37,7 +37,7 @@ def get_band_inside(y_true, y_pred) -> tf.Tensor:
     return band_inside
 
 
-def get_correct_trends(y_true, y_pred) -> tf.Tensor:
+def _get_correct_trends(y_true, y_pred) -> tf.Tensor:
     correct_trends = tf.equal(y_pred[:, 2], y_true[:, 2])
 
     return correct_trends
@@ -76,7 +76,7 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
         tf.abs(max_true - min_true) - (tf.cast(band_inside, dtype=tf.float32) * tf.abs(max_pred - min_pred)),
     )
 
-    correct_trends = get_correct_trends(y_true, y_pred)
+    correct_trends = _get_correct_trends(y_true, y_pred)
 
     trend_error_win = tf.reduce_mean(
         tf.cast(band_inside, dtype=tf.float32)
@@ -107,7 +107,7 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
 
 
 def metric_win_percent(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
+    wins = _get_band_inside(y_true, y_pred)
 
     win_fraction = tf.reduce_mean(tf.cast(wins, dtype=tf.float32))
 
@@ -115,7 +115,7 @@ def metric_win_percent(y_true, y_pred):
 
 
 def metric_win_pred_capture_percent(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
+    wins = _get_band_inside(y_true, y_pred)
 
     min_true = y_true[:, 0]
     max_true = y_true[:, 1]
@@ -137,9 +137,9 @@ def metric_win_pred_capture_percent(y_true, y_pred):
 
 
 def metric_win_correct_trend_percent(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
+    wins = _get_band_inside(y_true, y_pred)
 
-    correct_trends = get_correct_trends(y_true, y_pred)
+    correct_trends = _get_correct_trends(y_true, y_pred)
 
     correct_win_trend = tf.reduce_mean(
         tf.cast(correct_trends, dtype=tf.float32) * tf.cast(wins, dtype=tf.float32),
@@ -154,42 +154,10 @@ def metric_win_correct_trend_percent(y_true, y_pred):
     return metric * 100
 
 
-def metric_pred_capture(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
-
-    min_true = y_true[:, 0]
-    max_true = y_true[:, 1]
-
-    min_pred = y_pred[:, 0]
-    max_pred = y_pred[:, 1]
-
-    pred_capture = tf.reduce_mean(tf.abs(max_pred - min_pred) * tf.cast(wins, dtype=tf.float32))
-
-    total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
-
-    return total_capture_possible - pred_capture
-
-
-def metric_pred_capture_percent(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
-
-    min_true = y_true[:, 0]
-    max_true = y_true[:, 1]
-
-    min_pred = y_pred[:, 0]
-    max_pred = y_pred[:, 1]
-
-    pred_capture = tf.reduce_mean(tf.abs(max_pred - min_pred) * tf.cast(wins, dtype=tf.float32))
-
-    total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
-
-    return pred_capture / total_capture_possible * 100
-
-
 def metric_win_pred_trend_capture_percent(y_true, y_pred):
-    wins = get_band_inside(y_true, y_pred)
+    wins = _get_band_inside(y_true, y_pred)
 
-    correct_trends = get_correct_trends(y_true, y_pred)
+    correct_trends = _get_correct_trends(y_true, y_pred)
 
     min_true = y_true[:, 0]
     max_true = y_true[:, 1]
