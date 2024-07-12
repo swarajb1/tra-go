@@ -21,7 +21,7 @@ IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
 
-NUMBER_OF_EPOCHS: int = 1
+NUMBER_OF_EPOCHS: int = 100
 BATCH_SIZE: int = 512
 LEARNING_RATE: float = 0.0001
 TEST_SIZE: float = 0.2
@@ -37,6 +37,11 @@ PREV_MODEL_TRAINING: bool = False
 
 def main():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
+
+    if IS_TRAINING_MODEL:
+        # common elements for types
+
+        terNan = TerminateOnNaN()
 
     if Y_TYPE == BandType.BAND_4:
         (X_train, Y_train, train_prev_close), (
@@ -85,7 +90,6 @@ def main():
             log_dir: str = os.path.join("training", "logs", f"{now_datetime} - {Y_TYPE}")
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-            terNan = TerminateOnNaN()
 
             mcp_save_1 = ModelCheckpoint(
                 f"training/models/model - {now_datetime} - {Y_TYPE} - modelCheckPoint-1.keras",
@@ -230,7 +234,6 @@ def main():
             )
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-            terNan = TerminateOnNaN()
 
             checkpoint_path_prefix: str = os.path.join(
                 "training",
@@ -347,7 +350,6 @@ def main():
             )
 
             tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-            terNan = TerminateOnNaN()
 
             checkpoint_path_prefix: str = os.path.join(
                 "training",
@@ -372,14 +374,14 @@ def main():
             mcp_save_3 = ModelCheckpoint(
                 f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
                 save_best_only=True,
-                monitor="metric_pred_capture_percent",
+                monitor="metric_win_pred_capture_percent",
                 mode="max",
             )
 
             mcp_save_4 = ModelCheckpoint(
                 f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
                 save_best_only=True,
-                monitor="val_metric_pred_capture_percent",
+                monitor="val_metric_win_pred_capture_percent",
                 mode="max",
             )
 
@@ -397,7 +399,9 @@ def main():
                 mode="max",
             )
 
-            callbacks_modelcheckpoint: list = [
+            callbacks = [
+                tensorboard_callback,
+                terNan,
                 mcp_save_1,
                 mcp_save_2,
                 mcp_save_3,
@@ -405,11 +409,6 @@ def main():
                 mcp_save_5,
                 mcp_save_6,
             ]
-
-            callbacks: list = [
-                tensorboard_callback,
-                terNan,
-            ].extend(callbacks_modelcheckpoint)
 
             print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
 
@@ -429,12 +428,12 @@ def main():
         print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
         print("-" * 30)
 
-        number_of_model_checkpoints: int = len(callbacks_modelcheckpoint)
+        number_of_model_checkpoints: int = 6
 
-        evaluate_models(
-            model_location_type=ModelLocationType.TRAINED_NEW,
-            number_of_models=number_of_model_checkpoints,
-        )
+        # evaluate_models(
+        #     model_location_type=ModelLocationType.TRAINED_NEW,
+        #     number_of_models=number_of_model_checkpoints,
+        # )
 
     battery = psutil.sensors_battery()
 
