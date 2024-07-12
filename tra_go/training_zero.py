@@ -241,6 +241,6 @@ def train_test_split_lh(data_df, interval, x_type: BandType, test_size=0.2) -> p
     test_prev_close = df_test_close.values
 
     return (
-        (train_x, train_y_arr, train_prev_close),
-        (test_x, test_y_arr, test_prev_close),
+        (train_x, train_y_arr, train_y, train_prev_close),
+        (test_x, test_y_arr, test_y, test_prev_close),
     )
