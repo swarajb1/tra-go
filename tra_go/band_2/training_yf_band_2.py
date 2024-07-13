@@ -6,6 +6,7 @@ import numpy as np
 from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
+from numpy.typing import NDArray
 from training_yf import round_to_nearest_0_05
 
 import tra_go.band_2.keras_model_band_2 as km_2
@@ -24,7 +25,7 @@ class CustomEvaluation:
     def __init__(
         self,
         ticker: TickerOne,
-        X_data: np.ndarray[float],
+        X_data: NDArray[np.float32],
         Y_data: np.ndarray[float],
         prev_close: np.ndarray[float],
         x_type: BandType,
@@ -58,6 +59,7 @@ class CustomEvaluation:
         self.number_of_days = self.X_data.shape[0]
 
         self.is_model_worth_saving: bool = False
+        self.is_model_worth_double_saving: bool = False
 
         self.win_250_days: float = 0
 
@@ -102,7 +104,13 @@ class CustomEvaluation:
 
         self.y_pred: np.ndarray = model.predict(self.X_data)
 
-        x_close: np.ndarray = self.X_data[:, -1, 3]
+        x_close: np.ndarray
+
+        if self.x_type == BandType.BAND_2:
+            x_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+        elif self.x_type == BandType.BAND_4:
+            x_close: np.ndarray = self.X_data[:, -1, 3]
+
         x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
 
         # low, high
@@ -131,10 +139,10 @@ class CustomEvaluation:
             x_close=x_close_real,
         )
 
-        self.function_error_132_graph(
-            y_true=self.Y_data_real,
-            y_pred=y_pred_real_untruncated,
-        )
+        # self.function_error_132_graph(
+        #     y_true=self.Y_data_real,
+        #     y_pred=y_pred_real_untruncated,
+        # )
 
         return
 
@@ -342,6 +350,7 @@ class CustomEvaluation:
         )
 
         self.is_model_worth_saving = simulation.is_worth_saving
+        self.is_model_worth_double_saving = simulation.is_worth_double_saving
 
         fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 
