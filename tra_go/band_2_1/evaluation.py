@@ -13,13 +13,10 @@ import tra_go.band_2_1.keras_model as km_21_model
 import tra_go.band_2_1.model_metrics as km_21_metrics
 from database.enums import BandType, ModelLocationType, TickerOne
 
-SAFETY_FACTOR: float = 0.8
+SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
 
-def get_number_of_epochs() -> int:
-    from main import NUMBER_OF_EPOCHS
-
-    return NUMBER_OF_EPOCHS
+NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 
 
 class CustomEvaluation:
@@ -93,12 +90,14 @@ class CustomEvaluation:
                 "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
                 "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
                 "CustomActivationLayer": km_21_model.CustomActivationLayer,
+                "metric_correct_trends_full": km_21_metrics.metric_correct_trends_full,
             },
         ):
             model = load_model(file_path)
             # model.summary()
 
         self.y_pred: NDArray = model.predict(self.X_data)
+        print("self.y_pred.shape", self.y_pred.shape)
 
         if self.x_type == BandType.BAND_4:
             x_close: NDArray = self.X_data[:, -1, 3]
@@ -227,6 +226,7 @@ class CustomEvaluation:
         )
 
         self.is_model_worth_saving = simulation.is_worth_saving
+        self.is_model_worth_double_saving = simulation.is_worth_double_saving
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 
