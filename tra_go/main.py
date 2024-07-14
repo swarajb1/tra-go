@@ -7,9 +7,6 @@ from datetime import datetime
 import keras_model as km
 import psutil
 import training_zero as an
-from band_2.training_yf_band_2 import CustomEvaluation
-from band_2_1.evaluation import CustomEvaluation as CustomEvaluation_2_1
-from band_4.training_yf_band_4 import CustomEvaluation as CustomEvaluation_4
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_2.keras_model_band_2 as km_2
@@ -17,14 +14,17 @@ import tra_go.band_2_1.keras_model as km_21_model
 import tra_go.band_4.keras_model_band_4 as km_4
 from database.enums import BandType, ModelLocationType, TickerOne
 
+NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
+
+NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
+BATCH_SIZE: int = int(os.getenv("BATCH_SIZE"))
+LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
+TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
+
+
 IS_TRAINING_MODEL: bool = True
 prev_model: str = "2024-04-08 11-50"
 
-
-NUMBER_OF_EPOCHS: int = 3000
-BATCH_SIZE: int = 512
-LEARNING_RATE: float = 0.0001
-TEST_SIZE: float = 0.2
 
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2_1
@@ -33,9 +33,6 @@ TICKER: TickerOne = TickerOne.SBIN
 INTERVAL: str = "1m"
 
 PREV_MODEL_TRAINING: bool = False
-import os
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
 
 
 def main():
@@ -446,14 +443,29 @@ def main():
     print("is battery on charging: ", is_plugged)
 
 
-def get_custom_evaluation_class(x_type: BandType, y_type: BandType):
-    if y_type == BandType.BAND_4:
-        return CustomEvaluation_4
-    elif y_type == BandType.BAND_2_1:
-        return CustomEvaluation_2_1
+def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
+    if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1]:
+        raise ValueError("Invalid y_type")
 
-    # y_type == BandType.BAND_2:
+    if y_type == BandType.BAND_4:
+        from band_4.training_yf_band_4 import CustomEvaluation
+
+    elif y_type == BandType.BAND_2:
+        from band_2.training_yf_band_2 import CustomEvaluation
+
+    elif y_type == BandType.BAND_2_1:
+        from band_2_1.evaluation import CustomEvaluation
+
     return CustomEvaluation
+
+
+def is_valid_model_file_name(file_name: str) -> bool:
+    return (
+        "modelCheckPoint" in file_name
+        and ".keras" in file_name
+        and not file_name.startswith(".")
+        and "2024-07" not in file_name
+    )
 
 
 def evaluate_models(
@@ -465,19 +477,22 @@ def evaluate_models(
 
     list_of_files = os.listdir(model_location_prefix)
 
-    list_of_files = [file for file in list_of_files if not file.startswith(".")]
+    list_of_files = [file for file in list_of_files if is_valid_model_file_name(file)]
 
     list_of_files = sorted(list_of_files, key=lambda x: x, reverse=newly_trained_models)
 
     if not list_of_files:
-        print("\n\nNo models found in the folder: ", model_location_prefix)
-        return
+        raise ValueError("\n\nNo models found in the folder: ", model_location_prefix)
 
     if len(list_of_files) >= number_of_models:
         list_of_files = list_of_files[:number_of_models]
 
+    if newly_trained_models:
+        list_of_files = list_of_files[::-1]
+
     models_worth_saving: list[str] = []
     models_worth_double_saving: list[str] = []
+    models_worth_triple_saving: list[str] = []
     models_worth_not_saving: list[str] = []
 
     max_250_days_win_value: float = 0
@@ -485,10 +500,6 @@ def evaluate_models(
     for file in list_of_files:
         print("\n" * 4, "*" * 280, "\n" * 4, sep="")
         print("Evaluating model:\t", file)
-
-        if "modelCheckPoint" not in file:
-            print(ValueError("modelCheckpoint not found in file name"))
-            continue
 
         model_x_type: BandType
         model_y_type: BandType
@@ -524,7 +535,7 @@ def evaluate_models(
 
         df = an.get_data_all_df(ticker=model_ticker, interval=INTERVAL)
 
-        if Y_TYPE == BandType.BAND_2_1:
+        if model_y_type == BandType.BAND_2_1 and model_x_type == BandType.BAND_4:
             (
                 (X_train, Y_train, Y_train_full, train_prev_close),
                 (X_test, Y_test, Y_test_full, test_prev_close),
@@ -534,6 +545,9 @@ def evaluate_models(
                 x_type=X_TYPE,
                 interval=INTERVAL,
             )
+
+            Y_train = Y_train_full
+            Y_test = Y_test_full
         else:
             (
                 (X_train, Y_train, train_prev_close),
@@ -546,12 +560,18 @@ def evaluate_models(
                 interval=INTERVAL,
             )
 
-        evaluation_class = get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
+        # print("X_train", X_train.shape)
+        # print("X_test", X_test.shape)
+
+        # print("Y_train", Y_train.shape)
+        # print("Y_test", Y_test.shape)
+
+        evaluation_class = _get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
 
         training_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_train,
-            Y_data=Y_train_full,
+            Y_data=Y_train,
             prev_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
@@ -564,7 +584,7 @@ def evaluate_models(
         valid_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_test,
-            Y_data=Y_test_full,
+            Y_data=Y_test,
             prev_close=test_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
@@ -574,15 +594,29 @@ def evaluate_models(
             model_location_type=model_location_type,
         )
 
-        if (
+        is_triple_saving: bool = (
+            training_data_custom_evaluation.is_model_worth_double_saving
+            and valid_data_custom_evaluation.is_model_worth_double_saving
+        )
+
+        is_double_saving: bool = not is_triple_saving and (
             training_data_custom_evaluation.is_model_worth_saving
             and valid_data_custom_evaluation.is_model_worth_saving
-        ):
-            models_worth_double_saving.append(training_data_custom_evaluation.model_file_name)
-        elif (
+        )
+
+        is_single_saving: bool = (
             training_data_custom_evaluation.is_model_worth_saving or valid_data_custom_evaluation.is_model_worth_saving
-        ):
+        )
+
+        if is_triple_saving:
+            models_worth_triple_saving.append(training_data_custom_evaluation.model_file_name)
+
+        elif is_double_saving:
+            models_worth_double_saving.append(training_data_custom_evaluation.model_file_name)
+
+        elif is_single_saving:
             models_worth_saving.append(training_data_custom_evaluation.model_file_name)
+
         else:
             models_worth_not_saving.append(training_data_custom_evaluation.model_file_name)
 
@@ -606,6 +640,10 @@ def evaluate_models(
 
     print("\n\nMODELS WORTH DOUBLE SAVING:")
     for model_file_name in models_worth_double_saving:
+        print("\t", model_file_name, "\t" * 2, "\033[92m++++\033[0m")
+
+    print("\n\nMODELS WORTH TRIPLE SAVING:")
+    for model_file_name in models_worth_triple_saving:
         print("\t", model_file_name, "\t" * 2, "\033[92m+++++++++++++++\033[0m")
 
     print("\n\n")
@@ -655,11 +693,6 @@ if __name__ == "__main__":
             suppress_cpu_usage()
             main()
 
-        elif sys.argv[1] == "training":
-            IS_TRAINING_MODEL = False
-
-            evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
-
         elif sys.argv[1] == "training_new":
             IS_TRAINING_MODEL = False
 
@@ -669,10 +702,25 @@ if __name__ == "__main__":
                 newly_trained_models=True,
             )
 
+        elif sys.argv[1] == "training":
+            IS_TRAINING_MODEL = False
+
+            evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
+
         elif sys.argv[1] == "saved":
             IS_TRAINING_MODEL = False
 
             evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=10)
+
+        elif sys.argv[1] == "saved_double":
+            IS_TRAINING_MODEL = False
+
+            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=10)
+
+        elif sys.argv[1] == "saved_triple":
+            IS_TRAINING_MODEL = False
+
+            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=10)
 
     else:
         if IS_TRAINING_MODEL:
