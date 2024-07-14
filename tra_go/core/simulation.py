@@ -8,6 +8,9 @@ load_dotenv()
 
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
+PERCENT_250_DAYS: int = 1
+PERCENT_250_DAYS_WORTH_SAVING: int = 25
+
 
 class Simulation:
     def __init__(
@@ -24,6 +27,8 @@ class Simulation:
 
         self.is_worth_saving: bool = False
 
+        self.is_worth_double_saving: bool = False
+
         self.simulation()
 
     def simulation(self) -> bool:
@@ -35,9 +40,6 @@ class Simulation:
         #
         #   when the last tick happens. any pending orders that remain, the position is closed at market price.
         #       it will be either partial reward or partial stop_loss
-
-        PERCENT_250_DAYS: int = 1
-        PERCENT_250_DAYS_WORTH_SAVING: int = 18
 
         print("simulation started....")
 
@@ -216,14 +218,19 @@ class Simulation:
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_worth_saving = True
 
+                if RISK_TO_REWARD_RATIO <= 0.3:
+                    self.is_worth_double_saving = True
+
+            percent_prefix: str = " " if days_250 < 10 else ""
+            percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
+
             print(
                 "\t\t",
                 "risk_to_reward_ratio:",
                 "{:.2f}".format(RISK_TO_REWARD_RATIO),
                 "\t",
                 "250_days_s: ",
-                "{:.2f}".format(days_250) if days_250 > PERCENT_250_DAYS else "--",
-                " %" if days_250 > PERCENT_250_DAYS else "",
+                percent_val if days_250 > PERCENT_250_DAYS else "\t  --",
                 "\t" * 2,
                 "\033[92m++\033[0m" if self.is_worth_saving else "",
             )
