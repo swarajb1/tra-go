@@ -37,6 +37,7 @@ class ModelCompileDetails:
             # km_tf.metric_abs_percent,
             km_21_metrics.metric_rmse_percent,
             km_21_metrics.metric_abs_percent,
+            km_21_metrics.metric_correct_trends_full,
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
             km_21_metrics.metric_win_pred_capture_percent,
@@ -54,8 +55,7 @@ class CustomActivationLayer(Layer):
         first_two_features = inputs[:, :2]
 
         # Apply sigmoid activation and then round to the third feature
-        # third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
-        third_feature = tf.sigmoid(inputs[:, 2:3])
+        third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
 
         # Concatenate the features back together
         return tf.concat([first_two_features, third_feature], axis=-1)
