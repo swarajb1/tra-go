@@ -62,11 +62,10 @@ class CustomEvaluation:
 
         self.win_250_days: float = 0
 
-        print("\n" * 4, "*" * 200, "\n" * 4, sep="")
-
         if self.test_size > 0:
             print("TRAINING data now ...")
         else:
+            print("\n" * 2, "_" * 140, "\n" * 2, sep="")
             print("VALIDATION data now ...")
 
         self.custom_evaluate_safety_factor()
