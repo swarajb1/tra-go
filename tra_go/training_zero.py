@@ -5,8 +5,13 @@ from database.enums import BandType, IODataType, TickerOne
 
 TOTAL_POINTS_IN_ONE_DAY: int = 375
 
-NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 150
-NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 150
+NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 132
+NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 132
+
+
+# NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 150
+# NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 150
+
 
 NUMBER_OF_POINTS_IN_ZONE_DAY: int = NUMBER_OF_POINTS_IN_ZONE_1_ST + NUMBER_OF_POINTS_IN_ZONE_2_ND
 
@@ -100,19 +105,26 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     res_df = pd.DataFrame()
 
     # # when taking from 915 (165, 165)
-    # INITIAL_INDEX_OFFSET: int = 0
+    # initial_index_offset: int = 0
 
     # when taking from 1000  (132, 132)
-    # INITIAL_INDEX_OFFSET: int = 47
+    # initial_index_offset: int = 47
 
     # when taking from 951 (150, 150)
-    INITIAL_INDEX_OFFSET: int = 36
+    # initial_index_offset: int = 36
+
+    initial_index_offset: int
+
+    if NUMBER_OF_POINTS_IN_ZONE_2_ND == 132:
+        initial_index_offset = 47
+    elif NUMBER_OF_POINTS_IN_ZONE_2_ND == 150:
+        initial_index_offset = 36
 
     number_of_days = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
     for day in range(number_of_days):
-        start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + INITIAL_INDEX_OFFSET
-        end_index: int = day * TOTAL_POINTS_IN_ONE_DAY + (INITIAL_INDEX_OFFSET + NUMBER_OF_POINTS_IN_ZONE_DAY)
+        start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
+        end_index: int = day * TOTAL_POINTS_IN_ONE_DAY + (initial_index_offset + NUMBER_OF_POINTS_IN_ZONE_DAY)
 
         res_df = pd.concat([res_df, df.iloc[start_index : end_index + 1]])
 
