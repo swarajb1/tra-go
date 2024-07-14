@@ -1,14 +1,11 @@
 import tensorflow as tf
-from keras_model import metric_abs, metric_rmse
-
-SKIP_FIRST_PERCENTILE: float = 0.15
-SKIP_LAST_PERCENTILE: float = 0.15
+from keras_model_tf import metric_abs, metric_rmse
 
 
 def loss_function(y_true, y_pred):
     return (
-        metric_rmse(y_true, y_pred)
-        + metric_abs(y_true, y_pred) / 3
+        metric_rmse(y_true[:, :2], y_pred[:, :2])
+        + metric_abs(y_true[:, :2], y_pred[:, :2]) / 3
         + metric_average_in(y_true, y_pred) / 3
         + metric_loss_comp_2(y_true, y_pred)
     )
@@ -41,6 +38,14 @@ def _get_correct_trends(y_true, y_pred) -> tf.Tensor:
     correct_trends = tf.equal(y_pred[:, 2], y_true[:, 2])
 
     return correct_trends
+
+
+def metric_correct_trends_full(y_true, y_pred) -> tf.Tensor:
+    correct_trends = tf.equal(y_pred[:, 2], y_true[:, 2])
+
+    correct_win_trend = tf.reduce_mean(tf.cast(correct_trends, dtype=tf.float32))
+
+    return correct_win_trend * 100
 
 
 def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
@@ -100,9 +105,9 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
         + z_pred_valid_error
         + z_min_below_error
         + win_amt_true_error * 2
-        + win_amt_pred_error * 6
-        + trend_error_win * 16
-        + trend_error_win_pred_error * 39
+        + win_amt_pred_error * 4
+        + trend_error_win * 8
+        + trend_error_win_pred_error * 16
     )
 
 
@@ -172,3 +177,15 @@ def metric_win_pred_trend_capture_percent(y_true, y_pred):
     total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
 
     return pred_trend_capture / total_capture_possible * 100
+
+
+def metric_abs_percent(y_true, y_pred):
+    error = y_true - y_pred
+
+    return tf.reduce_mean(tf.abs(error[:, :2])) / tf.reduce_mean(tf.abs(y_true[:, :2])) * 100
+
+
+def metric_rmse_percent(y_true, y_pred):
+    error = y_true - y_pred
+
+    return tf.sqrt(tf.reduce_mean(tf.square(error[:, :2]))) / tf.reduce_mean(tf.abs(y_true[:, :2])) * 100
