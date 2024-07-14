@@ -12,13 +12,14 @@ from training_yf import round_to_nearest_0_05
 import tra_go.band_2.keras_model_band_2 as km_2
 from database.enums import BandType, ModelLocationType, TickerOne
 
-SAFETY_FACTOR: float = 0.8
+SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
 
-def get_number_of_epochs() -> int:
-    from main import NUMBER_OF_EPOCHS
+NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 
-    return NUMBER_OF_EPOCHS
+NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
+NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
+INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 class CustomEvaluation:
@@ -102,13 +103,14 @@ class CustomEvaluation:
             model = load_model(file_path)
             # model.summary()
 
-        self.y_pred: np.ndarray = model.predict(self.X_data)
+        self.y_pred: NDArray = model.predict(self.X_data)
+        print("self.y_pred.shape", self.y_pred.shape)
 
         x_close: np.ndarray
 
         if self.x_type == BandType.BAND_2:
             x_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
-        elif self.x_type == BandType.BAND_4:
+        elif self.x_type in [BandType.BAND_4, BandType.BAND_5]:
             x_close: np.ndarray = self.X_data[:, -1, 3]
 
         x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
@@ -233,10 +235,10 @@ class CustomEvaluation:
 
         plt.title(
             f" name: {self.now_datetime}\n"
-            + f"NUMBER_OF_NEURONS = {km.NUMBER_OF_NEURONS}  "
-            + f"NUMBER_OF_LAYERS = {km.NUMBER_OF_LAYERS}\n"
-            + f"NUMBER_OF_EPOCHS = {get_number_of_epochs()} | "
-            + f"INITIAL_DROPOUT = {km.INITIAL_DROPOUT_PERCENT}",
+            + f"NUMBER_OF_NEURONS = {NUMBER_OF_NEURONS}  "
+            + f"NUMBER_OF_LAYERS = {NUMBER_OF_LAYERS}\n"
+            + f"NUMBER_OF_EPOCHS = {NUMBER_OF_EPOCHS} | "
+            + f"INITIAL_DROPOUT = {INITIAL_DROPOUT_PERCENT}",
             fontsize=20,
         )
 
@@ -465,10 +467,10 @@ class CustomEvaluation:
 
         # plt.savefig(filename, dpi=300, bbox_inches="tight")
 
-        print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
-        print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
+        print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
+        print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
         print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
-        print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT_PERCENT)
+        print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT_PERCENT)
 
         print("folder_name\t", self.model_file_name)
 
