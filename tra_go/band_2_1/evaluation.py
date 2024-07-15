@@ -54,6 +54,7 @@ class CustomEvaluation:
         self.number_of_days = self.X_data.shape[0]
 
         self.is_model_worth_saving: bool = False
+        self.is_model_worth_double_saving: bool = False
 
         self.win_250_days: float = 0
 
@@ -256,6 +257,7 @@ class CustomEvaluation:
         win_percent_str: str = "{:.2f}".format(fraction_win * 100)
 
         average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        # self.is_model_worth_double_saving = self.is_model_worth_double_saving and fraction_average_in > 0.5
 
         cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
 
@@ -267,19 +269,25 @@ class CustomEvaluation:
         self.win_250_days = round(pro_250 * 100, 2)
 
         print("\n\n")
-        print("valid_pred\t", round(fraction_valid_pred * 100, 2), " %")
-        print("max_inside\t", round(fraction_max_inside * 100, 2), " %")
-        print("min_inside\t", round(fraction_min_inside * 100, 2), " %\n")
-        print("average_in\t", average_in_percent_str, " %\n")
+        print(
+            "Is Model Worth Double Saving\t",
+            "\033[92m++++\033[0m" if self.is_model_worth_double_saving else "\033[91m----\033[0m",
+        )
 
-        print("win_days_perc\t", win_percent_str, " %")
-        print("pred_capture\t", pred_capture_percent_str, " %")
+        print("\n\n")
+        print("Valid Pred:\t\t\t", round(fraction_valid_pred * 100, 2), " %")
+        print("Max Inside:\t\t\t", round(fraction_max_inside * 100, 2), " %")
+        print("Min Inside:\t\t\t", round(fraction_min_inside * 100, 2), " %\n")
+        print("Average In:\t\t\t", average_in_percent_str, " %\n")
 
-        print("per_day\t\t", round(cdgr * 100, 4), " %")
-        print("250 days:\t", pro_250_str)
-        print("\nleverage:\t", pro_250_5_str)
-        print("datetime:\t", self.now_datetime)
+        print("Win Days Perc:\t\t\t", win_percent_str, " %")
+        print("Pred Capture:\t\t\t", pred_capture_percent_str, " %")
 
+        print("Per Day:\t\t\t", round(cdgr * 100, 4), " %")
+        print("250 days:\t\t\t", pro_250_str)
+        print("\n")
+        print("Leverage:\t\t\t", pro_250_5_str)
+        print("Datetime:\t\t\t", self.now_datetime)
         # print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
         # print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
         # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
