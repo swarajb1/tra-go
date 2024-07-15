@@ -460,12 +460,13 @@ def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
 
 
 def is_valid_model_file_name(file_name: str) -> bool:
-    return (
-        "modelCheckPoint" in file_name
-        and ".keras" in file_name
-        and not file_name.startswith(".")
-        and "2024-07" not in file_name
-    )
+    return "modelCheckPoint" in file_name and ".keras" in file_name and not file_name.startswith(".")
+
+
+def is_file_after_date(file_path: str) -> bool:
+    target_date = time.mktime(time.strptime("2024-07-01", "%Y-%m-%d"))
+
+    return os.path.getctime(file_path) > target_date
 
 
 def evaluate_models(
@@ -477,7 +478,11 @@ def evaluate_models(
 
     list_of_files = os.listdir(model_location_prefix)
 
-    list_of_files = [file for file in list_of_files if is_valid_model_file_name(file)]
+    list_of_files = [
+        file
+        for file in list_of_files
+        if is_valid_model_file_name(file) and is_file_after_date(os.path.join(model_location_prefix, file))
+    ]
 
     list_of_files = sorted(list_of_files, key=lambda x: x, reverse=newly_trained_models)
 
@@ -498,7 +503,7 @@ def evaluate_models(
     max_250_days_win_value: float = 0
 
     for file in list_of_files:
-        print("\n" * 4, "*" * 280, "\n" * 4, sep="")
+        print("\n" * 20, "*" * 280, "\n" * 4, sep="")
         print("Evaluating model:\t", file)
 
         model_x_type: BandType
@@ -686,11 +691,12 @@ if __name__ == "__main__":
     os.system("clear")
     time_1 = time.time()
 
+    suppress_cpu_usage()
+
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             IS_TRAINING_MODEL = True
 
-            suppress_cpu_usage()
             main()
 
         elif sys.argv[1] == "training_new":
@@ -710,22 +716,19 @@ if __name__ == "__main__":
         elif sys.argv[1] == "saved":
             IS_TRAINING_MODEL = False
 
-            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=10)
+            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=6)
 
         elif sys.argv[1] == "saved_double":
             IS_TRAINING_MODEL = False
 
-            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=10)
+            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=6)
 
         elif sys.argv[1] == "saved_triple":
             IS_TRAINING_MODEL = False
 
-            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=10)
+            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=6)
 
     else:
-        if IS_TRAINING_MODEL:
-            suppress_cpu_usage()
-
         main()
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
