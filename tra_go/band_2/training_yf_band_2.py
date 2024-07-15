@@ -34,7 +34,7 @@ class CustomEvaluation:
         test_size: float,
         now_datetime: str,
         model_location_type: ModelLocationType,
-        model_num: int = 1,
+        model_num: int,
         skip_first_percentile: float = 0.18,
         skip_last_percentile: float = 0.18,
         safety_factor=0.8,
@@ -104,16 +104,16 @@ class CustomEvaluation:
             # model.summary()
 
         self.y_pred: NDArray = model.predict(self.X_data)
-        print("self.y_pred.shape", self.y_pred.shape)
+        # print("self.y_pred.shape", self.y_pred.shape)
 
-        x_close: np.ndarray
+        # x_close: np.ndarray
 
         if self.x_type == BandType.BAND_2:
-            x_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+            x_last_zone_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
         elif self.x_type in [BandType.BAND_4, BandType.BAND_5]:
-            x_close: np.ndarray = self.X_data[:, -1, 3]
+            x_last_zone_close: np.ndarray = self.X_data[:, -1, 3]
 
-        x_close_real: np.ndarray = round_to_nearest_0_05(x_close * self.prev_close)
+        x_last_zone_close_real: np.ndarray = round_to_nearest_0_05(x_last_zone_close * self.prev_close)
 
         # low, high
 
@@ -138,7 +138,7 @@ class CustomEvaluation:
         self.function_make_win_graph(
             y_true=self.Y_data_real,
             y_pred=self.y_pred_real,
-            x_close=x_close_real,
+            x_close=x_last_zone_close_real,
         )
 
         # self.function_error_132_graph(
@@ -279,6 +279,7 @@ class CustomEvaluation:
 
         valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
 
+        # step - using last close price of x data, and change min_pred and max_pred values, because of hypothesis that, the close price will be in the band
         close_below_band: np.ndarray = np.all([x_close <= min_pred], axis=0)
 
         close_above_band: np.ndarray = np.all([x_close >= max_pred], axis=0)
@@ -497,6 +498,7 @@ class CustomEvaluation:
 
         valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
 
+        # step - using last close price of x data, and change min_pred and max_pred values, because of hypothesis that, the close price will be in the band
         close_below_band: np.ndarray = np.all([x_close <= min_pred], axis=0)
 
         close_above_band: np.ndarray = np.all([x_close >= max_pred], axis=0)
