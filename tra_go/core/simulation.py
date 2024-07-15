@@ -2,6 +2,12 @@ import os
 
 import numpy as np
 from dotenv import load_dotenv
+from numpy.typing import NDArray
+from scipy import stats
+from scipy.stats import kurtosis, skew
+from utils.functions import round_num_str
+
+from database.enums import ProcessedDataType
 
 load_dotenv()
 
@@ -9,7 +15,7 @@ load_dotenv()
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS: int = 1
-PERCENT_250_DAYS_WORTH_SAVING: int = 25
+PERCENT_250_DAYS_WORTH_SAVING: int = 15
 
 
 class Simulation:
@@ -29,7 +35,16 @@ class Simulation:
 
         self.is_worth_double_saving: bool = False
 
+        self.real_data_for_analysis: NDArray
+        self.stoploss_data_for_analysis: NDArray
+        self.stoploss_rrr_for_analysis: float
+
         self.simulation()
+
+        self.display_stats()
+
+        self.real_mean: float
+        self.expected_mean: float
 
     def simulation(self) -> bool:
         # 3 orders are placed when the simulation starts
@@ -48,6 +63,8 @@ class Simulation:
 
             wins_day_wise_list: np.array = np.zeros(number_of_days)
             invested_day_wise_list: np.array = np.zeros(number_of_days)
+
+            expected_reward_percent_day_wise_list: np.array = np.zeros(number_of_days)
 
             trade_taken_list: np.array = np.zeros(number_of_days, dtype=bool)
             trade_taken_and_out_list: np.array = np.zeros(number_of_days, dtype=bool)
@@ -129,12 +146,12 @@ class Simulation:
                         net_day_reward = sell_price - avg_close_price
 
                 # each day's stats
-                if trade_taken:
-                    trade_taken_list[i_day] = True
-                    if is_trade_type_buy:
-                        invested_day_wise_list[i_day] = buy_price
-                    else:
-                        invested_day_wise_list[i_day] = sell_price
+                trade_taken_list[i_day] = trade_taken
+
+                if is_trade_type_buy:
+                    invested_day_wise_list[i_day] = buy_price
+                else:
+                    invested_day_wise_list[i_day] = sell_price
 
                 if trade_taken_and_out:
                     trade_taken_and_out_list[i_day] = True
@@ -146,6 +163,7 @@ class Simulation:
                     expected_trades_list[i_day] = True
 
                 wins_day_wise_list[i_day] = net_day_reward
+                expected_reward_percent_day_wise_list[i_day] = expected_reward / invested_day_wise_list[i_day] * 100
 
             # print("\n\n")
             # print("-" * 30)
@@ -218,10 +236,15 @@ class Simulation:
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_worth_saving = True
 
-                if RISK_TO_REWARD_RATIO <= 0.3:
+                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
                     self.is_worth_double_saving = True
 
-            percent_prefix: str = " " if days_250 < 10 else ""
+            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
+                self.real_data_for_analysis = arr_real
+                self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
+                self.stoploss_rrr_for_analysis = 1
+
+            percent_prefix: str = " " if round(days_250, 2) < 10 else ""
             percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
 
             print(
@@ -234,3 +257,82 @@ class Simulation:
                 "\t" * 2,
                 "\033[92m++\033[0m" if self.is_worth_saving else "",
             )
+
+    def display_stats(self) -> None:
+        if not self.is_worth_saving:
+            return
+
+        print("\n\n\n", "-" * 30, "\nReal End of Data Stats\n")
+        self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
+
+        print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
+        self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
+
+        print("\n\nCapture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
+
+    def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
+        sorted_arr = np.sort(arr)
+
+        print("Count: \t\t\t\t", np.size(sorted_arr))
+
+        # Central Tendency
+        mean = np.mean(sorted_arr)
+        if data_type == ProcessedDataType.REAL:
+            self.real_mean = mean
+        elif data_type == ProcessedDataType.EXPECTED_REWARD:
+            self.expected_mean = mean
+
+        median = np.median(sorted_arr)
+        stats.mode(np.round(sorted_arr, 2))
+
+        std_deviation = np.std(sorted_arr)
+
+        print("Mean: \t\t\t\t", round_num_str(mean, 4))
+        print("Median: \t\t\t", round_num_str(median, 4))
+
+        # Dispersion
+        Q3, Q1 = np.percentile(sorted_arr, [75, 25])
+        iq_range = Q3 - Q1
+        print("Standard Deviation: \t\t", round_num_str(std_deviation, 4))
+        print("Interquartile Range (IQR): \t", round_num_str(iq_range, 4))
+        print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 4))
+        print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 4))
+        print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 4))
+
+        coefficient_of_variation = std_deviation / mean
+
+        print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 4))
+
+        # Measures of Position
+        z_scores = stats.zscore(sorted_arr)
+        stats.rankdata(sorted_arr)
+
+        if len(z_scores) > 6:
+            z_scores_small = np.concatenate([sorted_arr[:3], sorted_arr[-3:]])
+            print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores_small])
+        else:
+            print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores])
+
+        print("Kurtosis: \t\t\t", round_num_str(kurtosis(sorted_arr), 4))
+        print("Skewness: \t\t\t", round_num_str(skew(sorted_arr), 4))
+
+        # print("Ranks: \t\t\t\t", ranks)
+
+        # Normality Tests
+        shapiro_test = stats.shapiro(sorted_arr)
+        kolmogorov_smirnov_test = stats.kstest(sorted_arr, "norm")
+
+        print("Shapiro-Wilk Test: \t\t", shapiro_test)
+        print("Kolmogorov-Smirnov Test: \t", kolmogorov_smirnov_test)
+
+        # Outliers and Anomalies
+        anomalies = sorted_arr[np.abs(z_scores) > 2]
+        outliers = sorted_arr[np.abs(z_scores) > 3]
+
+        anomalies_percent = np.size(anomalies) / np.size(sorted_arr) * 100
+        outliers_percent = np.size(outliers) / np.size(sorted_arr) * 100
+
+        print("Anomalies: \t\t\t", round_num_str(anomalies_percent, 2), "%")
+        print("Outliers: \t\t\t", round_num_str(outliers_percent, 2), "%")
+
+        return
