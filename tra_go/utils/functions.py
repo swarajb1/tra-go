@@ -13,6 +13,10 @@ def min_max_scaler(val: float, min_val: float, max_val: float) -> float:
     return scaled_data
 
 
+def round_num_str(val, number_of_decimals) -> str:
+    return "{:.{}f}".format(val, number_of_decimals)
+
+
 def with_leverage(val: float) -> float:
     per_day_percent: float = (pow(1 + val / 100, 1 / 250) - 1) * 100
 
