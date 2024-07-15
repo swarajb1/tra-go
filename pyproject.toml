@@ -23,6 +23,7 @@ statsmodels = "^0.14.2"
 certifi = "2024.07.04"
 urllib3 = "2.2.2"
 cffi = "^1.16.0"
+pydantic = "^2.8.2"
 
 
 [tool.poetry.group.dev.dependencies]
