@@ -15,7 +15,7 @@ load_dotenv()
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS: int = 1
-PERCENT_250_DAYS_WORTH_SAVING: int = 15
+PERCENT_250_DAYS_WORTH_SAVING: int = 25
 
 
 class Simulation:
