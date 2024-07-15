@@ -39,12 +39,15 @@ class Simulation:
         self.stoploss_data_for_analysis: NDArray
         self.stoploss_rrr_for_analysis: float
 
-        self.simulation()
-
-        self.display_stats()
-
         self.real_mean: float
         self.expected_mean: float
+        self.real_full_reward_mean: float
+
+        self.simulation()
+
+        self.set_real_full_reward_mean()
+
+        self.display_stats()
 
     def simulation(self) -> bool:
         # 3 orders are placed when the simulation starts
@@ -336,3 +339,32 @@ class Simulation:
         print("Outliers: \t\t\t", round_num_str(outliers_percent, 2), "%")
 
         return
+
+    def set_real_full_reward_mean(self) -> None:
+        number_of_days: int = self.real_price_arr.shape[0]
+
+        invested_day_wise_list: np.array = np.zeros(number_of_days)
+
+        real_order_type_buy: np.array = np.zeros(number_of_days)
+
+        real_full_reward_percent_day_wise_list: np.array = np.zeros(number_of_days)
+
+        for i_day in range(number_of_days):
+            net_day_reward: float = 0
+
+            min_ticker_price: float = np.min(self.real_price_arr[i_day, :, 0])
+            max_ticker_price: float = np.max(self.real_price_arr[i_day, :, 1])
+
+            full_reward = max_ticker_price - min_ticker_price
+
+            real_order_type_buy[i_day] = np.argmax(self.real_price_arr[i_day, :, 1]) > np.argmax(
+                self.real_price_arr[i_day, :, 0],
+            )
+
+            invested_day_wise_list[i_day] = (
+                self.buy_price_arr[i_day] if real_order_type_buy[i_day] else self.sell_price_arr[i_day]
+            )
+
+            real_full_reward_percent_day_wise_list[i_day] = full_reward / invested_day_wise_list[i_day] * 100
+
+        self.real_full_reward_mean = np.mean(real_full_reward_percent_day_wise_list)
