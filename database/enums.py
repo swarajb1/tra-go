@@ -89,3 +89,9 @@ class IODataType(Enum):
 class OrderType(Enum):
     BUY = "buy"
     SELL = "sell"
+
+
+class ProcessedDataType(Enum):
+    REAL = "real"
+    EXPECTED_REWARD = "expected_reward"
+    READ_FULL_REWARD = "read_full_reward"
