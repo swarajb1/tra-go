@@ -265,7 +265,7 @@ class Simulation:
         if not self.is_worth_saving:
             return
 
-        print("\n\n\n", "-" * 30, "\nReal End of Data Stats\n")
+        print("\n\n\n", "-" * 30, "\nReal End of Day Stats\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
 
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
