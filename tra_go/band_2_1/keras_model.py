@@ -66,20 +66,20 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> tf.keras.models.M
 
     model.add(Input(shape=(X_train[0].shape)))
 
-    for i in range(km_tf.NUMBER_OF_LAYERS):
+    for i in range(NUMBER_OF_LAYERS):
         model.add(
             Bidirectional(
                 LSTM(
-                    units=km_tf.NUMBER_OF_NEURONS,
+                    units=NUMBER_OF_NEURONS,
                     return_sequences=True,
                     activation="relu",
                 ),
             ),
         )
+        #  dropout value decreases in exponential fashion.
+        model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
-        model.add(Dropout(pow(1 + km_tf.INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
-
-    model.add(TimeDistributed(Dense(units=km_tf.NUMBER_OF_NEURONS)))
+    model.add(TimeDistributed(Dense(units=NUMBER_OF_NEURONS)))
 
     model.add(GlobalAveragePooling1D())
 
