@@ -476,7 +476,7 @@ class CustomEvaluation:
 
         print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
         print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
-        print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
+        print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)
         print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT_PERCENT)
 
         print("folder_name\t", self.model_file_name)
@@ -633,10 +633,10 @@ class CustomEvaluation:
         print("\nleverage:\t", pro_250_5_str)
         print("datetime:\t", self.now_datetime)
 
-        # print("\n\nNUMBER_OF_NEURONS\t\t", km.NUMBER_OF_NEURONS)
-        # print("NUMBER_OF_LAYERS\t\t", km.NUMBER_OF_LAYERS)
-        # print("NUMBER_OF_EPOCHS\t\t", get_number_of_epochs())
-        # print("INITIAL_DROPOUT\t\t\t", km.INITIAL_DROPOUT)
+        # print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
+        # print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
+        # print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)
+        # print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT)
 
         print("file_name\t", self.model_file_name)
 
