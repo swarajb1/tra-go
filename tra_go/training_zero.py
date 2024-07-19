@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from database.enums import BandType, IODataType, TickerOne
+from database.enums import BandType, IODataType, RequiredDataType, TickerOne
 
 TOTAL_POINTS_IN_ONE_DAY: int = 375
 
@@ -27,7 +27,7 @@ def get_csv_file_path(ticker, interval) -> str:
     return file_path
 
 
-def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
+def data_split_train_test(df: pd.DataFrame, test_size: float, data_required: RequiredDataType) -> pd.DataFrame:
     # split into train and test
 
     # 1 days points inside zone = 264
@@ -44,9 +44,16 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
+    columns: list[str]
+
+    if data_required == RequiredDataType.TRAINING:
+        columns = ["open", "high", "low", "close", "volume", "real_close"]
+    elif data_required == RequiredDataType.REAL:
+        columns = ["open", "high", "low", "close", "volume"]
+
     return (
-        train_df[["open", "high", "low", "close", "volume", "real_close"]],
-        test_df[["open", "high", "low", "close", "volume", "real_close"]],
+        train_df[columns],
+        test_df[columns],
     )
 
 
@@ -166,7 +173,7 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
 
     df = data_inside_zone(df=df, interval=interval)
 
-    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size, data_required=RequiredDataType.TRAINING)
 
     df_train_x, df_train_y, df_train_close = data_split_x_y_close(
         df=df_train,
@@ -211,7 +218,12 @@ def df_data_into_3_feature_array(arr: np.ndarray) -> np.ndarray:
     return res
 
 
-def train_test_split_lh(data_df, interval, x_type: BandType, test_size=0.2) -> pd.DataFrame:
+def train_test_split_lh(
+    data_df: pd.DataFrame,
+    interval: str,
+    x_type: BandType,
+    test_size: float = 0.2,
+) -> pd.DataFrame:
     # separate into 178, 132 entries df. for train and test df.
     # # separate into 132, 132 entries df. for train and test df.
 
@@ -224,7 +236,9 @@ def train_test_split_lh(data_df, interval, x_type: BandType, test_size=0.2) -> p
 
     df = data_inside_zone(df=df, interval=interval)
 
-    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size, data_required=RequiredDataType.TRAINING)
+
+    y_type = BandType.BAND_4
 
     df_train_x, df_train_y, df_train_close = data_split_x_y_close(
         df=df_train,
