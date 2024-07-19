@@ -100,21 +100,21 @@ class Simulation:
 
                 # step 2 - simulating each tick inside the interval
                 for i_tick in range(self.real_price_arr.shape[1]):
-                    tick_min = self.real_price_arr[i_day, i_tick, 0]
-                    tick_max = self.real_price_arr[i_day, i_tick, 1]
+                    tick_low = self.real_price_arr[i_day, i_tick, 0]
+                    tick_high = self.real_price_arr[i_day, i_tick, 1]
 
                     if is_trade_type_buy:
                         # buy trade
                         if not trade_taken:
-                            if tick_min <= buy_price and buy_price <= tick_max:
+                            if tick_low <= buy_price and buy_price <= tick_high:
                                 trade_taken = True
 
                         if trade_taken and not trade_taken_and_out:
-                            if tick_min <= sell_price and sell_price <= tick_max:
+                            if tick_low <= sell_price and sell_price <= tick_high:
                                 trade_taken_and_out = True
                                 net_day_reward = expected_reward
 
-                            elif tick_min <= stop_loss and stop_loss <= tick_max:
+                            elif tick_low <= stop_loss and stop_loss <= tick_high:
                                 trade_taken_and_out = True
                                 stop_loss_hit = True
 
@@ -123,15 +123,15 @@ class Simulation:
                     else:
                         # sell trade
                         if not trade_taken:
-                            if tick_min <= sell_price and sell_price <= tick_max:
+                            if tick_low <= sell_price and sell_price <= tick_high:
                                 trade_taken = True
 
                         if trade_taken and not trade_taken_and_out:
-                            if tick_min <= buy_price and buy_price <= tick_max:
+                            if tick_low <= buy_price and buy_price <= tick_high:
                                 trade_taken_and_out = True
                                 net_day_reward = expected_reward
 
-                            elif tick_min <= stop_loss and stop_loss <= tick_max:
+                            elif tick_low <= stop_loss and stop_loss <= tick_high:
                                 trade_taken_and_out = True
                                 stop_loss_hit = True
 
