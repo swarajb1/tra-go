@@ -98,7 +98,7 @@ class Simulation:
                     # pred is down
                     stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
 
-                # step 2 - similating each tick inside the interval
+                # step 2 - simulating each tick inside the interval
                 for i_tick in range(self.real_price_arr.shape[1]):
                     tick_min = self.real_price_arr[i_day, i_tick, 0]
                     tick_max = self.real_price_arr[i_day, i_tick, 1]
@@ -256,7 +256,7 @@ class Simulation:
                 "{:.2f}".format(RISK_TO_REWARD_RATIO),
                 "\t",
                 "250_days_s: ",
-                percent_val if days_250 > PERCENT_250_DAYS else "\t  --",
+                percent_val if days_250 > PERCENT_250_DAYS else "\t   --",
                 "\t" * 2,
                 "\033[92m++\033[0m" if self.is_worth_saving else "",
             )
@@ -265,7 +265,7 @@ class Simulation:
         if not self.is_worth_saving:
             return
 
-        print("\n\n\n", "-" * 30, "\nReal End of Day Stats\n")
+        print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
 
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
@@ -286,8 +286,6 @@ class Simulation:
             self.expected_mean = mean
 
         median = np.median(sorted_arr)
-        stats.mode(np.round(sorted_arr, 2))
-
         std_deviation = np.std(sorted_arr)
 
         print("Mean: \t\t\t\t", round_num_str(mean, 4))
@@ -296,15 +294,15 @@ class Simulation:
         # Dispersion
         Q3, Q1 = np.percentile(sorted_arr, [75, 25])
         iq_range = Q3 - Q1
+        print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 4))
         print("Standard Deviation: \t\t", round_num_str(std_deviation, 4))
-        print("Interquartile Range (IQR): \t", round_num_str(iq_range, 4))
         print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 4))
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 4))
         print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 4))
 
-        coefficient_of_variation = std_deviation / mean
+        coefficient_of_variation = std_deviation / mean * 100
 
-        print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 4))
+        print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
 
         # Measures of Position
         z_scores = stats.zscore(sorted_arr)
@@ -312,7 +310,7 @@ class Simulation:
 
         if len(z_scores) > 6:
             z_scores_small = np.concatenate([sorted_arr[:3], sorted_arr[-3:]])
-            print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores_small])
+            print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores_small].insert(3, " ... "))
         else:
             print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores])
 
