@@ -83,7 +83,12 @@ class ModelLocationType(Enum):
 
 class IODataType(Enum):
     INPUT_DATA = "input_data"
-    OUTPUT_DATA = "ouput_data"
+    OUTPUT_DATA = "output_data"
+
+
+class RequiredDataType(Enum):
+    TRAINING = "training"
+    REAL = "real"
 
 
 class OrderType(Enum):
