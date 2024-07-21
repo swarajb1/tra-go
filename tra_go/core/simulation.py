@@ -366,3 +366,6 @@ class Simulation:
             real_full_reward_percent_day_wise_list[i_day] = full_reward / invested_day_wise_list[i_day] * 100
 
         self.real_full_reward_mean = np.mean(real_full_reward_percent_day_wise_list)
+
+    def get_is_worth_values(self) -> tuple[bool, bool]:
+        return self.is_worth_saving, self.is_worth_double_saving
