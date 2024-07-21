@@ -26,7 +26,7 @@ class CustomEvaluation:
     def __init__(
         self,
         ticker: TickerOne,
-        X_data: NDArray[np.float32],
+        X_data: NDArray[np.float64],
         Y_data: np.ndarray[float],
         prev_close: np.ndarray[float],
         x_type: BandType,
@@ -354,25 +354,25 @@ class CustomEvaluation:
 
         self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
 
-        fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
+        fraction_valid_actual: float = np.mean(valid_actual.astype(np.float64))
 
-        fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
+        fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
-        fraction_max_inside: float = np.mean(max_inside.astype(np.float32))
+        fraction_max_inside: float = np.mean(max_inside.astype(np.float64))
 
-        fraction_min_inside: float = np.mean(min_inside.astype(np.float32))
+        fraction_min_inside: float = np.mean(min_inside.astype(np.float64))
 
-        fraction_average_in: float = np.mean(average_in.astype(np.float32))
+        fraction_average_in: float = np.mean(average_in.astype(np.float64))
 
-        fraction_win: float = np.mean(wins.astype(np.float32))
+        fraction_win: float = np.mean(wins.astype(np.float64))
 
-        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
+        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float64)
         all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
 
         all_days_pro_cumulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
         pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
-            np.float32,
+            np.float64,
         )
 
         total_capture_possible_arr: np.ndarray = max_true / min_true - 1
@@ -578,23 +578,23 @@ class CustomEvaluation:
 
         self.is_model_worth_saving = simulation.is_worth_saving
 
-        fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
+        fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
-        fraction_max_inside: float = np.mean(max_inside.astype(np.float32))
+        fraction_max_inside: float = np.mean(max_inside.astype(np.float64))
 
-        fraction_min_inside: float = np.mean(min_inside.astype(np.float32))
+        fraction_min_inside: float = np.mean(min_inside.astype(np.float64))
 
-        fraction_average_in: float = np.mean(average_in.astype(np.float32))
+        fraction_average_in: float = np.mean(average_in.astype(np.float64))
 
-        fraction_win: float = np.mean(wins.astype(np.float32))
+        fraction_win: float = np.mean(wins.astype(np.float64))
 
-        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float32)
+        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float64)
         all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
         pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
-            np.float32,
+            np.float64,
         )
 
         total_capture_possible_arr: np.ndarray = max_true / min_true - 1

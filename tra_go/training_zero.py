@@ -410,7 +410,7 @@ class DataLoader:
         return res_df[columns]
 
 
-def check_gaps(data: NDArray[np.float32]) -> None:
+def check_gaps(data: NDArray[np.float64]) -> None:
     count_gaps_train = 0
 
     for i_day in range(data.shape[0]):
