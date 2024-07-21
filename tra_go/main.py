@@ -444,21 +444,6 @@ def suppress_cpu_usage():
     )
 
 
-def get_list_of_files(model_type: ModelLocationType, number_of_files: int = 6) -> list[str]:
-    list_of_files = os.listdir("training/models")
-
-    list_of_files = [file for file in list_of_files if not file.startswith(".")]
-
-    folder_name = model_type.value
-
-    list_of_files = sorted(
-        list_of_files,
-        key=lambda x: os.path.getmtime(folder_name + "/" + x),
-    )
-
-    return list_of_files[:number_of_files]
-
-
 if __name__ == "__main__":
     os.system("clear")
     time_1 = time.time()
