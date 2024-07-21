@@ -91,9 +91,6 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
     df_i.reset_index(drop=True, inplace=True)
     df_o.reset_index(drop=True, inplace=True)
 
-    # print("inside")
-    # print(prev_close)
-
     columns_x: list[str]
     columns_y: list[str]
 
@@ -141,7 +138,7 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
 
     for day in range(number_of_days):
         start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
-        end_index: int = day * TOTAL_POINTS_IN_ONE_DAY + (initial_index_offset + NUMBER_OF_POINTS_IN_ZONE_DAY)
+        end_index: int = start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
         res_df = pd.concat([res_df, df.iloc[start_index : end_index + 1]])
 
