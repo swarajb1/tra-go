@@ -352,8 +352,7 @@ class CustomEvaluation:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving = simulation.is_worth_saving
-        self.is_model_worth_double_saving = simulation.is_worth_double_saving
+        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
 
         fraction_valid_actual: float = np.mean(valid_actual.astype(np.float32))
 

@@ -25,6 +25,7 @@ class CustomEvaluation:
         ticker: TickerOne,
         X_data: NDArray[np.float32],
         Y_data: NDArray[np.float32],
+        Y_data_real: NDArray[np.float32],
         prev_close: NDArray[np.float32],
         x_type: BandType,
         y_type: BandType,
@@ -37,6 +38,8 @@ class CustomEvaluation:
 
         self.X_data = X_data
         self.y_data = Y_data
+        self.y_data_real = Y_data_real
+
         self.prev_close = prev_close.reshape(len(prev_close))
 
         self.x_type = x_type
@@ -110,7 +113,8 @@ class CustomEvaluation:
         self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_close)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_close)
 
-        self.y_data_real = round_to_nearest_0_05(self.y_data * self.prev_close[:, np.newaxis, np.newaxis])
+        # self.y_data_real = self.y_data * self.prev_close[:, np.newaxis, np.newaxis]
+        # print(self.y_data_real)
 
         self.function_make_win_graph(
             y_true=self.y_data_real,
@@ -224,8 +228,7 @@ class CustomEvaluation:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving = simulation.is_worth_saving
-        self.is_model_worth_double_saving = simulation.is_worth_double_saving
+        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float32))
 
