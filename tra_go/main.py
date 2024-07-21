@@ -8,11 +8,12 @@ import keras_model as km
 import psutil
 import training_zero as an
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
+from training_zero import DataLoader
 
 import tra_go.band_2.keras_model_band_2 as km_2
 import tra_go.band_2_1.keras_model as km_21_model
 import tra_go.band_4.keras_model_band_4 as km_4
-from database.enums import BandType, ModelLocationType, TickerOne
+from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
 
 NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
 
@@ -29,8 +30,11 @@ prev_model: str = "2024-04-08 11-50"
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2_1
 
-TICKER: TickerOne = TickerOne.SBIN
+# (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN) #ignore
+
+TICKER: TickerOne = TickerOne.RELIANCE
 INTERVAL: str = "1m"
+INTERVAL_1: IntervalType = IntervalType.MIN_1
 
 PREV_MODEL_TRAINING: bool = False
 
@@ -503,7 +507,7 @@ def evaluate_models(
     max_250_days_win_value: float = 0
 
     for file in list_of_files:
-        print("\n" * 20, "*" * 280, "\n" * 4, sep="")
+        print("\n" * 25, "*" * 280, "\n" * 4, sep="")
         print("Evaluating model:\t", file)
 
         model_x_type: BandType
@@ -540,10 +544,27 @@ def evaluate_models(
 
         df = an.get_data_all_df(ticker=model_ticker, interval=INTERVAL)
 
+        data_loader = DataLoader(
+            ticker=model_ticker,
+            interval=IntervalType.MIN_1,
+            x_type=model_x_type,
+            y_type=model_y_type,
+            test_size=TEST_SIZE,
+        )
+
+        Y_train_data_real, Y_test_data_real = data_loader.get_real_y_data()
+
+        an.check_gaps(Y_train_data_real)
+        an.check_gaps(Y_test_data_real)
+
+        print("Y_train_data_real")
+        print(Y_train_data_real)
+        print("^" * 100)
+
         if model_y_type == BandType.BAND_2_1 and model_x_type == BandType.BAND_4:
             (
-                (X_train, Y_train, Y_train_full, train_prev_close),
-                (X_test, Y_test, Y_test_full, test_prev_close),
+                (X_train, Y_train, Y_train_real, train_prev_close),
+                (X_test, Y_test, Y_test_real, test_prev_close),
             ) = an.train_test_split_lh(
                 data_df=df,
                 test_size=TEST_SIZE,
@@ -551,8 +572,8 @@ def evaluate_models(
                 interval=INTERVAL,
             )
 
-            Y_train = Y_train_full
-            Y_test = Y_test_full
+            Y_train = Y_train_real
+            Y_test = Y_test_real
         else:
             (
                 (X_train, Y_train, train_prev_close),
@@ -565,18 +586,13 @@ def evaluate_models(
                 interval=INTERVAL,
             )
 
-        # print("X_train", X_train.shape)
-        # print("X_test", X_test.shape)
-
-        # print("Y_train", Y_train.shape)
-        # print("Y_test", Y_test.shape)
-
         evaluation_class = _get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
 
         training_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_train,
             Y_data=Y_train,
+            Y_data_real=Y_train_data_real,
             prev_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
@@ -590,6 +606,7 @@ def evaluate_models(
             ticker=model_ticker,
             X_data=X_test,
             Y_data=Y_test,
+            Y_data_real=Y_test_data_real,
             prev_close=test_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
