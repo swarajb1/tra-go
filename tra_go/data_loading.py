@@ -138,7 +138,7 @@ class DataLoader:
 
         for day in range(number_of_days):
             start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
-            end_index: int = day * TOTAL_POINTS_IN_ONE_DAY + (initial_index_offset + NUMBER_OF_POINTS_IN_ZONE_DAY)
+            end_index: int = start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
             res_df = pd.concat([res_df, df.iloc[start_index : end_index + 1]])
 
