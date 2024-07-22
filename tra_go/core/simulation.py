@@ -21,10 +21,10 @@ PERCENT_250_DAYS_WORTH_SAVING: int = 25
 class Simulation:
     def __init__(
         self,
-        buy_price_arr: np.ndarray[float],
-        sell_price_arr: np.ndarray[float],
-        order_type_buy_arr: np.ndarray[bool],
-        real_price_arr: np.ndarray[float],
+        buy_price_arr: NDArray[np.float64],
+        sell_price_arr: NDArray[np.float64],
+        order_type_buy_arr: NDArray[np.bool_],
+        real_price_arr: NDArray[np.float64],
     ):
         self.buy_price_arr = buy_price_arr
         self.sell_price_arr = sell_price_arr
