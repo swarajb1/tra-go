@@ -304,8 +304,8 @@ def main_training():
 
     elif Y_TYPE == BandType.BAND_2_1:
         (
-            (X_train, Y_train, Y_train_full, train_prev_close),
-            (X_test, Y_test, Y_test_full, test_prev_close),
+            (X_train, Y_train, train_prev_close),
+            (X_test, Y_test, test_prev_close),
         ) = an.train_test_split_lh(
             data_df=df,
             test_size=TEST_SIZE,
@@ -452,13 +452,9 @@ def main():
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
-            pass
-
             main_training()
 
         elif sys.argv[1] == "training_new":
-            pass
-
             evaluate_models(
                 model_location_type=ModelLocationType.TRAINED_NEW,
                 number_of_models=6,
@@ -466,23 +462,15 @@ def main():
             )
 
         elif sys.argv[1] == "training":
-            pass
-
             evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
 
         elif sys.argv[1] == "saved":
-            pass
-
             evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=6)
 
         elif sys.argv[1] == "saved_double":
-            pass
-
             evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=6)
 
         elif sys.argv[1] == "saved_triple":
-            pass
-
             evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=6)
 
     else:
