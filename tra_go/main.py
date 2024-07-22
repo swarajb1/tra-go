@@ -30,7 +30,7 @@ prev_model: str = "2024-04-08 11-50"
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2_1
 
-# (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN) #ignore
+# (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN)
 
 TICKER: TickerOne = TickerOne.RELIANCE
 INTERVAL: str = "1m"
@@ -39,7 +39,7 @@ INTERVAL_1: IntervalType = IntervalType.MIN_1
 PREV_MODEL_TRAINING: bool = False
 
 
-def main():
+def main_training():
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL)
 
     if IS_TRAINING_MODEL:
@@ -444,7 +444,7 @@ def suppress_cpu_usage():
     )
 
 
-if __name__ == "__main__":
+def main():
     os.system("clear")
     time_1 = time.time()
 
@@ -452,12 +452,12 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
-            IS_TRAINING_MODEL = True
+            pass
 
-            main()
+            main_training()
 
         elif sys.argv[1] == "training_new":
-            IS_TRAINING_MODEL = False
+            pass
 
             evaluate_models(
                 model_location_type=ModelLocationType.TRAINED_NEW,
@@ -466,26 +466,30 @@ if __name__ == "__main__":
             )
 
         elif sys.argv[1] == "training":
-            IS_TRAINING_MODEL = False
+            pass
 
             evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
 
         elif sys.argv[1] == "saved":
-            IS_TRAINING_MODEL = False
+            pass
 
             evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=6)
 
         elif sys.argv[1] == "saved_double":
-            IS_TRAINING_MODEL = False
+            pass
 
             evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=6)
 
         elif sys.argv[1] == "saved_triple":
-            IS_TRAINING_MODEL = False
+            pass
 
             evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=6)
 
     else:
-        main()
+        main_training()
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
+
+
+if __name__ == "__main__":
+    main()
