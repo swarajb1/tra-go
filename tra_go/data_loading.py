@@ -99,19 +99,27 @@ class DataLoader:
         columns_x: list[str]
         columns_y: list[str]
 
+        band_2_columns: list[str] = ["low", "high"]
+        band_4_columns: list[str] = ["open", "high", "low", "close"]
+        band_5_columns: list[str] = ["open", "high", "low", "close", "volume"]
+
         if self.x_type == BandType.BAND_4 or data_type == RequiredDataType.REAL:
-            columns_x = ["open", "high", "low", "close"]
+            columns_x = band_4_columns
+
         elif self.x_type == BandType.BAND_2:
-            columns_x = ["low", "high"]
+            columns_x = band_2_columns
+
         elif self.x_type == BandType.BAND_5:
-            columns_x = ["open", "high", "low", "close", "volume"]
+            columns_x = band_5_columns
 
         if self.y_type == BandType.BAND_4 or data_type == RequiredDataType.REAL:
-            columns_y = ["open", "high", "low", "close"]
+            columns_y = band_4_columns
+
         elif self.y_type in [BandType.BAND_2, BandType.BAND_2_1]:
-            columns_y = ["low", "high"]
+            columns_y = band_2_columns
+
         elif self.y_type == BandType.BAND_5:
-            columns_y = ["open", "high", "low", "close", "volume"]
+            columns_y = band_5_columns
 
         return df_i[columns_x], df_o[columns_y]
 
