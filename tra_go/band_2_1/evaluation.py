@@ -15,7 +15,6 @@ from database.enums import BandType, ModelLocationType, TickerOne
 
 SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
-
 NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 
 
@@ -36,7 +35,7 @@ class CustomEvaluation:
     ):
         self.ticker = ticker
 
-        self.X_data = X_data
+        self.x_data = X_data
         self.y_data = Y_data
         self.y_data_real = Y_data_real
 
@@ -54,7 +53,7 @@ class CustomEvaluation:
 
         self.safety_factor = SAFETY_FACTOR
 
-        self.number_of_days = self.X_data.shape[0]
+        self.number_of_days = self.x_data.shape[0]
 
         self.is_model_worth_saving: bool = False
         self.is_model_worth_double_saving: bool = False
@@ -97,13 +96,12 @@ class CustomEvaluation:
             model = load_model(file_path)
             # model.summary()
 
-        self.y_pred: NDArray = model.predict(self.X_data)
-        # print("self.y_pred.shape", self.y_pred.shape)
+        self.y_pred: NDArray = model.predict(self.x_data)
 
         if self.x_type == BandType.BAND_4:
-            x_last_zone_close: NDArray = self.X_data[:, -1, 3]
+            x_last_zone_close: NDArray = self.x_data[:, -1, 3]
         elif self.x_type == BandType.BAND_2:
-            x_last_zone_close: NDArray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+            x_last_zone_close: NDArray = (self.x_data[:, -1, 0] + self.x_data[:, -1, 1]) / 2
 
         x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_close)
 
@@ -113,11 +111,11 @@ class CustomEvaluation:
         self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_close)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_close)
 
-        # self.y_data_real = self.y_data * self.prev_close[:, np.newaxis, np.newaxis]
-        # print(self.y_data_real)
+        y_data_real_try = round_to_nearest_0_05(self.y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
         self.function_make_win_graph(
-            y_true=self.y_data_real,
+            # y_true=self.y_data_real,
+            y_true=y_data_real_try,
             y_pred=self.y_pred_real,
             x_close=x_last_zone_close_real,
         )
@@ -145,13 +143,13 @@ class CustomEvaluation:
         y_pred: NDArray,
         x_close: NDArray,
     ):
-        min_true: NDArray = np.min(y_true[:, :, 0], axis=1)
+        min_true: NDArray = np.min(y_true[:, :, 2], axis=1)
         max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
         min_pred: NDArray = y_pred[:, 0]
         max_pred: NDArray = y_pred[:, 1]
 
-        buy_order_pred: NDArray = y_pred[:, 2]
+        buy_order_pred: NDArray[np.bool_] = y_pred[:, 2].astype(bool)
 
         valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
 
