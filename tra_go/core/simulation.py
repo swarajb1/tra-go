@@ -14,7 +14,7 @@ load_dotenv()
 
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
-PERCENT_250_DAYS: int = 1
+PERCENT_250_DAYS: int = -10
 PERCENT_250_DAYS_WORTH_SAVING: int = 25
 
 
@@ -31,8 +31,9 @@ class Simulation:
         self.order_type_buy_arr = order_type_buy_arr
         self.real_price_arr = real_price_arr
 
-        self.is_worth_saving: bool = False
+        # real_price_arr = o,h,l,c
 
+        self.is_worth_saving: bool = False
         self.is_worth_double_saving: bool = False
 
         self.real_data_for_analysis: NDArray
@@ -49,6 +50,8 @@ class Simulation:
 
         self.display_stats()
 
+        print("")
+
     def simulation(self) -> bool:
         # 3 orders are placed when the simulation starts
         #   buy order
@@ -64,16 +67,16 @@ class Simulation:
         for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
             number_of_days: int = self.real_price_arr.shape[0]
 
-            wins_day_wise_list: np.array = np.zeros(number_of_days)
-            invested_day_wise_list: np.array = np.zeros(number_of_days)
+            wins_day_wise_list: NDArray = np.zeros(number_of_days)
+            invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
-            expected_reward_percent_day_wise_list: np.array = np.zeros(number_of_days)
+            expected_reward_percent_day_wise_list: NDArray = np.zeros(number_of_days)
 
-            trade_taken_list: np.array = np.zeros(number_of_days, dtype=bool)
-            trade_taken_and_out_list: np.array = np.zeros(number_of_days, dtype=bool)
-            stop_loss_hit_list: np.array = np.zeros(number_of_days, dtype=bool)
-            completed_at_closing_list: np.array = np.zeros(number_of_days, dtype=bool)
-            expected_trades_list: np.array = np.zeros(number_of_days, dtype=bool)
+            trade_taken_list: NDArray = np.zeros(number_of_days, dtype=bool)
+            trade_taken_and_out_list: NDArray = np.zeros(number_of_days, dtype=bool)
+            stop_loss_hit_list: NDArray = np.zeros(number_of_days, dtype=bool)
+            completed_at_closing_list: NDArray = np.zeros(number_of_days, dtype=bool)
+            expected_trades_list: NDArray = np.zeros(number_of_days, dtype=bool)
 
             for i_day in range(number_of_days):
                 trade_taken: bool = False
@@ -100,7 +103,7 @@ class Simulation:
 
                 # step 2 - simulating each tick inside the interval
                 for i_tick in range(self.real_price_arr.shape[1]):
-                    tick_low = self.real_price_arr[i_day, i_tick, 0]
+                    tick_low = self.real_price_arr[i_day, i_tick, 2]
                     tick_high = self.real_price_arr[i_day, i_tick, 1]
 
                     if is_trade_type_buy:
@@ -172,11 +175,11 @@ class Simulation:
             # print("-" * 30)
             # print("\n\n")
 
-            # count_trade_taken: int = np.sum(trade_taken_list)
-            # count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
-            # count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
-            # count_completed_at_closing: int = np.sum(completed_at_closing_list)
-            # count_expected_trades: int = np.sum(expected_trades_list)
+            count_trade_taken: int = np.sum(trade_taken_list)
+            count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
+            count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
+            count_completed_at_closing: int = np.sum(completed_at_closing_list)
+            count_expected_trades: int = np.sum(expected_trades_list)
 
             # print("number_of_days\t\t\t", number_of_days, "\n")
 
@@ -195,7 +198,7 @@ class Simulation:
 
             # print("percent_expected_trades\t\t", "{:.2f}".format(count_expected_trades / number_of_days * 100), " %")
 
-            # number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
+            number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
 
             # print("\npercent_win_trades\t\t", "{:.2f}".format(number_of_win_trades / number_of_days * 100), " %")
 
@@ -262,8 +265,8 @@ class Simulation:
             )
 
     def display_stats(self) -> None:
-        if not self.is_worth_saving:
-            return
+        # if not self.is_worth_saving:
+        #     return
 
         print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
@@ -304,6 +307,11 @@ class Simulation:
 
         print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
 
+        # self._log_statistics_extra(self, sorted_arr)
+
+        return
+
+    def _log_statistics_extra(self, sorted_arr: NDArray) -> None:
         # Measures of Position
         z_scores = stats.zscore(sorted_arr)
         stats.rankdata(sorted_arr)
@@ -341,11 +349,11 @@ class Simulation:
     def set_real_full_reward_mean(self) -> None:
         number_of_days: int = self.real_price_arr.shape[0]
 
-        invested_day_wise_list: np.array = np.zeros(number_of_days)
+        invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
-        real_order_type_buy: np.array = np.zeros(number_of_days)
+        real_order_type_buy: NDArray = np.zeros(number_of_days)
 
-        real_full_reward_percent_day_wise_list: np.array = np.zeros(number_of_days)
+        real_full_reward_percent_day_wise_list: NDArray = np.zeros(number_of_days)
 
         for i_day in range(number_of_days):
             net_day_reward: float = 0
