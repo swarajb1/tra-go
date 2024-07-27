@@ -141,7 +141,7 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     return res_df[["open", "high", "low", "close", "real_close", "volume"]]
 
 
-def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> np.ndarray:
+def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> NDArray:
     array = df.values
 
     points_in_each_day: int
@@ -205,12 +205,12 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
     )
 
 
-def df_data_into_3_feature_array(arr: np.ndarray) -> np.ndarray:
+def df_data_into_3_feature_array(arr: NDArray) -> NDArray:
     res = np.zeros((arr.shape[0], 3))
 
-    min_values = np.min(arr[:, :, 0], axis=1)
+    min_values = np.min(arr[:, :, 2], axis=1)
     max_values = np.max(arr[:, :, 1], axis=1)
-    is_buy_trend = np.argmax(arr[:, :, 0], axis=1) > np.argmin(arr[:, :, 1], axis=1)
+    is_buy_trend = np.argmax(arr[:, :, 2], axis=1) > np.argmin(arr[:, :, 1], axis=1)
 
     res[:, 0] = min_values
     res[:, 1] = max_values
@@ -268,8 +268,8 @@ def train_test_split_lh(
     test_prev_close = df_test_close.values
 
     return (
-        (train_x, train_y_arr, train_prev_close),
-        (test_x, test_y_arr, test_prev_close),
+        (train_x, train_y_arr, train_y, train_prev_close),
+        (test_x, test_y_arr, test_y, test_prev_close),
     )
 
 
