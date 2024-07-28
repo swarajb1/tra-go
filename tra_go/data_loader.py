@@ -1,3 +1,6 @@
+import os
+
+import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from training_zero import (
@@ -6,7 +9,6 @@ from training_zero import (
     NUMBER_OF_POINTS_IN_ZONE_DAY,
     TOTAL_POINTS_IN_ONE_DAY,
     by_date_df_array,
-    check_gaps,
     data_split_train_test,
 )
 
@@ -15,6 +17,7 @@ from database.enums import (
     IntervalType,
     IODataType,
     RequiredDataType,
+    TickerDataType,
     TickerOne,
 )
 
@@ -34,14 +37,13 @@ class DataLoader:
         self.y_type = y_type
         self.test_size = test_size
 
-        self.train_y_real_data: NDArray
-
-        self.test_y_real_data: NDArray
+        self.train_y_real_data: NDArray[np.float64]
+        self.test_y_real_data: NDArray[np.float64]
 
         self.load_real_y_data()
 
-    def load_real_y_data(self):
-        df = self.get_data_df_real()
+    def load_real_y_data(self) -> None:
+        df = self.get_data_df(ticker_data_type=TickerDataType.CLEANED)
 
         df = self.data_inside_zone(df=df, data_type=RequiredDataType.REAL)
 
@@ -60,7 +62,9 @@ class DataLoader:
 
         self.train_y_real_data, self.test_y_real_data = train_y, test_y
 
-    def get_real_y_data(self) -> tuple[NDArray, NDArray]:
+        return
+
+    def get_real_y_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         print("\ntrain_data - y real")
         check_gaps(self.train_y_real_data)
 
@@ -69,8 +73,15 @@ class DataLoader:
 
         return self.train_y_real_data, self.test_y_real_data
 
-    def get_data_df_real(self) -> pd.DataFrame:
-        file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
+    def get_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
+        # file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
+
+        file_path = os.path.join(
+            ".",
+            ticker_data_type.value,
+            self.interval.value,
+            f"{self.ticker.value} - {self.interval.value}.csv",
+        )
 
         df = pd.read_csv(file_path)
 
@@ -99,27 +110,19 @@ class DataLoader:
         columns_x: list[str]
         columns_y: list[str]
 
-        band_2_columns: list[str] = ["low", "high"]
-        band_4_columns: list[str] = ["open", "high", "low", "close"]
-        band_5_columns: list[str] = ["open", "high", "low", "close", "volume"]
+        band_columns: dict[BandType, list[str]] = {
+            BandType.BAND_2: ["low", "high"],
+            BandType.BAND_2_1: ["low", "high"],
+            BandType.BAND_4: ["open", "high", "low", "close"],
+            BandType.BAND_5: ["open", "high", "low", "close", "volume"],
+        }
 
-        if self.x_type == BandType.BAND_4 or data_type == RequiredDataType.REAL:
-            columns_x = band_4_columns
-
-        elif self.x_type == BandType.BAND_2:
-            columns_x = band_2_columns
-
-        elif self.x_type == BandType.BAND_5:
-            columns_x = band_5_columns
-
-        if self.y_type == BandType.BAND_4 or data_type == RequiredDataType.REAL:
-            columns_y = band_4_columns
-
-        elif self.y_type in [BandType.BAND_2, BandType.BAND_2_1]:
-            columns_y = band_2_columns
-
-        elif self.y_type == BandType.BAND_5:
-            columns_y = band_5_columns
+        if data_type == RequiredDataType.REAL:
+            columns_x = band_columns[BandType.BAND_4]
+            columns_y = band_columns[BandType.BAND_4]
+        else:
+            columns_x = band_columns[self.x_type]
+            columns_y = band_columns[self.y_type]
 
         return df_i[columns_x], df_o[columns_y]
 
@@ -152,11 +155,33 @@ class DataLoader:
 
         res_df.reset_index(drop=True, inplace=True)
 
+        base_columns: list[str] = ["open", "high", "low", "close", "volume"]
+
         columns: list[str]
 
         if data_type == RequiredDataType.TRAINING:
-            columns = ["open", "high", "low", "close", "real_close", "volume"]
+            columns = base_columns + ["real_close"]
         elif data_type == RequiredDataType.REAL:
-            columns = ["open", "high", "low", "close", "volume"]
+            columns = base_columns
 
         return res_df[columns]
+
+
+def check_gaps(data: NDArray[np.float64]) -> None:
+    count_gaps_train = 0
+
+    for i_day in range(data.shape[0]):
+        for i_tick in range(data.shape[1] - 1):
+            close = data[i_day, i_tick, 3]
+            next_max = data[i_day, i_tick + 1, 1]
+            next_min = data[i_day, i_tick + 1, 2]
+
+            if not (next_min <= close <= next_max):
+                count_gaps_train += 1
+
+    print("Count Gaps:\t\t\t", count_gaps_train)
+    print(
+        "Count Gaps Percentage:\t\t",
+        "{:.2f}".format(count_gaps_train / (data.shape[0] * data.shape[1]) * 100),
+        " %\n",
+    )
