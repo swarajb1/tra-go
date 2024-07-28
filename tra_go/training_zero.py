@@ -231,7 +231,7 @@ def train_test_split_lh(
     # divide the price data of that day by the closing price of the previous day.
     # for the very first day of the dataset - divide the prices by the opening price.
 
-    y_type: BandType = BandType.BAND_2_1
+    # y_type: BandType = BandType.BAND_2_1
 
     df = data_df.copy(deep=True)
 
@@ -270,24 +270,4 @@ def train_test_split_lh(
     return (
         (train_x, train_y_arr, train_y, train_prev_close),
         (test_x, test_y_arr, test_y, test_prev_close),
-    )
-
-
-def check_gaps(data: NDArray[np.float64]) -> None:
-    count_gaps_train = 0
-
-    for i_day in range(data.shape[0]):
-        for i_tick in range(data.shape[1] - 1):
-            close = data[i_day, i_tick, 3]
-            next_max = data[i_day, i_tick + 1, 1]
-            next_min = data[i_day, i_tick + 1, 2]
-
-            if not (next_min <= close <= next_max):
-                count_gaps_train += 1
-
-    print("Count Gaps:\t\t\t", count_gaps_train)
-    print(
-        "Count Gaps Percentage:\t\t",
-        "{:.2f}".format(count_gaps_train / (data.shape[0] * data.shape[1]) * 100),
-        " %\n",
     )
