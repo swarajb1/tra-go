@@ -10,14 +10,7 @@ from training_zero import (
     TOTAL_POINTS_IN_ONE_DAY,
 )
 
-from database.enums import (
-    BandType,
-    IntervalType,
-    IODataType,
-    RequiredDataType,
-    TickerDataType,
-    TickerOne,
-)
+from database.enums import BandType, IntervalType, IODataType, TickerDataType, TickerOne
 
 
 class DataLoader:
@@ -53,15 +46,17 @@ class DataLoader:
         self.load_data_train_test_close()
 
     def load_data_y_real(self) -> None:
-        df = self._get_data_df(ticker_data_type=TickerDataType.CLEANED)
+        ticker_data_type = TickerDataType.REAL_AND_CLEANED
 
-        df = self.data_inside_zone(df=df, data_type=RequiredDataType.REAL)
+        df = self._get_full_data_df(ticker_data_type)
 
-        df_train, df_test = self.data_split_train_test(df=df, required_data_type=RequiredDataType.REAL)
+        df = self.data_inside_zone(df=df, ticker_data_type=ticker_data_type)
 
-        df_train_x, df_train_y = self.data_split_x_y(df=df_train, required_data_type=RequiredDataType.REAL)
+        df_train, df_test = self.data_split_train_test(df=df, ticker_data_type=ticker_data_type)
 
-        df_test_x, df_test_y = self.data_split_x_y(df=df_test, required_data_type=RequiredDataType.REAL)
+        df_train_x, df_train_y = self.data_split_x_y(df=df_train, ticker_data_type=ticker_data_type)
+
+        df_test_x, df_test_y = self.data_split_x_y(df=df_test, ticker_data_type=ticker_data_type)
 
         train_y = by_date_df_array(df_train_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
         test_y = by_date_df_array(df_test_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
@@ -79,7 +74,7 @@ class DataLoader:
 
         return self.train_y_real_data, self.test_y_real_data
 
-    def _get_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
+    def _get_full_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
         # file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
 
         file_path = os.path.join(
@@ -93,7 +88,7 @@ class DataLoader:
 
         return df
 
-    def data_split_x_y(self, df: pd.DataFrame, required_data_type: RequiredDataType | None) -> pd.DataFrame:
+    def data_split_x_y(self, df: pd.DataFrame, ticker_data_type: TickerDataType | None) -> pd.DataFrame:
         """Splits the data into input, output dataframe."""
 
         df_i = pd.DataFrame()
@@ -123,7 +118,7 @@ class DataLoader:
             BandType.BAND_5: ["open", "high", "low", "close", "volume"],
         }
 
-        if required_data_type == RequiredDataType.REAL:
+        if required_data_type == TickerDataType.REAL_AND_CLEANED:
             columns_x = band_columns[BandType.BAND_4]
             columns_y = band_columns[BandType.BAND_4]
         else:
@@ -132,7 +127,7 @@ class DataLoader:
 
         return df_i[columns_x], df_o[columns_y]
 
-    def data_inside_zone(self, df: pd.DataFrame, data_type: RequiredDataType) -> pd.DataFrame:
+    def data_inside_zone(self, df: pd.DataFrame, ticker_data_type: TickerDataType) -> pd.DataFrame:
         res_df = pd.DataFrame()
 
         # # when taking from 915 (165, 165)
@@ -165,18 +160,18 @@ class DataLoader:
 
         res_df.reset_index(drop=True, inplace=True)
 
-        columns: list[str] = self.get_columns(data_type)
+        columns: list[str] = self.get_columns(ticker_data_type)
 
         return res_df[columns]
 
-    def get_columns(self, required_data_type: RequiredDataType) -> list[str]:
+    def get_columns(self, ticker_data_type: TickerDataType) -> list[str]:
         columns: list[str]
 
         base_columns: list[str] = ["open", "high", "low", "close", "volume"]
 
-        if required_data_type == RequiredDataType.TRAINING:
+        if ticker_data_type == TickerDataType.TRAINING:
             columns = base_columns + ["real_close"]
-        elif required_data_type == RequiredDataType.REAL:
+        elif ticker_data_type == TickerDataType.REAL_AND_CLEANED:
             columns = base_columns
 
         return columns
@@ -184,7 +179,7 @@ class DataLoader:
     def data_split_train_test(
         self,
         df: pd.DataFrame,
-        required_data_type: RequiredDataType,
+        ticker_data_type: TickerDataType,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         # split into train and test
 
@@ -204,7 +199,7 @@ class DataLoader:
         train_df.reset_index(drop=True, inplace=True)
         test_df.reset_index(drop=True, inplace=True)
 
-        columns: list[str] = self.get_columns(required_data_type)
+        columns: list[str] = self.get_columns(ticker_data_type)
 
         return train_df[columns], test_df[columns]
 
@@ -223,7 +218,7 @@ class DataLoader:
         """Splits the data into input, output dataframe, and the previous close
         price dataframe."""
 
-        df = self.data_inside_zone(df=df, data_type=RequiredDataType.TRAINING)
+        df = self.data_inside_zone(df=df, ticker_data_type=TickerDataType.TRAINING)
 
         df_i = pd.DataFrame()
         df_o = pd.DataFrame()
