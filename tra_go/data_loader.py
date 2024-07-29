@@ -12,6 +12,8 @@ from training_zero import (
 
 from database.enums import BandType, IntervalType, IODataType, TickerDataType, TickerOne
 
+PROJECT_FOLDER_NAME: str = "tra-go"
+
 
 class DataLoader:
     def __init__(
@@ -37,97 +39,48 @@ class DataLoader:
 
         self.train_x_data: NDArray[np.float64]
         self.train_y_data: NDArray[np.float64]
-        self.train_prev_close: NDArray[np.float64]
 
         self.test_x_data: NDArray[np.float64]
         self.test_y_data: NDArray[np.float64]
+
+        self.load_data_y_for_training()
+
+        self.train_prev_close: NDArray[np.float64]
         self.test_prev_close: NDArray[np.float64]
 
-        self.load_data_train_test_close()
+        self.load_data_prev_close()
 
-    def load_data_y_real(self) -> None:
-        ticker_data_type = TickerDataType.REAL_AND_CLEANED
+    def _get_columns(self, ticker_data_type: TickerDataType) -> list[str]:
+        columns: list[str]
 
-        df = self._get_full_data_df(ticker_data_type)
+        base_columns: list[str] = ["open", "high", "low", "close", "volume"]
 
-        df = self.data_inside_zone(df=df, ticker_data_type=ticker_data_type)
+        if ticker_data_type == TickerDataType.TRAINING:
+            columns = base_columns + ["real_close"]
+        elif ticker_data_type == TickerDataType.REAL_AND_CLEANED:
+            columns = base_columns
 
-        df_train, df_test = self.data_split_train_test(df=df, ticker_data_type=ticker_data_type)
-
-        df_train_x, df_train_y = self.data_split_x_y(df=df_train, ticker_data_type=ticker_data_type)
-
-        df_test_x, df_test_y = self.data_split_x_y(df=df_test, ticker_data_type=ticker_data_type)
-
-        train_y = by_date_df_array(df_train_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
-        test_y = by_date_df_array(df_test_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
-
-        self.train_y_real_data, self.test_y_real_data = train_y, test_y
-
-        return
-
-    def get_real_y_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        print("\ntrain_data - y real")
-        check_gaps(self.train_y_real_data)
-
-        print("test_data - y real")
-        check_gaps(self.test_y_real_data)
-
-        return self.train_y_real_data, self.test_y_real_data
+        return columns
 
     def _get_full_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
         # file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
 
         file_path = os.path.join(
-            ".",
-            ticker_data_type.value,
+            os.getcwd(),
+            f"data_{ticker_data_type.value}",
             self.interval.value,
             f"{self.ticker.value} - {self.interval.value}.csv",
         )
+
+        os.getcwdb
 
         df = pd.read_csv(file_path)
 
         return df
 
-    def data_split_x_y(self, df: pd.DataFrame, ticker_data_type: TickerDataType | None) -> pd.DataFrame:
-        """Splits the data into input, output dataframe."""
+    def data_inside_zone(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
+        df = self._get_full_data_df(ticker_data_type)
 
-        df_i = pd.DataFrame()
-        df_o = pd.DataFrame()
-
-        number_of_days: int = len(df) // NUMBER_OF_POINTS_IN_ZONE_DAY
-
-        for day in range(number_of_days):
-            day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
-            day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
-
-            first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
-
-            df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
-            df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
-
-        df_i.reset_index(drop=True, inplace=True)
-        df_o.reset_index(drop=True, inplace=True)
-
-        columns_x: list[str]
-        columns_y: list[str]
-
-        band_columns: dict[BandType, list[str]] = {
-            BandType.BAND_2: ["low", "high"],
-            BandType.BAND_2_1: ["low", "high"],
-            BandType.BAND_4: ["open", "high", "low", "close"],
-            BandType.BAND_5: ["open", "high", "low", "close", "volume"],
-        }
-
-        if required_data_type == TickerDataType.REAL_AND_CLEANED:
-            columns_x = band_columns[BandType.BAND_4]
-            columns_y = band_columns[BandType.BAND_4]
-        else:
-            columns_x = band_columns[self.x_type]
-            columns_y = band_columns[self.y_type]
-
-        return df_i[columns_x], df_o[columns_y]
-
-    def data_inside_zone(self, df: pd.DataFrame, ticker_data_type: TickerDataType) -> pd.DataFrame:
         res_df = pd.DataFrame()
 
         # # when taking from 915 (165, 165)
@@ -150,7 +103,7 @@ class DataLoader:
 
         assert (
             len(df) % TOTAL_POINTS_IN_ONE_DAY == 0
-        ), "Full Cleaned Data length is not divisible by TOTAL_POINTS_IN_ONE_DAY"
+        ), f"Full {TickerDataType.key} Data length is not divisible by TOTAL_POINTS_IN_ONE_DAY"
 
         for day in range(number_of_days):
             start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
@@ -160,28 +113,94 @@ class DataLoader:
 
         res_df.reset_index(drop=True, inplace=True)
 
-        columns: list[str] = self.get_columns(ticker_data_type)
+        # columns: list[str] = self._get_columns(ticker_data_type)
 
-        return res_df[columns]
+        # return res_df[columns]
+        return res_df
 
-    def get_columns(self, ticker_data_type: TickerDataType) -> list[str]:
-        columns: list[str]
+    def data_split_x_y(self, df: pd.DataFrame, ticker_data_type: TickerDataType | None) -> pd.DataFrame:
+        """Splits the data into input, output dataframe."""
 
-        base_columns: list[str] = ["open", "high", "low", "close", "volume"]
+        # assumptions:
+        # 1. df is inside zone data
 
-        if ticker_data_type == TickerDataType.TRAINING:
-            columns = base_columns + ["real_close"]
-        elif ticker_data_type == TickerDataType.REAL_AND_CLEANED:
-            columns = base_columns
+        df_i = pd.DataFrame()
+        df_o = pd.DataFrame()
 
-        return columns
+        number_of_days: int = len(df) // NUMBER_OF_POINTS_IN_ZONE_DAY
 
-    def data_split_train_test(
-        self,
-        df: pd.DataFrame,
-        ticker_data_type: TickerDataType,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        assert (
+            len(df) % NUMBER_OF_POINTS_IN_ZONE_DAY == 0
+        ), "Full Zone Data length is not divisible by NUMBER_OF_POINTS_IN_ZONE_DAY"
+
+        for day in range(number_of_days):
+            day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
+            day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
+
+            first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
+
+            df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
+            df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
+
+        df_i.reset_index(drop=True, inplace=True)
+        df_o.reset_index(drop=True, inplace=True)
+
+        assert (
+            len(df_i) % NUMBER_OF_POINTS_IN_ZONE_1_ST == 0
+        ), "Input Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_1_ST"
+
+        assert (
+            len(df_o) % NUMBER_OF_POINTS_IN_ZONE_2_ND == 0
+        ), "Output Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_2_ND"
+
+        columns_x: list[str]
+        columns_y: list[str]
+
+        band_columns: dict[BandType, list[str]] = {
+            BandType.BAND_2: ["low", "high"],
+            BandType.BAND_2_1: ["low", "high"],
+            BandType.BAND_4: ["open", "high", "low", "close"],
+            BandType.BAND_5: ["open", "high", "low", "close", "volume"],
+        }
+
+        if ticker_data_type == TickerDataType.REAL_AND_CLEANED:
+            columns_x = band_columns[BandType.BAND_4]
+            columns_y = band_columns[BandType.BAND_4]
+        else:
+            columns_x = band_columns[self.x_type]
+            columns_y = band_columns[self.y_type]
+
+        return df_i[columns_x], df_o[columns_y]
+
+    def load_data_y_real(self) -> None:
+        ticker_data_type = TickerDataType.REAL_AND_CLEANED
+
+        df_train, df_test = self.data_split_train_test(ticker_data_type=ticker_data_type)
+
+        df_train_x, df_train_y = self.data_split_x_y(df=df_train, ticker_data_type=ticker_data_type)
+
+        df_test_x, df_test_y = self.data_split_x_y(df=df_test, ticker_data_type=ticker_data_type)
+
+        train_y = by_date_df_array(df_train_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
+        test_y = by_date_df_array(df_test_y, band_type=BandType.BAND_4, io_type=IODataType.OUTPUT_DATA)
+
+        self.train_y_real_data, self.test_y_real_data = train_y, test_y
+
+        return
+
+    def get_real_y_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        print("\ntrain_data - y real")
+        check_gaps(self.train_y_real_data)
+
+        print("test_data - y real")
+        check_gaps(self.test_y_real_data)
+
+        return self.train_y_real_data, self.test_y_real_data
+
+    def data_split_train_test(self, ticker_data_type: TickerDataType) -> tuple[pd.DataFrame, pd.DataFrame]:
         # split into train and test
+
+        df = self.data_inside_zone(ticker_data_type)
 
         assert (
             len(df) % NUMBER_OF_POINTS_IN_ZONE_DAY == 0
@@ -199,71 +218,72 @@ class DataLoader:
         train_df.reset_index(drop=True, inplace=True)
         test_df.reset_index(drop=True, inplace=True)
 
-        columns: list[str] = self.get_columns(ticker_data_type)
+        columns: list[str] = self._get_columns(ticker_data_type)
 
         return train_df[columns], test_df[columns]
 
-    def get_train_test_split(
-        self,
-    ) -> tuple[
-        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
-        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
-    ]:
-        return (
-            (self.train_x_data, self.train_y_data, self.train_prev_close),
-            (self.test_x_data, self.test_y_data, self.test_prev_close),
-        )
+    def load_data_y_for_training(self) -> None:
+        ticker_data_type = TickerDataType.TRAINING
 
-    def load_data_train_test_close(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Splits the data into input, output dataframe, and the previous close
-        price dataframe."""
+        df_train, df_test = self.data_split_train_test(ticker_data_type=ticker_data_type)
 
-        df = self.data_inside_zone(df=df, ticker_data_type=TickerDataType.TRAINING)
+        df_train_x, df_train_y = self.data_split_x_y(df=df_train, ticker_data_type=ticker_data_type)
 
-        df_i = pd.DataFrame()
-        df_o = pd.DataFrame()
+        df_test_x, df_test_y = self.data_split_x_y(df=df_test, ticker_data_type=ticker_data_type)
 
-        prev_close = pd.DataFrame()
+        train_x = by_date_df_array(df_train_x, band_type=self.x_type, io_type=IODataType.INPUT_DATA)
+        test_x = by_date_df_array(df_test_x, band_type=self.x_type, io_type=IODataType.INPUT_DATA)
+
+        train_y = by_date_df_array(df_train_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
+        test_y = by_date_df_array(df_test_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
+
+        self.train_x_data = train_x
+        self.train_y_data = train_y
+
+        self.test_x_data = test_x
+        self.test_y_data = test_y
+
+        return
+
+    def load_data_prev_close(self) -> None:
+        ticker_data_type = TickerDataType.TRAINING
+
+        df = self.data_inside_zone(ticker_data_type)
+
+        prev_close: list[float] = []
 
         number_of_days: int = len(df) // NUMBER_OF_POINTS_IN_ZONE_DAY
 
         for day in range(number_of_days):
             day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
-            day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
-            first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
+            prev_close.append(df.iloc[day_start_index, df.columns.get_loc("real_close")])
 
-            df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
-            df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
+        self.train_prev_close = prev_close[: int(number_of_days * (1 - self.test_size))]
+        self.test_prev_close = prev_close[int(number_of_days * (1 - self.test_size)) :]
 
-            dict_1 = {"real_close": df.iloc[day_start_index, df.columns.get_loc("real_close")]}
+        assert len(self.train_prev_close) == len(
+            self.train_x_data.shape[0],
+        ), "train_prev_close and train_x_data.shape[0] are not equal"
 
-            prev_close = pd.concat([prev_close, pd.DataFrame(dict_1, index=[0])], ignore_index=True)
+        assert len(self.test_prev_close) == len(
+            self.test_x_data.shape[0],
+        ), "test_prev_close and test_x_data.shape[0] are not equal"
 
-        df_i.reset_index(drop=True, inplace=True)
-        df_o.reset_index(drop=True, inplace=True)
+        return
 
-        columns_x: list[str]
-        columns_y: list[str]
-
-        if self.x_type == BandType.BAND_4:
-            columns_x = ["open", "high", "low", "close"]
-        elif self.x_type == BandType.BAND_2:
-            columns_x = ["low", "high"]
-        elif self.x_type == BandType.BAND_5:
-            columns_x = ["open", "high", "low", "close", "volume"]
-
-        if self.y_type == BandType.BAND_4:
-            columns_y = ["open", "high", "low", "close"]
-        elif self.y_type in [BandType.BAND_2, BandType.BAND_2_1]:
-            columns_y = ["low", "high"]
-        elif self.y_type == BandType.BAND_5:
-            columns_y = ["open", "high", "low", "close", "volume"]
+    def get_train_test_close_split_data(
+        self,
+    ) -> tuple[
+        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
+        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
+    ]:
+        assert self.train_prev_close.ndim == 1, "train_prev_close is not 1D"
+        assert self.test_prev_close.ndim == 1, "test_prev_close is not 1D"
 
         return (
-            df_i[columns_x],
-            df_o[columns_y],
-            prev_close[["real_close"]],
+            (self.train_x_data, self.train_y_data, self.train_prev_close),
+            (self.test_x_data, self.test_y_data, self.test_prev_close),
         )
 
 
@@ -297,18 +317,20 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     elif io_type == IODataType.OUTPUT_DATA:
         points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_2_ND
 
+    assert len(array) % points_in_each_day == 0, "Array length is not divisible by points_in_each_day"
+
     if band_type == BandType.BAND_4:
-        assert len(array) % (points_in_each_day * 4) == 0, "Array length is not divisible by 4 * points_in_each_day"
+        assert array.shape[1] == 4, "Array.shape[1] is not equal to 4 "
 
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 4)
 
     elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
-        assert len(array) % (points_in_each_day * 2) == 0, "Array length is not divisible by 2 * points_in_each_day"
+        assert array.shape[1] == 2, "Array.shape[1] is not equal to 2 "
 
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 2)
 
     elif band_type == BandType.BAND_5:
-        assert len(array) % (points_in_each_day * 5) == 0, "Array length is not divisible by 5 * points_in_each_day"
+        assert array.shape[1] == 5, "Array.shape[1] is not equal to 5 "
 
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 5)
 
