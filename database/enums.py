@@ -80,6 +80,8 @@ class ModelLocationType(Enum):
     SAVED_DOUBLE = "training/models_saved_double"
     SAVED_TRIPLE = "training/models_saved_triple"
 
+    OLD = "training/models_z_old"
+
 
 class IODataType(Enum):
     INPUT_DATA = "input_data"
@@ -100,3 +102,8 @@ class ProcessedDataType(Enum):
     REAL = "real"
     EXPECTED_REWARD = "expected_reward"
     READ_FULL_REWARD = "read_full_reward"
+
+
+class TickerDataType(Enum):
+    TRAINING = "training"
+    CLEANED = "cleaned"
