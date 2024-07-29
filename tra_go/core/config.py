@@ -24,7 +24,7 @@ class GlobalConfig(BaseSettings):
 
     FLAVOUR: EnvFlavour = Field(default=EnvFlavour.dev)
 
-    PROJECT_NAME: str = Field(default="helios")
+    PROJECT_NAME: str = Field(default="tra_go")
 
     API_PREFIX: str = "/api"
     VERSION: str = "1.0"
@@ -45,29 +45,8 @@ class GlobalConfig(BaseSettings):
 
     DEBUG: bool = Field(default=False)
     LOGGING_LEVEL: int = logging.DEBUG if DEBUG else logging.INFO
-    RELOAD: bool = False
 
     AUTH_SECRET: str
-
-    REDIS_HOST: str
-    REDIS_PORT: int
-
-    AWS_ACCESS_KEY_ID: str
-    AWS_SECRET_ACCESS_KEY: str
-    AWS_ACCOUNT_ID: int
-    AWS_REGION: str
-    S3_BUCKET: str
-
-    TZ: str
-
-    CREATE_TABLES: bool
-
-    HERMES_POST_EVENT_URL: str
-    HERMES_POST_SYSTEM_EVENT_URL: str
-
-    SEND_EVENTS: bool = True
-
-    KRONOS_URL: str
 
     PROFILING_ENABLED: bool = False
 
@@ -77,7 +56,7 @@ class GlobalConfig(BaseSettings):
 class DevConfig(GlobalConfig):
     """Development configurations."""
 
-    RELOAD: bool = True
+    DEBUG: bool = True
 
 
 class StageConfig(GlobalConfig):
