@@ -114,8 +114,7 @@ class CustomEvaluation:
         y_data_real_try = round_to_nearest_0_05(self.y_data * self.prev_close[:, np.newaxis, np.newaxis])
 
         self.function_make_win_graph(
-            # y_true=self.y_data_real,
-            y_true=y_data_real_try,
+            y_true=self.y_data_real,
             y_pred=self.y_pred_real,
             x_close=x_last_zone_close_real,
         )
@@ -226,7 +225,7 @@ class CustomEvaluation:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
+        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_model_worthiness()
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
@@ -258,7 +257,7 @@ class CustomEvaluation:
         win_percent_str: str = "{:.2f}".format(fraction_win * 100)
 
         average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
-        # self.is_model_worth_double_saving = self.is_model_worth_double_saving and fraction_average_in > 0.5
+        self.is_model_worth_double_saving &= fraction_average_in > 0.25
 
         cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
 
