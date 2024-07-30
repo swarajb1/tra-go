@@ -84,17 +84,16 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
     correct_trends = _get_correct_trends(y_true, y_pred)
 
     trend_error_win = tf.reduce_mean(
-        tf.cast(band_inside, dtype=tf.float32)
-        * (1 - tf.cast(correct_trends, dtype=tf.float32))
+        (1 - (tf.cast(band_inside, dtype=tf.float32) * tf.cast(correct_trends, dtype=tf.float32)))
         * tf.abs(max_true - min_true),
     )
 
     trend_error_win_pred_error = tf.reduce_mean(
         (
-            tf.cast(band_inside, dtype=tf.float32) * tf.abs(max_true - min_true)
+            tf.abs(max_true - min_true)
             - (
                 tf.cast(band_inside, dtype=tf.float32)
-                * (1 - tf.cast(correct_trends, dtype=tf.float32))
+                * tf.cast(correct_trends, dtype=tf.float32)
                 * tf.abs(max_pred - min_pred)
             )
         ),
