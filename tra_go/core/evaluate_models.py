@@ -2,7 +2,7 @@ import os
 import time
 
 import training_zero as an
-from training_zero import DataLoader
+from data_loader import DataLoader
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
 
@@ -119,15 +119,22 @@ def evaluate_models(
         Y_train_data_real, Y_test_data_real = data_loader.get_real_y_data()
 
         if model_y_type == BandType.BAND_2_1 and model_x_type == BandType.BAND_4:
-            (
-                (X_train, Y_train, train_prev_close),
-                (X_test, Y_test, test_prev_close),
-            ) = an.train_test_split_lh(
-                data_df=df,
-                test_size=TEST_SIZE,
-                x_type=model_x_type,
-                interval=interval_from_model,
-            )
+            train_prev_close, test_prev_close = data_loader.get_prev_close_data()
+
+            (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
+
+            # (
+            #     (X_train, Y_train, Y_train_full, train_prev_close),
+            #     (X_test, Y_test, Y_test_full, test_prev_close),
+            # ) = an.train_test_split_lh(
+            #     data_df=df,
+            #     test_size=TEST_SIZE,
+            #     x_type=model_x_type,
+            #     interval=interval_from_model,
+            # )
+
+            # Y_train = Y_train_full
+            # Y_test = Y_test_full
 
         else:
             (
@@ -146,6 +153,7 @@ def evaluate_models(
         training_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_train,
+            Y_data=Y_train,
             Y_data_real=Y_train_data_real,
             prev_close=train_prev_close,
             x_type=model_x_type,
@@ -159,6 +167,7 @@ def evaluate_models(
         valid_data_custom_evaluation = evaluation_class(
             ticker=model_ticker,
             X_data=X_test,
+            Y_data=Y_test,
             Y_data_real=Y_test_data_real,
             prev_close=test_prev_close,
             x_type=model_x_type,
@@ -207,18 +216,21 @@ def evaluate_models(
 
     print("\n\nMODELS NOT WORTH SAVING:")
     for model_file_name in models_worth_not_saving:
-        print("\t", model_file_name, "\t" * 2, "\033[91m--\033[0m")
+        print("\t", model_file_name, "\t" * 2, " \033[91m--\033[0m ")
 
     print("\n\nMODELS WORTH SAVING:")
     for model_file_name in models_worth_saving:
-        print("\t", model_file_name, "\t" * 2, "\033[92m++\033[0m")
+        print("\t", model_file_name, "\t" * 2, " \033[92m++\033[0m ")
 
     print("\n\nMODELS WORTH DOUBLE SAVING:")
     for model_file_name in models_worth_double_saving:
-        print("\t", model_file_name, "\t" * 2, "\033[92m++++\033[0m")
+        print("\t", model_file_name, "\t" * 2, " \033[92m++++\033[0m ")
 
     print("\n\nMODELS WORTH TRIPLE SAVING:")
     for model_file_name in models_worth_triple_saving:
-        print("\t", model_file_name, "\t" * 2, "\033[92m+++++++++++++++\033[0m")
+        print("\t", model_file_name, "\t" * 2, " \033[92m+++++++++++++++\033[0m ")
 
     print("\n\n")
+
+    # add code to move files into one/double/triple saving folders
+    # on prompt if written 'MOVE'
