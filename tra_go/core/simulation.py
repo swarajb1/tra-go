@@ -14,8 +14,8 @@ load_dotenv()
 
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
-PERCENT_250_DAYS: int = -10
-PERCENT_250_DAYS_WORTH_SAVING: int = 25
+PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
+PERCENT_250_DAYS_WORTH_SAVING: int = 5
 
 
 class Simulation:
@@ -65,6 +65,7 @@ class Simulation:
         print("simulation started....")
 
         for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
+            # for RISK_TO_REWARD_RATIO in [0.5]:
             number_of_days: int = self.real_price_arr.shape[0]
 
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
@@ -175,11 +176,11 @@ class Simulation:
             # print("-" * 30)
             # print("\n\n")
 
-            count_trade_taken: int = np.sum(trade_taken_list)
-            count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
-            count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
-            count_completed_at_closing: int = np.sum(completed_at_closing_list)
-            count_expected_trades: int = np.sum(expected_trades_list)
+            # count_trade_taken: int = np.sum(trade_taken_list)
+            # count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
+            # count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
+            # count_completed_at_closing: int = np.sum(completed_at_closing_list)
+            # count_expected_trades: int = np.sum(expected_trades_list)
 
             # print("number_of_days\t\t\t", number_of_days, "\n")
 
@@ -198,15 +199,15 @@ class Simulation:
 
             # print("percent_expected_trades\t\t", "{:.2f}".format(count_expected_trades / number_of_days * 100), " %")
 
-            number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
+            # number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
 
             # print("\npercent_win_trades\t\t", "{:.2f}".format(number_of_win_trades / number_of_days * 100), " %")
 
             new_invested_day_wise_list = np.copy(invested_day_wise_list)
             new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
 
-            arr = np.array(wins_day_wise_list) * 100
-            arr_real = arr / new_invested_day_wise_list
+            arr = np.array(wins_day_wise_list)
+            arr_real_percent = (arr / new_invested_day_wise_list) * 100
 
             # plt.figure(figsize=(16, 9))
 
@@ -224,7 +225,7 @@ class Simulation:
 
             # plt.savefig(filename, dpi=300, bbox_inches="tight")
 
-            avg_win_per_day = np.mean(arr_real / 100)
+            avg_win_per_day = np.mean(arr_real_percent / 100)
 
             days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
 
@@ -246,7 +247,7 @@ class Simulation:
                     self.is_worth_double_saving = True
 
             if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
-                self.real_data_for_analysis = arr_real
+                self.real_data_for_analysis = arr_real_percent
                 self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
                 self.stoploss_rrr_for_analysis = 1
 
@@ -259,9 +260,9 @@ class Simulation:
                 "{:.2f}".format(RISK_TO_REWARD_RATIO),
                 "\t",
                 "250_days_s: ",
-                percent_val if days_250 > PERCENT_250_DAYS else "\t   --",
+                percent_val if days_250 > PERCENT_250_DAYS_MIN_THRESHOLD else "\t   --",
                 "\t" * 2,
-                "\033[92m++\033[0m" if self.is_worth_saving else "",
+                " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
             )
 
     def display_stats(self) -> None:
@@ -274,12 +275,11 @@ class Simulation:
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
-        print("\n\nCapture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
+        print("\n\n", "Count: \t\t\t", np.size(self.real_data_for_analysis))
+        print("Capture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
 
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
-
-        print("Count: \t\t\t\t", np.size(sorted_arr))
 
         # Central Tendency
         mean = np.mean(sorted_arr)
@@ -289,23 +289,23 @@ class Simulation:
             self.expected_mean = mean
 
         median = np.median(sorted_arr)
-        std_deviation = np.std(sorted_arr)
+        np.std(sorted_arr)
 
-        print("Mean: \t\t\t\t", round_num_str(mean, 4))
-        print("Median: \t\t\t", round_num_str(median, 4))
+        print("Mean: \t\t\t\t", round_num_str(mean, 2))
+        print("Median: \t\t\t", round_num_str(median, 2))
 
         # Dispersion
         Q3, Q1 = np.percentile(sorted_arr, [75, 25])
-        iq_range = Q3 - Q1
-        print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 4))
-        print("Standard Deviation: \t\t", round_num_str(std_deviation, 4))
-        print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 4))
-        print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 4))
-        print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 4))
+        Q3 - Q1
+        # print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 2))
+        # print("Standard Deviation: \t\t", round_num_str(std_deviation, 2))
+        print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 2))
+        print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
+        # print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 2))
 
-        coefficient_of_variation = std_deviation / mean * 100
+        # coefficient_of_variation = std_deviation / mean * 100
 
-        print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
+        # print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
 
         # self._log_statistics_extra(self, sorted_arr)
 
@@ -322,8 +322,8 @@ class Simulation:
         else:
             print("Z-Scores: \t\t\t", [round_num_str(x, 3) for x in z_scores])
 
-        print("Kurtosis: \t\t\t", round_num_str(kurtosis(sorted_arr), 4))
-        print("Skewness: \t\t\t", round_num_str(skew(sorted_arr), 4))
+        print("Kurtosis: \t\t\t", round_num_str(kurtosis(sorted_arr), 2))
+        print("Skewness: \t\t\t", round_num_str(skew(sorted_arr), 2))
 
         # print("Ranks: \t\t\t\t", ranks)
 
@@ -375,5 +375,12 @@ class Simulation:
 
         self.real_full_reward_mean = np.mean(real_full_reward_percent_day_wise_list)
 
-    def get_is_worth_values(self) -> tuple[bool, bool]:
+    def get_model_worthiness(self) -> tuple[bool, bool]:
+        """Returns a tuple indicating the worthiness of the model.
+
+        Returns:
+            A tuple of two boolean values:
+            - The first value indicates whether the model is worth saving.
+            - The second value indicates whether the model is worth double saving.
+        """
         return self.is_worth_saving, self.is_worth_double_saving
