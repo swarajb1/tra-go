@@ -27,6 +27,7 @@ class CustomEvaluation:
         ticker: TickerOne,
         X_data: NDArray[np.float64],
         Y_data: NDArray[np.float64],
+        Y_data_real: NDArray[np.float64],
         prev_close: NDArray[np.float64],
         x_type: BandType,
         y_type: BandType,
@@ -34,14 +35,13 @@ class CustomEvaluation:
         now_datetime: str,
         model_location_type: ModelLocationType,
         model_num: int,
-        skip_first_percentile: float = 0.18,
-        skip_last_percentile: float = 0.18,
-        safety_factor=0.8,
     ):
         self.ticker = ticker
 
         self.X_data = X_data
         self.Y_data = Y_data
+        self.y_data_real = Y_data_real
+
         self.prev_close = prev_close.reshape(len(prev_close))
 
         self.x_type = x_type
@@ -289,7 +289,7 @@ class CustomEvaluation:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
+        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_model_worthiness()
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
