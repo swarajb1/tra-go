@@ -7,6 +7,7 @@ from datetime import datetime
 import keras_model as km
 import psutil
 import training_zero as an
+from data_loader import DataLoader
 from keras.callbacks import ModelCheckpoint, TensorBoard, TerminateOnNaN
 
 import tra_go.band_2.keras_model_band_2 as km_2
@@ -32,7 +33,7 @@ Y_TYPE: BandType = BandType.BAND_2_1
 
 # (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN)
 
-TICKER: TickerOne = TickerOne.RELIANCE
+TICKER: TickerOne = TickerOne.ICICIBANK
 INTERVAL: str = "1m"
 INTERVAL_1: IntervalType = IntervalType.MIN_1
 
@@ -303,15 +304,27 @@ def main_training():
         )
 
     elif Y_TYPE == BandType.BAND_2_1:
-        (
-            (X_train, Y_train, train_prev_close),
-            (X_test, Y_test, test_prev_close),
-        ) = an.train_test_split_lh(
-            data_df=df,
-            test_size=TEST_SIZE,
+        data_loader = DataLoader(
+            ticker=TICKER,
+            interval=INTERVAL_1,
             x_type=X_TYPE,
-            interval=INTERVAL,
+            y_type=Y_TYPE,
+            test_size=TEST_SIZE,
         )
+
+        # (
+        #     (X_train, Y_train, Y_train_full, train_prev_close),
+        #     (X_test, Y_test, Y_test_full, test_prev_close),
+        # ) = an.train_test_split_lh(
+        #     data_df=df,
+        #     test_size=TEST_SIZE,
+        #     x_type=X_TYPE,
+        #     interval=INTERVAL,
+        # )
+
+        train_prev_close, test_prev_close = data_loader.get_prev_close_data()
+
+        (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
         if IS_TRAINING_MODEL and not PREV_MODEL_TRAINING:
             now_datetime = datetime.now().strftime("%Y-%m-%d %H-%M")
@@ -324,6 +337,7 @@ def main_training():
 
             model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
+            print("model input shape\t", model.input_shape)
             print("model output shape\t", model.output_shape)
 
             log_dir: str = os.path.join(
@@ -453,6 +467,7 @@ def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "true":
             main_training()
+            # evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=2)
 
         elif sys.argv[1] == "training_new":
             evaluate_models(
@@ -465,16 +480,20 @@ def main():
             evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=6)
 
         elif sys.argv[1] == "saved":
-            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=6)
+            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=2)
 
         elif sys.argv[1] == "saved_double":
-            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=6)
+            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=12)
 
         elif sys.argv[1] == "saved_triple":
             evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=6)
 
+        elif sys.argv[1] == "old":
+            evaluate_models(model_location_type=ModelLocationType.OLD, number_of_models=6)
+
     else:
         main_training()
+        # evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=2)
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
 
