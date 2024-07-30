@@ -64,15 +64,22 @@ class DataLoader:
 
     def _get_full_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
         # file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
+        file_path: str
 
-        file_path = os.path.join(
-            os.getcwd(),
-            f"data_{ticker_data_type.value}",
-            self.interval.value,
-            f"{self.ticker.value} - {self.interval.value}.csv",
-        )
+        if ticker_data_type == TickerDataType.TRAINING:
+            file_path = os.path.join(
+                os.getcwd(),
+                f"data_{ticker_data_type.value}",
+                f"{self.ticker.value} - {self.interval.value}.csv",
+            )
 
-        os.getcwdb
+        elif ticker_data_type == TickerDataType.REAL_AND_CLEANED:
+            file_path = os.path.join(
+                os.getcwd(),
+                f"data_{ticker_data_type.value}",
+                self.interval.value,
+                f"{self.ticker.value} - {self.interval.value}.csv",
+            )
 
         df = pd.read_csv(file_path)
 
@@ -237,6 +244,10 @@ class DataLoader:
         train_y = by_date_df_array(df_train_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
         test_y = by_date_df_array(df_test_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
 
+        if self.y_type == BandType.BAND_2_1:
+            train_y = df_data_into_3_feature_array(train_y)
+            test_y = df_data_into_3_feature_array(test_y)
+
         self.train_x_data = train_x
         self.train_y_data = train_y
 
@@ -259,32 +270,40 @@ class DataLoader:
 
             prev_close.append(df.iloc[day_start_index, df.columns.get_loc("real_close")])
 
-        self.train_prev_close = prev_close[: int(number_of_days * (1 - self.test_size))]
-        self.test_prev_close = prev_close[int(number_of_days * (1 - self.test_size)) :]
+        self.train_prev_close = np.array(prev_close[: int(number_of_days * (1 - self.test_size))])
+        self.test_prev_close = np.array(prev_close[int(number_of_days * (1 - self.test_size)) :])
 
-        assert len(self.train_prev_close) == len(
-            self.train_x_data.shape[0],
-        ), "train_prev_close and train_x_data.shape[0] are not equal"
+        assert (
+            self.train_prev_close.shape[0] == self.train_x_data.shape[0]
+        ), "train_prev_close length and train_x_data.shape[0] are not equal"
 
-        assert len(self.test_prev_close) == len(
-            self.test_x_data.shape[0],
-        ), "test_prev_close and test_x_data.shape[0] are not equal"
+        assert (
+            self.test_prev_close.shape[0] == self.test_x_data.shape[0]
+        ), "test_prev_close length and test_x_data.shape[0] are not equal"
 
         return
 
-    def get_train_test_close_split_data(
+    def get_train_test_split_data(
         self,
-    ) -> tuple[
-        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
-        tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
-    ]:
+    ) -> tuple[tuple[NDArray[np.float64], NDArray[np.float64]], tuple[NDArray[np.float64], NDArray[np.float64]]]:
+        assert (
+            self.train_x_data.shape[0] == self.train_y_data.shape[0]
+        ), "train_x_data and train_y_data  .shape[0] (days) are not equal"
+
+        assert (
+            self.test_x_data.shape[0] == self.test_y_data.shape[0]
+        ), "test_x_data and test_y_data  .shape[0] (days) are not equal"
+
+        return (
+            (self.train_x_data, self.train_y_data),
+            (self.test_x_data, self.test_y_data),
+        )
+
+    def get_prev_close_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         assert self.train_prev_close.ndim == 1, "train_prev_close is not 1D"
         assert self.test_prev_close.ndim == 1, "test_prev_close is not 1D"
 
-        return (
-            (self.train_x_data, self.train_y_data, self.train_prev_close),
-            (self.test_x_data, self.test_y_data, self.test_prev_close),
-        )
+        return (self.train_prev_close, self.test_prev_close)
 
 
 def check_gaps(data: NDArray[np.float64]) -> None:
@@ -322,16 +341,32 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     if band_type == BandType.BAND_4:
         assert array.shape[1] == 4, "Array.shape[1] is not equal to 4 "
 
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 4)
-
     elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
         assert array.shape[1] == 2, "Array.shape[1] is not equal to 2 "
-
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 2)
 
     elif band_type == BandType.BAND_5:
         assert array.shape[1] == 5, "Array.shape[1] is not equal to 5 "
 
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 5)
+    num_feature: int = array.shape[1]
+
+    res = array.reshape(len(array) // points_in_each_day, points_in_each_day, num_feature)
+
+    return res
+
+
+def df_data_into_3_feature_array(arr: NDArray) -> NDArray:
+    res = np.zeros((arr.shape[0], 3))
+
+    assert arr.shape[2] == 2, "Array.shape[2] is not equal to 2, the data is not coming in the form of BAND_2"
+
+    min_values = np.min(arr[:, :, 0], axis=1)
+    max_values = np.max(arr[:, :, 1], axis=1)
+
+    # buy trend when max comes after min
+    is_buy_trend = np.argmax(arr[:, :, 1], axis=1) > np.argmin(arr[:, :, 0], axis=1)
+
+    res[:, 0] = min_values
+    res[:, 1] = max_values
+    res[:, 2] = is_buy_trend.astype(int)
 
     return res
