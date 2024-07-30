@@ -26,6 +26,8 @@ class CoreEvaluation:
         model_location_type: ModelLocationType,
         model_num: int,
     ):
+        assert Y_data_real.ndim == 3, "Y Real Data array must be 3-dimensional"
+
         self.ticker = ticker
 
         self.now_datetime = now_datetime
@@ -111,7 +113,7 @@ class CoreEvaluation:
                 if next_tick_min <= prev_tick_close <= next_tick_max:
                     continue
 
-                # ohlc
+                # ohlc (open, high, low, close)
                 # gap up
                 if prev_tick_close < next_tick_min:
                     # next tick low and open = prev tick close
