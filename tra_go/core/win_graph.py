@@ -1,24 +1,23 @@
+import matplotlib.pyplot as plt
 import numpy as np
+from core.simulation import Simulation
 from numpy.typing import NDArray
 
 
 class WinGraph:
     def __init__(
         self,
-        y_real: NDArray,
-        y_pred: NDArray,
+        y_real: NDArray[np.float64],
+        y_pred: NDArray[np.float64],
     ):
-        self.y_data_real: NDArray = y_real
-        self.y_pred_real: NDArray = y_pred
+        assert y_real.ndim == 3, "Y Real Data array must be 3-dimensional"
+
+        self.y_data_real: NDArray[np.float64] = y_real
+        self.y_pred_real: NDArray[np.float64] = y_pred
 
         self.make_win_graph()
 
-    def make_win_graph(
-        self,
-        y_true: NDArray,
-        y_pred: NDArray,
-        x_close: NDArray,
-    ):
+    def make_win_graph(self, y_true: NDArray, y_pred: NDArray, x_close: NDArray) -> None:
         min_true: NDArray = np.min(y_true[:, :, 0], axis=1)
         max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
@@ -102,7 +101,7 @@ class WinGraph:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_is_worth_values()
+        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_model_worthiness()
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
