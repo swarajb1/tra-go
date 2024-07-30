@@ -90,7 +90,7 @@ class IODataType(Enum):
 
 class RequiredDataType(Enum):
     TRAINING = "training"
-    REAL = "real"
+    REAL = "real_and_cleaned"
 
 
 class OrderType(Enum):
@@ -101,9 +101,9 @@ class OrderType(Enum):
 class ProcessedDataType(Enum):
     REAL = "real"
     EXPECTED_REWARD = "expected_reward"
-    READ_FULL_REWARD = "read_full_reward"
+    REAL_FULL_REWARD = "real_full_reward"
 
 
 class TickerDataType(Enum):
     TRAINING = "training"
-    CLEANED = "cleaned"
+    REAL_AND_CLEANED = "cleaned"
