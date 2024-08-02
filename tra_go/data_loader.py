@@ -196,11 +196,11 @@ class DataLoader:
         return
 
     def get_real_y_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        print("\ntrain_data - y real")
-        check_gaps(self.train_y_real_data)
+        # print("\ntrain_data - y real")
+        # check_gaps(self.train_y_real_data)
 
-        print("test_data - y real")
-        check_gaps(self.test_y_real_data)
+        # print("test_data - y real")
+        # check_gaps(self.test_y_real_data)
 
         return self.train_y_real_data, self.test_y_real_data
 
@@ -270,8 +270,10 @@ class DataLoader:
 
             prev_close.append(df.iloc[day_start_index, df.columns.get_loc("real_close")])
 
-        self.train_prev_close = np.array(prev_close[: int(number_of_days * (1 - self.test_size))])
-        self.test_prev_close = np.array(prev_close[int(number_of_days * (1 - self.test_size)) :])
+        number_of_days_train: int = int(number_of_days * (1 - self.test_size))
+
+        self.train_prev_close = np.array(prev_close[:number_of_days_train])
+        self.test_prev_close = np.array(prev_close[number_of_days_train:])
 
         assert (
             self.train_prev_close.shape[0] == self.train_x_data.shape[0]
