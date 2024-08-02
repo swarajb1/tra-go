@@ -81,6 +81,7 @@ class ModelLocationType(Enum):
     SAVED_TRIPLE = "training/models_saved_triple"
 
     OLD = "training/models_z_old"
+    DISCARDED = "training/models_zz_discarded"
 
 
 class IODataType(Enum):
