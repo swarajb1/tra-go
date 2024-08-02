@@ -51,7 +51,7 @@ class CustomEvaluation:
         self.model_num = model_num
         self.model_location_type = model_location_type
 
-        self.safety_factor = SAFETY_FACTOR
+        # ------------------------------------------
 
         self.number_of_days = self.x_data.shape[0]
 
@@ -59,6 +59,8 @@ class CustomEvaluation:
         self.is_model_worth_double_saving: bool = False
 
         self.win_250_days: float = 0
+
+        self.win_pred_capture_percent: float = 0
 
         if self.test_size > 0:
             print("TRAINING data now ...")
@@ -111,7 +113,9 @@ class CustomEvaluation:
         self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_close)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_close)
 
-        y_data_real_try = round_to_nearest_0_05(self.y_data * self.prev_close[:, np.newaxis, np.newaxis])
+        self.correct_pred_values()
+
+        self.apply_safety_factor_on_pred()
 
         self.function_make_win_graph(
             y_true=self.y_data_real,
@@ -121,20 +125,35 @@ class CustomEvaluation:
 
         return
 
-    def correct_pred_values(self, y_arr: NDArray) -> NDArray:
-        res = y_arr.copy()
+    def apply_safety_factor_on_pred(self) -> None:
+        y_pred_average: NDArray = (self.y_pred_real[:, 0] + self.y_pred_real[:, 1]) / 2
+
+        y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]
+
+        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 * SAFETY_FACTOR
+        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 * SAFETY_FACTOR
+
+        self.y_pred_real[:, 0] = round_to_nearest_0_05(new_y_pred_low)
+        self.y_pred_real[:, 1] = round_to_nearest_0_05(new_y_pred_high)
+
+        return
+
+    def correct_pred_values(self):
         # step 1 - correct /exchange low/high values if needed., for each candle
 
-        for i_day in range(res.shape[0]):
-            for i_tick in range(res.shape[1]):
-                if res[i_day, i_tick, 0] > res[i_day, i_tick, 1]:
-                    # (low > high)
-                    res[i_day, i_tick, 0], res[i_day, i_tick, 1] = (
-                        res[i_day, i_tick, 1],
-                        res[i_day, i_tick, 0],
-                    )
+        for i_day in range(self.y_pred_real.shape[0]):
+            if self.y_pred_real[i_day, 0] > self.y_pred_real[i_day, 1]:
+                # (low > high)
 
-        return res
+                (
+                    self.y_pred_real[i_day, 0],
+                    self.y_pred_real[i_day, 1],
+                ) = (
+                    self.y_pred_real[i_day, 1],
+                    self.y_pred_real[i_day, 0],
+                )
+
+        return
 
     def function_make_win_graph(
         self,
@@ -150,7 +169,7 @@ class CustomEvaluation:
 
         buy_order_pred: NDArray[np.bool_] = y_pred[:, 2].astype(bool)
 
-        valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
+        valid_pred: NDArray[np.bool_] = np.all([max_pred > min_pred], axis=0)
 
         # step - using last close price of x data, and change min_pred and max_pred values, because of hypothesis that, the close price will be in the band
         close_below_band: NDArray = np.all([x_close <= min_pred], axis=0)
@@ -179,13 +198,16 @@ class CustomEvaluation:
                     min_pred[i] = x_close[i] - band_val
                     max_pred[i] = x_close[i]
 
-        pred_average: NDArray = (max_pred + min_pred) / 2
+                del band_val
+        del i
 
-        valid_min: NDArray = np.all([min_pred > min_true], axis=0)
+        pred_average: NDArray[np.float64] = (max_pred + min_pred) / 2
 
-        valid_max: NDArray = np.all([max_true > max_pred], axis=0)
+        valid_min: NDArray[np.bool_] = np.all([min_pred > min_true], axis=0)
 
-        min_inside: NDArray = np.all(
+        valid_max: NDArray[np.bool_] = np.all([max_true > max_pred], axis=0)
+
+        min_inside: NDArray[np.bool_] = np.all(
             [
                 max_true > min_pred,
                 valid_min,
@@ -193,7 +215,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        max_inside: NDArray = np.all(
+        max_inside: NDArray[np.bool_] = np.all(
             [
                 max_pred > min_true,
                 valid_max,
@@ -201,7 +223,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        wins: NDArray = np.all(
+        wins: NDArray[np.bool_] = np.all(
             [
                 min_inside,
                 max_inside,
@@ -210,7 +232,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        average_in: NDArray = np.all(
+        average_in: NDArray[np.bool_] = np.all(
             [
                 max_true > pred_average,
                 pred_average > min_true,
@@ -237,29 +259,26 @@ class CustomEvaluation:
 
         fraction_win: float = np.mean(wins.astype(np.float64))
 
-        all_days_pro_arr: NDArray = (max_pred / min_pred) * wins.astype(np.float64)
-        all_days_pro_arr_non_zero: NDArray = all_days_pro_arr[all_days_pro_arr != 0]
+        all_days_pro_arr: NDArray[np.float64] = (max_pred / min_pred) * wins.astype(np.float64)
+        all_days_pro_arr_non_zero: NDArray[np.float64] = all_days_pro_arr[all_days_pro_arr != 0]
 
-        all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
+        all_days_pro_cumulative_value: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: NDArray = (max_pred / min_pred - 1) * wins.astype(
-            np.float64,
-        )
+        pred_capture_arr: NDArray = (max_pred - min_pred) * wins.astype(np.float64)
 
-        total_capture_possible_arr: NDArray = max_true / min_true - 1
+        total_capture_possible_arr: NDArray = max_true - min_true
 
-        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
-            total_capture_possible_arr,
-        )
+        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
 
         pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+
+        self.win_pred_capture_percent = float(pred_capture_percent_str)
 
         win_percent_str: str = "{:.2f}".format(fraction_win * 100)
 
         average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
-        self.is_model_worth_double_saving &= fraction_average_in > 0.25
 
-        cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
+        cdgr: float = pow(all_days_pro_cumulative_value, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
@@ -268,14 +287,25 @@ class CustomEvaluation:
 
         self.win_250_days = round(pro_250 * 100, 2)
 
-        print("\n\n")
-        print(
-            "Is Model Worth Double Saving\t",
-            "\033[92m++++\033[0m" if self.is_model_worth_double_saving else "\033[91m----\033[0m",
-        )
+        # special condition, later make this with 'and' for worth double saving
+
+        self.is_model_worth_saving |= fraction_win > 0.4
+
+        self.is_model_worth_double_saving |= self.win_pred_capture_percent > 15
+
+        if self.is_model_worth_saving:
+            print("\n\nIs Model Worth Saving\t \033[92m+++\033[0m ")
+
+        if self.is_model_worth_double_saving:
+            print("\n\nIs Model Worth Double Saving\t \033[92m++++\033[0m ")
+
+        # print(
+        #     "Is Model Worth Double Saving\t",
+        #     "\033[92m++++\033[0m" if self.is_model_worth_double_saving else "\033[91m----\033[0m",
+        # )
 
         print("\n\n")
-        print("Valid Pred:\t\t\t", round(fraction_valid_pred * 100, 2), " %")
+        # print("Valid Pred:\t\t\t", round(fraction_valid_pred * 100, 2), " %")
         print("Max Inside:\t\t\t", round(fraction_max_inside * 100, 2), " %")
         print("Min Inside:\t\t\t", round(fraction_min_inside * 100, 2), " %\n")
         print("Average In:\t\t\t", average_in_percent_str, " %\n")
@@ -283,11 +313,13 @@ class CustomEvaluation:
         print("Win Days Perc:\t\t\t", win_percent_str, " %")
         print("Pred Capture:\t\t\t", pred_capture_percent_str, " %")
 
-        print("Per Day:\t\t\t", round(cdgr * 100, 4), " %")
+        print("Per Day:\t\t\t", round(cdgr * 100, 3), " %")
         print("250 days:\t\t\t", pro_250_str)
+
         print("\n")
-        print("Leverage:\t\t\t", pro_250_5_str)
-        print("Datetime:\t\t\t", self.now_datetime)
+        # print("Leverage:\t\t\t", pro_250_5_str)
+        # print("Datetime:\t\t\t", self.now_datetime)
+
         # print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
         # print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
         # print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)

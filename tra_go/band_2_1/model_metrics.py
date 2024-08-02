@@ -7,13 +7,19 @@ def loss_function(y_true, y_pred):
         metric_rmse(y_true[:, :2], y_pred[:, :2])
         + metric_abs(y_true[:, :2], y_pred[:, :2]) / 3
         + metric_average_in(y_true, y_pred) / 3
-        + metric_loss_comp_2(y_true, y_pred)
+        + metric_loss_comp_2(y_true, y_pred) * 3
     )
 
 
 def metric_average_in(y_true, y_pred):
     average_pred = (y_pred[:, 0] + y_pred[:, 1]) / 2
     average_true = (y_true[:, 0] + y_true[:, 1]) / 2
+
+    # return (
+    #     metric_rmse(average_true, average_pred)
+    #     + metric_rmse(y_true[:, 0], y_pred[:, 0])
+    #     + metric_rmse(y_true[:, 1], y_pred[:, 1])
+    # )
 
     return (
         metric_abs(average_true, average_pred)
@@ -22,25 +28,25 @@ def metric_average_in(y_true, y_pred):
     )
 
 
-def _get_band_inside(y_true, y_pred) -> tf.Tensor:
-    is_valid_pred: tf.Tensor = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+def _get_band_inside(y_true, y_pred):
+    is_valid_pred = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
 
-    is_max_pred_less_than_max_true: tf.Tensor = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    is_max_pred_less_than_max_true = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
 
-    is_min_pred_more_than_min_true: tf.Tensor = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_min_pred_more_than_min_true = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
 
-    band_inside: tf.Tensor = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
+    band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
     return band_inside
 
 
-def _get_correct_trends(y_true, y_pred) -> tf.Tensor:
+def _get_correct_trends(y_true, y_pred):
     correct_trends = tf.equal(y_pred[:, 2], y_true[:, 2])
 
     return correct_trends
 
 
-def metric_correct_trends_full(y_true, y_pred) -> tf.Tensor:
+def metric_correct_trends_full(y_true, y_pred):
     correct_trends = tf.equal(y_pred[:, 2], y_true[:, 2])
 
     correct_win_trend = tf.reduce_mean(tf.cast(correct_trends, dtype=tf.float32))
@@ -48,20 +54,20 @@ def metric_correct_trends_full(y_true, y_pred) -> tf.Tensor:
     return correct_win_trend * 100
 
 
-def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
+def metric_loss_comp_2(y_true, y_pred):
     min_true = y_true[:, 0]
     max_true = y_true[:, 1]
 
     min_pred = y_pred[:, 0]
     max_pred = y_pred[:, 1]
 
-    is_valid_pred: tf.Tensor = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+    is_valid_pred = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
 
-    is_max_pred_less_than_max_true: tf.Tensor = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    is_max_pred_less_than_max_true = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
 
-    is_min_pred_more_than_min_true: tf.Tensor = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_min_pred_more_than_min_true = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
 
-    band_inside: tf.Tensor = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
+    band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
     z_max_above_error = tf.reduce_mean(
         (1 - tf.cast(is_max_pred_less_than_max_true, dtype=tf.float32)) * tf.abs(max_true - max_pred),
@@ -105,8 +111,8 @@ def metric_loss_comp_2(y_true, y_pred) -> tf.Tensor:
         + z_min_below_error
         + win_amt_true_error * 2
         + win_amt_pred_error * 4
-        + trend_error_win * 8
-        + trend_error_win_pred_error * 16
+        + trend_error_win * 9
+        + trend_error_win_pred_error * 24
     )
 
 
