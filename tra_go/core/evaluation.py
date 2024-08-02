@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import numpy as np
 from keras.models import load_model
@@ -27,6 +28,7 @@ class CoreEvaluation:
         model_num: int,
     ):
         assert Y_data_real.ndim == 3, "Y Real Data array must be 3-dimensional"
+        assert Y_data_real.shape[2] == 4, "Y Real Data .shape[2] must be 4"
 
         self.ticker = ticker
 
@@ -46,13 +48,9 @@ class CoreEvaluation:
         self.test_size = test_size
 
         # --------------------------------------------------
-        # other attributes declared here
+        # other properties declared here
 
-        self.model_file_path: str
-
-        self.safety_factor = SAFETY_FACTOR
-
-        self.number_of_days = self.x_data.shape[0]
+        self.number_of_days: int = self.x_data.shape[0]
 
         self.is_model_worth_saving: bool = False
         self.is_model_worth_double_saving: bool = False
@@ -61,6 +59,7 @@ class CoreEvaluation:
 
         self._print_start_of_evaluation_message()
 
+        self.model_file_path: Path
         self._set_model_file_path()
 
         self._fill_gaps_in_y_real_data()
@@ -75,10 +74,14 @@ class CoreEvaluation:
     def _set_model_file_path(self) -> None:
         self.model_file_path = f"model - {self.now_datetime} - {self.x_type.value} - {self.y_type.value} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
 
-        file_path: str = os.path.join(self.model_location_type.value, self.model_file_path)
+        # file_path: str = os.path.join(self.model_location_type.value, self.model_file_path)
+        file_path: Path = Path(self.model_location_type.value) / self.model_file_path
+
+        Path.exists(file_path)
 
         # check this file exists or not
-        if not os.path.exists(file_path):
+        if not Path.exists(file_path):
+            # if not os.path.exists(file_path):
             raise ValueError(f"WARNING: file not found at: \n{file_path}\n")
 
         self.model_file_path = file_path
@@ -101,6 +104,7 @@ class CoreEvaluation:
         for day in range(self.y_data_real.shape[0]):
             for tick in range(self.y_data_real.shape[1]):
                 if tick == 0:
+                    # no adjustment for the first tick
                     continue
 
                 self.y_data_real[day, tick, 0] = self.y_data_real[day, tick, 1] = self.prev_close[day]
@@ -111,17 +115,19 @@ class CoreEvaluation:
                 next_tick_max = self.y_data_real[day, tick, 1]
 
                 if next_tick_min <= prev_tick_close <= next_tick_max:
+                    # no gap condition
                     continue
 
                 # ohlc (open, high, low, close)
-                # gap up
+
+                # type of gap - gap up
                 if prev_tick_close < next_tick_min:
                     # next tick low and open = prev tick close
 
                     self.y_data_real[day, tick, 0] = prev_tick_close
                     self.y_data_real[day, tick, 3] = prev_tick_close
 
-                # gap down
+                # type of gap - gap down
                 if prev_tick_close > next_tick_max:
                     # next tick high and open = prev tick close
 
