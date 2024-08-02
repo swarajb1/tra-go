@@ -11,7 +11,7 @@ TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
 def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
     if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1]:
-        raise ValueError("Invalid y_type")
+        raise ValueError(f"Invalid y_type: {y_type}")
 
     if y_type == BandType.BAND_4:
         from band_4.training_yf_band_4 import CustomEvaluation
@@ -39,6 +39,7 @@ def evaluate_models(
     model_location_type: ModelLocationType,
     number_of_models: int,
     newly_trained_models: bool = False,
+    move_files: bool = False,
 ) -> None:
     model_location_prefix: str = model_location_type.value
 
@@ -53,7 +54,7 @@ def evaluate_models(
     list_of_files = sorted(list_of_files, key=lambda x: x, reverse=newly_trained_models)
 
     if not list_of_files:
-        raise ValueError("\n\nNo models found in the folder: ", model_location_prefix)
+        raise ValueError(f"\n\nNo models found in the folder: {model_location_prefix}")
 
     if len(list_of_files) >= number_of_models:
         list_of_files = list_of_files[:number_of_models]
@@ -67,10 +68,11 @@ def evaluate_models(
     models_worth_not_saving: list[str] = []
 
     max_250_days_win_value: float = 0
+    max_win_pred_capture_percent_value: float = 0
 
-    for file in list_of_files:
+    for index, file in enumerate(list_of_files):
         print("\n" * 25, "*" * 280, "\n" * 4, sep="")
-        print("Evaluating model:\t", file)
+        print(f"{index+1}/{len(list_of_files)} - Evaluating model:\t{file}")
 
         model_x_type: BandType
         model_y_type: BandType
@@ -85,28 +87,34 @@ def evaluate_models(
             if band_type.value == x_type_str:
                 model_x_type = band_type
                 break
+        del band_type
+        del x_type_str
 
         y_type_str = file.split(" - ")[3]
         for band_type in BandType:
             if band_type.value == y_type_str:
                 model_y_type = band_type
                 break
+        del band_type
+        del y_type_str
 
         ticker_str = file.split(" - ")[4]
         for ticker in TickerOne:
             if ticker.name == ticker_str:
                 model_ticker = ticker
                 break
+        del ticker
+        del ticker_str
 
-        interval_from_model: str = "1m"
+        model_interval: IntervalType = IntervalType.MIN_1
 
         model_checkpoint_num_str = file.split(" - ")[5]
         if "modelCheckPoint" not in model_checkpoint_num_str:
-            raise ValueError("modelCheckpoint not found in file name")
+            raise ValueError(f"modelCheckpoint not found in file name:\n {file}")
 
         model_checkpoint_num = int(model_checkpoint_num_str.split("-")[1].split(".keras")[0])
 
-        df = an.get_data_all_df(ticker=model_ticker, interval=interval_from_model)
+        df = an.get_data_all_df(ticker=model_ticker, interval=model_interval.value)
 
         data_loader = DataLoader(
             ticker=model_ticker,
@@ -130,7 +138,7 @@ def evaluate_models(
             #     data_df=df,
             #     test_size=TEST_SIZE,
             #     x_type=model_x_type,
-            #     interval=interval_from_model,
+            #     interval=model_interval.value,
             # )
 
             # Y_train = Y_train_full
@@ -145,7 +153,7 @@ def evaluate_models(
                 test_size=TEST_SIZE,
                 x_type=model_x_type,
                 y_type=model_y_type,
-                interval=interval_from_model,
+                interval=model_interval.value,
             )
 
         evaluation_class = _get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
@@ -210,9 +218,40 @@ def evaluate_models(
             valid_data_custom_evaluation.win_250_days,
         )
 
+        max_win_pred_capture_percent_value = max(
+            max_win_pred_capture_percent_value,
+            training_data_custom_evaluation.win_pred_capture_percent,
+            valid_data_custom_evaluation.win_pred_capture_percent,
+        )
+
+        # move files into discarded/saved/saved_double folders
+        if move_files and model_location_type in [
+            ModelLocationType.TRAINED_NEW,
+            ModelLocationType.SAVED,
+            ModelLocationType.OLD,
+            ModelLocationType.DISCARDED,
+        ]:
+            destination_model_location_type: ModelLocationType = model_location_type
+
+            if is_double_saving or is_triple_saving:
+                destination_model_location_type = ModelLocationType.SAVED_DOUBLE
+            elif is_single_saving:
+                destination_model_location_type = ModelLocationType.SAVED
+            else:
+                destination_model_location_type = ModelLocationType.DISCARDED
+
+            if model_location_type == destination_model_location_type:
+                continue
+
+            source_file: str = os.path.join(model_location_type.value, file)
+            destination_file: str = os.path.join(destination_model_location_type.value, file)
+
+            os.rename(source_file, destination_file)
+
     print("\n\n", "-" * 280, "\n", sep="")
 
     print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
+    print("\nMAX Win Pred Capture Percent achieved:\t", max_win_pred_capture_percent_value, "%")
 
     print("\n\nMODELS NOT WORTH SAVING:")
     for model_file_name in models_worth_not_saving:
