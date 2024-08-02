@@ -31,6 +31,11 @@ class Simulation:
         self.order_type_buy_arr = order_type_buy_arr
         self.real_price_arr = real_price_arr
 
+        del buy_price_arr
+        del sell_price_arr
+        del order_type_buy_arr
+        del real_price_arr
+
         # real_price_arr = o,h,l,c
 
         self.is_worth_saving: bool = False
@@ -275,7 +280,7 @@ class Simulation:
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
-        print("\n\n", "Count: \t\t\t", np.size(self.real_data_for_analysis))
+        # print("\n\nCount: \t\t\t\t", np.size(self.real_data_for_analysis))
         print("Capture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
 
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
