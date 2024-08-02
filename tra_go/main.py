@@ -31,7 +31,7 @@ Y_TYPE: BandType = BandType.BAND_2_1
 
 # (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN)
 
-TICKER: TickerOne = TickerOne.RELIANCE
+TICKER: TickerOne = TickerOne.LT
 INTERVAL: IntervalType = IntervalType.MIN_1
 
 
@@ -83,28 +83,28 @@ def main_training():
     mcp_save_3 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
         save_best_only=True,
-        monitor="metric_pred_capture_percent",
+        monitor="metric_win_pred_capture_percent",
         mode="max",
     )
 
     mcp_save_4 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
         save_best_only=True,
-        monitor="val_metric_pred_capture_percent",
+        monitor="val_metric_win_pred_capture_percent",
         mode="max",
     )
 
     mcp_save_5 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-5.keras",
         save_best_only=True,
-        monitor="metric_pred_trend_capture_percent",
+        monitor="metric_win_pred_trend_capture_percent",
         mode="max",
     )
 
     mcp_save_6 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-6.keras",
         save_best_only=True,
-        monitor="val_metric_pred_trend_capture_percent",
+        monitor="val_metric_win_pred_trend_capture_percent",
         mode="max",
     )
 
