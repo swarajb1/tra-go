@@ -70,10 +70,11 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
     number_of_days: int = len(df) // NUMBER_OF_POINTS_IN_ZONE_DAY
 
     for day in range(number_of_days):
-        day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
-        day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
+        day_start_index: int = day * NUMBER_OF_POINTS_IN_ZONE_DAY
 
-        first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
+        first_2_nd_zone_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST
+
+        day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
         df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
         df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
