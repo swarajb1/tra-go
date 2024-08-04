@@ -25,7 +25,7 @@ install:  ## Install poetry to run on local
 
 run: ## run the program
 	clear
-	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py $(model)
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/main.py $(model) $(num)
 
 clean:
 	rm -rf __pycache__
