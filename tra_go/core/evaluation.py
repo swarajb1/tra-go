@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import numpy as np
+from core.win_graph import WinGraph
 from keras.models import load_model
 from keras.utils import custom_object_scope
 from numpy.typing import NDArray
@@ -23,29 +24,28 @@ class CoreEvaluation:
         x_type: BandType,
         y_type: BandType,
         test_size: float,
-        now_datetime: str,
+        model_file_name: str,
         model_location_type: ModelLocationType,
-        model_num: int,
     ):
-        assert Y_data_real.ndim == 3, "Y Real Data array must be 3-dimensional"
-        assert Y_data_real.shape[2] == 4, "Y Real Data .shape[2] must be 4"
+        assert Y_data_real.ndim == 3, "Y Real data array must be 3-dimensional"
+        assert Y_data_real.shape[2] == 4, "Y Real data .shape[2] must be 4"
+        assert prev_close.ndim == 1, "Prev Close data array must be 1-dimensional"
 
         self.ticker = ticker
-
-        self.now_datetime = now_datetime
-        self.model_num = model_num
-        self.model_location_type = model_location_type
 
         self.x_data = X_data
         self.y_data = Y_data
         self.y_data_real = Y_data_real
 
-        self.prev_close = prev_close.reshape(len(prev_close))
-
         self.x_type = x_type
         self.y_type = y_type
 
         self.test_size = test_size
+
+        self.model_location_type = model_location_type
+        self.model_file_name = model_file_name
+
+        self.prev_close = prev_close
 
         # --------------------------------------------------
         # other properties declared here
@@ -56,6 +56,7 @@ class CoreEvaluation:
         self.is_model_worth_double_saving: bool = False
 
         self.win_250_days: float = 0
+        self.win_pred_capture_percent: float = 0
 
         self._print_start_of_evaluation_message()
 
@@ -72,19 +73,10 @@ class CoreEvaluation:
             print("VALIDATION data now ...")
 
     def _set_model_file_path(self) -> None:
-        self.model_file_path = f"model - {self.now_datetime} - {self.x_type.value} - {self.y_type.value} - {self.ticker.name} - modelCheckPoint-{self.model_num}.keras"
+        self.model_file_path: Path = Path(self.model_location_type.value) / self.model_file_name
 
-        # file_path: str = os.path.join(self.model_location_type.value, self.model_file_path)
-        file_path: Path = Path(self.model_location_type.value) / self.model_file_path
-
-        Path.exists(file_path)
-
-        # check this file exists or not
-        if not Path.exists(file_path):
-            # if not os.path.exists(file_path):
-            raise ValueError(f"WARNING: file not found at: \n{file_path}\n")
-
-        self.model_file_path = file_path
+        if not Path.exists(self.model_file_path):
+            raise (f"WARNING: file not found at: \n{self.model_file_path}\n")
 
         return
 
@@ -133,6 +125,22 @@ class CoreEvaluation:
 
                     self.y_data_real[day, tick, 0] = prev_tick_close
                     self.y_data_real[day, tick, 1] = prev_tick_close
+
+        return
+
+    def generate_win_graph(self, max_pred, min_pred, buy_order_pred) -> None:
+        win_graph = WinGraph(
+            max_pred=max_pred,
+            min_pred=min_pred,
+            order_type_buy=buy_order_pred,
+            y_real=self.y_data_real,
+        )
+
+        self.win_250_days, self.win_pred_capture_percent = win_graph.get_win_values()
+
+        self.is_model_worth_saving, self.is_model_worth_double_saving = win_graph.get_model_worthiness()
+
+        print("file name:\t\t\t", self.model_file_name)
 
         return
 
