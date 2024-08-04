@@ -55,8 +55,6 @@ class Simulation:
 
         self.display_stats()
 
-        print("")
-
     def simulation(self) -> bool:
         # 3 orders are placed when the simulation starts
         #   buy order
@@ -70,7 +68,6 @@ class Simulation:
         print("simulation started....")
 
         for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            # for RISK_TO_REWARD_RATIO in [0.5]:
             number_of_days: int = self.real_price_arr.shape[0]
 
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
@@ -271,8 +268,8 @@ class Simulation:
             )
 
     def display_stats(self) -> None:
-        # if not self.is_worth_saving:
-        #     return
+        if not self.is_worth_saving:
+            return
 
         print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
@@ -280,8 +277,7 @@ class Simulation:
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
-        # print("\n\nCount: \t\t\t\t", np.size(self.real_data_for_analysis))
-        print("Capture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
+        print("\n\nCapture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
 
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
@@ -361,9 +357,7 @@ class Simulation:
         real_full_reward_percent_day_wise_list: NDArray = np.zeros(number_of_days)
 
         for i_day in range(number_of_days):
-            net_day_reward: float = 0
-
-            min_ticker_price: float = np.min(self.real_price_arr[i_day, :, 0])
+            min_ticker_price: float = np.min(self.real_price_arr[i_day, :, 2])
             max_ticker_price: float = np.max(self.real_price_arr[i_day, :, 1])
 
             full_reward = max_ticker_price - min_ticker_price

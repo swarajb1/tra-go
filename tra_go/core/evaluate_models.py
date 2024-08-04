@@ -20,13 +20,13 @@ def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
         from band_2.training_yf_band_2 import CustomEvaluation
 
     elif y_type == BandType.BAND_2_1:
-        from band_2_1.evaluation import CustomEvaluation
+        from band_2_1.evaluation_new import CustomEvaluation
 
     return CustomEvaluation
 
 
 def is_valid_model_file_name(file_name: str) -> bool:
-    return "modelCheckPoint" in file_name and ".keras" in file_name and not file_name.startswith(".")
+    return ".keras" in file_name and not file_name.startswith(".")
 
 
 def is_file_after_date(file_path: str) -> bool:
@@ -70,19 +70,21 @@ def evaluate_models(
     max_250_days_win_value: float = 0
     max_win_pred_capture_percent_value: float = 0
 
-    for index, file in enumerate(list_of_files):
+    for index, file_name in enumerate(list_of_files):
         print("\n" * 25, "*" * 280, "\n" * 4, sep="")
-        print(f"{index+1}/{len(list_of_files)} - Evaluating model:\t{file}")
+        print(f"{index+1}/{len(list_of_files)} - Evaluating model:\t{file_name}")
+
+        file_name_1: str = file_name[: -(len(".keras"))]
 
         model_x_type: BandType
         model_y_type: BandType
         model_ticker: TickerOne
-        model_datetime: str
-        model_checkpoint_num: int
 
-        model_datetime = file.split(" - ")[1]
+        model_interval: IntervalType = IntervalType.MIN_1
 
-        x_type_str = file.split(" - ")[2]
+        model_datetime: str = file_name_1.split(" - ")[1]
+
+        x_type_str = file_name_1.split(" - ")[2]
         for band_type in BandType:
             if band_type.value == x_type_str:
                 model_x_type = band_type
@@ -90,7 +92,7 @@ def evaluate_models(
         del band_type
         del x_type_str
 
-        y_type_str = file.split(" - ")[3]
+        y_type_str = file_name_1.split(" - ")[3]
         for band_type in BandType:
             if band_type.value == y_type_str:
                 model_y_type = band_type
@@ -98,21 +100,13 @@ def evaluate_models(
         del band_type
         del y_type_str
 
-        ticker_str = file.split(" - ")[4]
+        ticker_str = file_name_1.split(" - ")[4]
         for ticker in TickerOne:
             if ticker.name == ticker_str:
                 model_ticker = ticker
                 break
         del ticker
         del ticker_str
-
-        model_interval: IntervalType = IntervalType.MIN_1
-
-        model_checkpoint_num_str = file.split(" - ")[5]
-        if "modelCheckPoint" not in model_checkpoint_num_str:
-            raise ValueError(f"modelCheckpoint not found in file name:\n {file}")
-
-        model_checkpoint_num = int(model_checkpoint_num_str.split("-")[1].split(".keras")[0])
 
         df = an.get_data_all_df(ticker=model_ticker, interval=model_interval.value)
 
@@ -167,8 +161,7 @@ def evaluate_models(
             x_type=model_x_type,
             y_type=model_y_type,
             test_size=TEST_SIZE,
-            now_datetime=model_datetime,
-            model_num=model_checkpoint_num,
+            model_file_name=file_name,
             model_location_type=model_location_type,
         )
 
@@ -181,8 +174,7 @@ def evaluate_models(
             x_type=model_x_type,
             y_type=model_y_type,
             test_size=0,
-            now_datetime=model_datetime,
-            model_num=model_checkpoint_num,
+            model_file_name=file_name,
             model_location_type=model_location_type,
         )
 
@@ -243,8 +235,8 @@ def evaluate_models(
             if model_location_type == destination_model_location_type:
                 continue
 
-            source_file: str = os.path.join(model_location_type.value, file)
-            destination_file: str = os.path.join(destination_model_location_type.value, file)
+            source_file: str = os.path.join(model_location_type.value, file_name)
+            destination_file: str = os.path.join(destination_model_location_type.value, file_name)
 
             os.rename(source_file, destination_file)
 
