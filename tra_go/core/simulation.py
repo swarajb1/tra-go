@@ -15,7 +15,7 @@ load_dotenv()
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
-PERCENT_250_DAYS_WORTH_SAVING: int = 5
+PERCENT_250_DAYS_WORTH_SAVING: int = 25
 
 
 class Simulation:
@@ -38,8 +38,8 @@ class Simulation:
 
         # real_price_arr = o,h,l,c
 
-        self.is_worth_saving: bool = False
-        self.is_worth_double_saving: bool = False
+        self.is_model_worth_saving: bool = False
+        self.is_model_worth_double_saving: bool = False
 
         self.real_data_for_analysis: NDArray
         self.stoploss_data_for_analysis: NDArray
@@ -55,7 +55,7 @@ class Simulation:
 
         self.display_stats()
 
-    def simulation(self) -> bool:
+    def simulation(self) -> None:
         # 3 orders are placed when the simulation starts
         #   buy order
         #   sell order
@@ -66,6 +66,8 @@ class Simulation:
         #       it will be either partial reward or partial stop_loss
 
         print("simulation started....")
+
+        self.count_something: int = 0
 
         for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
             number_of_days: int = self.real_price_arr.shape[0]
@@ -109,6 +111,13 @@ class Simulation:
                     tick_low = self.real_price_arr[i_day, i_tick, 2]
                     tick_high = self.real_price_arr[i_day, i_tick, 1]
 
+                    # if (
+                    #     tick_low <= buy_price <= tick_high
+                    #     and tick_low <= sell_price <= tick_high
+                    #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                    # ):
+                    #     print("WARNING: buy_price and sell_price both inside the 1 tick", i_tick, tick_low, tick_high)
+
                     if is_trade_type_buy:
                         # buy trade
                         if not trade_taken:
@@ -126,6 +135,13 @@ class Simulation:
 
                                 net_day_reward = stop_loss - buy_price
 
+                            # if (
+                            #     tick_low <= buy_price <= tick_high
+                            #     and tick_low <= stop_loss <= tick_high
+                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            # ):
+                            #     print("WARNING: buy_price and stop_loss both inside the 1 tick ")
+
                     else:
                         # sell trade
                         if not trade_taken:
@@ -142,6 +158,13 @@ class Simulation:
                                 stop_loss_hit = True
 
                                 net_day_reward = sell_price - stop_loss
+
+                            # if (
+                            #     tick_low <= sell_price <= tick_high
+                            #     and tick_low <= stop_loss <= tick_high
+                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            # ):
+                            #     print("WARNING: sell_price and stop_loss both inside the 1 tick ")
 
                 # if trade is still active at closing time, then closing the position at the closing price of the interval.
                 if trade_taken and not trade_taken_and_out:
@@ -174,42 +197,87 @@ class Simulation:
                 wins_day_wise_list[i_day] = net_day_reward
                 expected_reward_percent_day_wise_list[i_day] = expected_reward / invested_day_wise_list[i_day] * 100
 
-            # print("\n\n")
-            # print("-" * 30)
-            # print("\n\n")
-
-            # count_trade_taken: int = np.sum(trade_taken_list)
-            # count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
-            # count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
-            # count_completed_at_closing: int = np.sum(completed_at_closing_list)
-            # count_expected_trades: int = np.sum(expected_trades_list)
-
-            # print("number_of_days\t\t\t", number_of_days, "\n")
-
-            # print("percent_trade_taken\t\t", "{:.2f}".format(count_trade_taken / number_of_days * 100), " %")
-            # print(
-            #     "percent_trade_taken_and_out\t",
-            #     "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
-            #     " %",
-            # )
-            # print("percent_stop_loss_hit\t\t", "{:.2f}".format(count_stop_loss_hit / number_of_days * 100), " %")
-            # print(
-            #     "percent_completed_at_closing\t",
-            #     "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
-            #     " %",
-            # )
-
-            # print("percent_expected_trades\t\t", "{:.2f}".format(count_expected_trades / number_of_days * 100), " %")
-
-            # number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
-
-            # print("\npercent_win_trades\t\t", "{:.2f}".format(number_of_win_trades / number_of_days * 100), " %")
-
             new_invested_day_wise_list = np.copy(invested_day_wise_list)
             new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
 
             arr = np.array(wins_day_wise_list)
             arr_real_percent = (arr / new_invested_day_wise_list) * 100
+
+            avg_win_per_day = np.mean(arr_real_percent / 100)
+
+            days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
+
+            if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
+                self.is_model_worth_saving = True
+
+                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
+                    self.is_model_worth_double_saving = True
+
+            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
+                self.real_data_for_analysis = arr_real_percent
+                self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
+                self.stoploss_rrr_for_analysis = 1
+
+                # ----- start: single rrr value stats
+                if self.is_model_worth_double_saving:
+                    print("\n\n")
+
+                    count_trade_taken: int = np.sum(trade_taken_list)
+                    count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
+                    count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
+                    count_completed_at_closing: int = np.sum(completed_at_closing_list)
+                    count_expected_trades: int = np.sum(expected_trades_list)
+
+                    number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
+
+                    print("\t\t\tnumber Of Days\t\t\t", number_of_days)
+                    print(
+                        "\n\t\t\tpercent Trade Taken\t\t",
+                        "{:.2f}".format(count_trade_taken / number_of_days * 100),
+                        " %",
+                    )
+                    print(
+                        "\t\t\tpercent Trade Taken And Out\t",
+                        "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
+                        " %",
+                    )
+                    print(
+                        "\t\t\tpercent Stop Loss Hit\t\t",
+                        "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
+                        " %",
+                    )
+                    print(
+                        "\t\t\tpercent Completed At Closing\t",
+                        "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
+                        " %",
+                    )
+                    print(
+                        "\t\t\tpercent Expected Trades\t\t",
+                        "{:.2f}".format(count_expected_trades / number_of_days * 100),
+                        " %",
+                    )
+                    print(
+                        "\n\t\t\tpercent Win Trades\t\t",
+                        "{:.2f}".format(number_of_win_trades / number_of_days * 100),
+                        " %",
+                    )
+
+                # ----- end: single rrr value stats
+
+            percent_prefix: str = " " if round(days_250, 2) < 10 else ""
+            percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
+
+            print(
+                "\t\t",
+                "Risk To Reward Ratio:",
+                "{:.2f}".format(RISK_TO_REWARD_RATIO),
+                "\t",
+                "250 Days s: ",
+                percent_val if days_250 > PERCENT_250_DAYS_MIN_THRESHOLD else "\t   --",
+                "\t" * 2,
+                " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
+            )
+            """# graph making
 
             # plt.figure(figsize=(16, 9))
 
@@ -226,49 +294,12 @@ class Simulation:
             #     filename = filename[:-4] + "- valid.png"
 
             # plt.savefig(filename, dpi=300, bbox_inches="tight")
-
-            avg_win_per_day = np.mean(arr_real_percent / 100)
-
-            days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
-
-            # print("\n\navg_percent_win_per_day\t\t", "{:.5f}".format(avg_win_per_day * 100), " %")
-            # print("avg_percent_win_per_day_leverage", "{:.5f}".format(avg_win_per_day * 100 * 5), " %")
-
-            # print("\n\n250_days\t\t\t", "{:.2f}".format(days_250), " %")
-            # print("250_days_leverage\t\t", "{:.2f}".format((pow(1 + avg_win_per_day * 5, 250) - 1) * 100), " %")
-
-            # if self.test_size != 0:
-            #     print(f"\n work: data = VALIDATION DATA, model={self.model_num} \n")
-            # else:
-            #     print(f"\n work: data = TRAINING DATA, model={self.model_num} \n")
-
-            if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
-                self.is_worth_saving = True
-
-                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
-                    self.is_worth_double_saving = True
-
-            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
-                self.real_data_for_analysis = arr_real_percent
-                self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
-                self.stoploss_rrr_for_analysis = 1
-
-            percent_prefix: str = " " if round(days_250, 2) < 10 else ""
-            percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
-
-            print(
-                "\t\t",
-                "risk_to_reward_ratio:",
-                "{:.2f}".format(RISK_TO_REWARD_RATIO),
-                "\t",
-                "250_days_s: ",
-                percent_val if days_250 > PERCENT_250_DAYS_MIN_THRESHOLD else "\t   --",
-                "\t" * 2,
-                " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
-            )
+            """
 
     def display_stats(self) -> None:
-        if not self.is_worth_saving:
+        print("count_something = ", self.count_something)
+
+        if not self.is_model_worth_saving:
             return
 
         print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
@@ -362,6 +393,7 @@ class Simulation:
 
             full_reward = max_ticker_price - min_ticker_price
 
+            # buy trend is max comes after then min
             real_order_type_buy[i_day] = np.argmax(self.real_price_arr[i_day, :, 1]) > np.argmax(
                 self.real_price_arr[i_day, :, 0],
             )
@@ -382,4 +414,4 @@ class Simulation:
             - The first value indicates whether the model is worth saving.
             - The second value indicates whether the model is worth double saving.
         """
-        return self.is_worth_saving, self.is_worth_double_saving
+        return self.is_model_worth_saving, self.is_model_worth_double_saving
