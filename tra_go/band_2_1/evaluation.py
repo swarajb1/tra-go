@@ -130,8 +130,8 @@ class CustomEvaluation:
 
         y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]
 
-        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 * SAFETY_FACTOR
-        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 * SAFETY_FACTOR
+        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 / SAFETY_FACTOR
+        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 / SAFETY_FACTOR
 
         self.y_pred_real[:, 0] = round_to_nearest_0_05(new_y_pred_low)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(new_y_pred_high)
