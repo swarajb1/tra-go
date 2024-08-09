@@ -6,8 +6,8 @@ def loss_function(y_true, y_pred):
     return (
         metric_rmse(y_true[:, :2], y_pred[:, :2])
         + metric_abs(y_true[:, :2], y_pred[:, :2]) / 3
-        + metric_average_in(y_true, y_pred) / 3
-        + metric_loss_comp_2(y_true, y_pred) * 3
+        # + metric_average_in(y_true, y_pred) / 3
+        + metric_loss_comp_2(y_true, y_pred)
     )
 
 
@@ -110,9 +110,9 @@ def metric_loss_comp_2(y_true, y_pred):
         + z_pred_valid_error
         + z_min_below_error
         + win_amt_true_error * 2
-        + win_amt_pred_error * 4
-        + trend_error_win * 9
-        + trend_error_win_pred_error * 24
+        + win_amt_pred_error * 5
+        + trend_error_win * 10
+        + trend_error_win_pred_error * 25
     )
 
 

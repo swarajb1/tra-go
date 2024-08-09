@@ -23,7 +23,7 @@ class CustomEvaluation(CoreEvaluation):
         X_data: NDArray[np.float64],
         Y_data: NDArray[np.float64],
         Y_data_real: NDArray[np.float64],
-        prev_close: NDArray[np.float64],
+        prev_day_close: NDArray[np.float64],
         x_type: BandType,
         y_type: BandType,
         test_size: float,
@@ -35,7 +35,7 @@ class CustomEvaluation(CoreEvaluation):
             X_data=X_data,
             Y_data=Y_data,
             Y_data_real=Y_data_real,
-            prev_close=prev_close,
+            prev_day_close=prev_day_close,
             x_type=x_type,
             y_type=y_type,
             test_size=test_size,
@@ -45,6 +45,8 @@ class CustomEvaluation(CoreEvaluation):
 
         self.y_pred_real: NDArray
         self.x_last_zone_close_real: NDArray
+
+        self.simulation_250_days: float = 0
 
         self.custom_evaluate_safety_factor()
 
@@ -73,17 +75,17 @@ class CustomEvaluation(CoreEvaluation):
         elif self.x_type == BandType.BAND_2:
             x_last_zone_close: NDArray = (self.x_data[:, -1, 0] + self.x_data[:, -1, 1]) / 2
 
-        self.x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_close)
+        self.x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_day_close)
 
         # (low, high) = (0, 1)
 
         self.y_pred_real = self.y_pred
-        self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_close)
-        self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_close)
+        self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_day_close)
+        self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_day_close)
 
         self.correct_pred_values()
 
-        self.apply_safety_factor_on_pred()
+        # self._apply_safety_factor_on_pred()
 
         self._correct_pred_values_based_on_last_close()
 
@@ -100,7 +102,10 @@ class CustomEvaluation(CoreEvaluation):
 
         return
 
-    def apply_safety_factor_on_pred(self) -> None:
+    def _apply_safety_factor_on_pred(self) -> None:
+        if SAFETY_FACTOR == 1:
+            return
+
         y_pred_average: NDArray = (self.y_pred_real[:, 0] + self.y_pred_real[:, 1]) / 2
 
         y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]

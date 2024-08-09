@@ -115,7 +115,7 @@ class CustomEvaluation:
 
         self.correct_pred_values()
 
-        self.apply_safety_factor_on_pred()
+        self._apply_safety_factor_on_pred()
 
         self.function_make_win_graph(
             y_true=self.y_data_real,
@@ -125,7 +125,10 @@ class CustomEvaluation:
 
         return
 
-    def apply_safety_factor_on_pred(self) -> None:
+    def _apply_safety_factor_on_pred(self) -> None:
+        if SAFETY_FACTOR == 1:
+            return
+
         y_pred_average: NDArray = (self.y_pred_real[:, 0] + self.y_pred_real[:, 1]) / 2
 
         y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]
