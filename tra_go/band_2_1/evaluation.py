@@ -1,5 +1,7 @@
 import os
 
+import band_2_1.keras_model as km_21_model
+import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,8 +11,6 @@ from keras.utils import custom_object_scope
 from numpy.typing import NDArray
 from training_yf import round_to_nearest_0_05
 
-import tra_go.band_2_1.keras_model as km_21_model
-import tra_go.band_2_1.model_metrics as km_21_metrics
 from database.enums import BandType, ModelLocationType, TickerOne
 
 SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))

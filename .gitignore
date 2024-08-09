@@ -19,11 +19,11 @@ training/
 
 # private_data
 private_data
+data_archives
+data_cleaned
+data_training
 data_yf
 data_z
-data_cleaned
-data_archives
-data_training
 
 # temp
 temp

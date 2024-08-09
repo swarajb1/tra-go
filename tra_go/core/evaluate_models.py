@@ -251,9 +251,9 @@ def evaluate_models(
 
     print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
     print("\nMAX Win Pred Capture Percent achieved:\t", max_win_pred_capture_percent_value, "%")
-    print("\nMAX 250 Days Simulation Value:\t", max_250_days_simulation_value, "%")
+    print("\nMAX 250 Days Simulation Value:\t\t", max_250_days_simulation_value, "%")
 
-    print(f"\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
+    print(f"\n\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:
         print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[91m--\033[0m ")
 

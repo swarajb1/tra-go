@@ -1,5 +1,6 @@
 import os
 
+import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import tensorflow as tf
 from dotenv import load_dotenv
@@ -15,8 +16,6 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 from tensorflow.keras.models import Model
-
-import tra_go.band_2_1.model_metrics as km_21_metrics
 
 load_dotenv()
 
