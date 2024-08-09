@@ -28,6 +28,7 @@ class WinGraph:
 
         self.win_250_days: float = 0
         self.win_pred_capture_percent: float = 0
+        self.simulation_250_days: float = 0
 
         self._make_win_graph()
 
@@ -80,7 +81,16 @@ class WinGraph:
             real_price_arr=self.y_data_real,
         )
 
-        self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_model_worthiness()
+        # self.is_model_worth_saving, self.is_model_worth_double_saving = simulation.get_model_worthiness()
+
+        copy_attributes: list[str] = [
+            "is_model_worth_saving",
+            "is_model_worth_double_saving",
+            "simulation_250_days",
+        ]
+
+        for attr in copy_attributes:
+            setattr(self, attr, getattr(simulation, attr))
 
         fraction_max_inside: float = np.mean(max_inside.astype(np.float64))
 
@@ -118,17 +128,17 @@ class WinGraph:
 
         self.win_250_days = round(pro_250 * 100, 2)
 
-        # special condition, later make this with 'and' for worth double saving
+        # special conditions
 
-        self.is_model_worth_saving &= fraction_win > 0.2
+        # self.is_model_worth_saving &= fraction_win > 0.2
 
-        self.is_model_worth_double_saving &= self.win_pred_capture_percent > 5
+        # self.is_model_worth_double_saving &= self.is_model_worth_saving and self.win_pred_capture_percent > 5
 
-        if self.is_model_worth_saving:
-            print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")
+        # if self.is_model_worth_saving:
+        #     print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")
 
-        if self.is_model_worth_double_saving:
-            print("\n\nIs Model Worth Double Saving\t \033[92m++++\033[0m ")
+        # if self.is_model_worth_double_saving:
+        #     print("\n\nIs Model Worth Double Saving\t \033[92m++++\033[0m ")
 
         print("\n")
         # print("Valid Pred:\t\t\t", round(fraction_valid_pred * 100, 2), " %")
@@ -153,13 +163,13 @@ class WinGraph:
 
         return
 
-    def get_win_values(self):
-        return self.win_pred_capture_percent, self.win_250_days
+    def get_win_values(self) -> tuple[bool, bool]:
+        return self.win_250_days, self.win_pred_capture_percent
 
-    def get_model_worthiness(self):
+    def get_model_worthiness(self) -> tuple[bool, bool]:
         return self.is_model_worth_saving, self.is_model_worth_double_saving
 
-    def day_candle_pred_true(self, i_day: int):
+    def day_candle_pred_true(self, i_day: int) -> None:
         error = self.y_data_real - self.y_pred_real
 
         y_l = error[i_day, :, 0]
