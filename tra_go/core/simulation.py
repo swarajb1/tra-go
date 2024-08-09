@@ -241,7 +241,7 @@ class Simulation:
                 self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
                 self.stoploss_rrr_for_analysis = 1
 
-                self.simulation_250_days = days_250
+                self.simulation_250_days = round(days_250, 2)
 
                 # ----- start: single rrr value stats
                 count_trade_taken: int = np.sum(trade_taken_list)
