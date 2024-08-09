@@ -69,6 +69,7 @@ def evaluate_models(
 
     max_250_days_win_value: float = 0
     max_win_pred_capture_percent_value: float = 0
+    max_250_days_simulation_value: float = 0
 
     for index, file_name in enumerate(list_of_files):
         print("\n" * 25, "*" * 280, "\n" * 4, sep="")
@@ -157,7 +158,7 @@ def evaluate_models(
             X_data=X_train,
             Y_data=Y_train,
             Y_data_real=Y_train_data_real,
-            prev_close=train_prev_close,
+            prev_day_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
             test_size=TEST_SIZE,
@@ -170,7 +171,7 @@ def evaluate_models(
             X_data=X_test,
             Y_data=Y_test,
             Y_data_real=Y_test_data_real,
-            prev_close=test_prev_close,
+            prev_day_close=test_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
             test_size=0,
@@ -216,6 +217,12 @@ def evaluate_models(
             valid_data_custom_evaluation.win_pred_capture_percent,
         )
 
+        max_250_days_simulation_value = max(
+            max_250_days_simulation_value,
+            training_data_custom_evaluation.simulation_250_days,
+            valid_data_custom_evaluation.simulation_250_days,
+        )
+
         # move files into discarded/saved/saved_double folders
         if move_files and model_location_type in [
             ModelLocationType.TRAINED_NEW,
@@ -244,22 +251,23 @@ def evaluate_models(
 
     print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
     print("\nMAX Win Pred Capture Percent achieved:\t", max_win_pred_capture_percent_value, "%")
+    print("\nMAX 250 Days Simulation Value:\t", max_250_days_simulation_value, "%")
 
-    print("\n\nMODELS NOT WORTH SAVING:")
+    print(f"\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:
-        print("\t", model_file_name, "\t" * 2, " \033[91m--\033[0m ")
+        print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[91m--\033[0m ")
 
-    print("\n\nMODELS WORTH SAVING:")
+    print(f"\n\nMODELS WORTH SAVING: \t\t\t[{len(models_worth_saving)}]\n")
     for model_file_name in models_worth_saving:
-        print("\t", model_file_name, "\t" * 2, " \033[92m++\033[0m ")
+        print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[92m++\033[0m ")
 
-    print("\n\nMODELS WORTH DOUBLE SAVING:")
+    print(f"\n\nMODELS WORTH DOUBLE SAVING: \t\t[{len(models_worth_double_saving)}]\n")
     for model_file_name in models_worth_double_saving:
-        print("\t", model_file_name, "\t" * 2, " \033[92m++++\033[0m ")
+        print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[92m++++\033[0m ")
 
-    print("\n\nMODELS WORTH TRIPLE SAVING:")
+    print(f"\n\nMODELS WORTH TRIPLE SAVING: \t\t[{len(models_worth_triple_saving)}]\n")
     for model_file_name in models_worth_triple_saving:
-        print("\t", model_file_name, "\t" * 2, " \033[92m+++++++++++++++\033[0m ")
+        print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[92m+++++++++++++++\033[0m ")
 
     print("\n\n")
 

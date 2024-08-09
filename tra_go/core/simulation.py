@@ -15,7 +15,7 @@ load_dotenv()
 RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
-PERCENT_250_DAYS_WORTH_SAVING: int = 25
+PERCENT_250_DAYS_WORTH_SAVING: int = 5
 
 
 class Simulation:
@@ -48,6 +48,8 @@ class Simulation:
         self.real_mean: float
         self.expected_mean: float
         self.real_full_reward_mean: float
+
+        self.simulation_250_days: float = 0
 
         self.simulation()
 
@@ -82,6 +84,8 @@ class Simulation:
             stop_loss_hit_list: NDArray = np.zeros(number_of_days, dtype=bool)
             completed_at_closing_list: NDArray = np.zeros(number_of_days, dtype=bool)
             expected_trades_list: NDArray = np.zeros(number_of_days, dtype=bool)
+
+            completed_at_closing_reward: NDArray = np.zeros(number_of_days, dtype=np.float32)
 
             for i_day in range(number_of_days):
                 trade_taken: bool = False
@@ -167,15 +171,18 @@ class Simulation:
                             #     print("WARNING: sell_price and stop_loss both inside the 1 tick ")
 
                 # if trade is still active at closing time, then closing the position at the closing price of the interval.
+
                 if trade_taken and not trade_taken_and_out:
-                    avg_close_price = (self.real_price_arr[i_day, -1, 0] + self.real_price_arr[i_day, -1, 1]) / 2
+                    # NOTE: taking last tick close when closing open position and middle of tick_low and tick_high, not tick_close, because orders are very fluctuating and close not accurate
+                    last_tick = (self.real_price_arr[i_day, -1, 2] + self.real_price_arr[i_day, -1, 1]) / 2
+
                     if is_trade_type_buy:
                         # buy trade
-                        net_day_reward = avg_close_price - buy_price
+                        net_day_reward = last_tick - buy_price
 
                     else:
                         # sell trade
-                        net_day_reward = sell_price - avg_close_price
+                        net_day_reward = sell_price - last_tick
 
                 # each day's stats
                 trade_taken_list[i_day] = trade_taken
@@ -191,6 +198,8 @@ class Simulation:
                     stop_loss_hit_list[i_day] = True
                 if trade_taken and not trade_taken_and_out:
                     completed_at_closing_list[i_day] = True
+                    completed_at_closing_reward[i_day] = net_day_reward
+
                 if trade_taken_and_out and not stop_loss_hit:
                     expected_trades_list[i_day] = True
 
@@ -207,63 +216,6 @@ class Simulation:
 
             days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
 
-            if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
-                self.is_model_worth_saving = True
-
-                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
-                    self.is_model_worth_double_saving = True
-
-            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
-                self.real_data_for_analysis = arr_real_percent
-                self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
-                self.stoploss_rrr_for_analysis = 1
-
-                # ----- start: single rrr value stats
-                if self.is_model_worth_double_saving:
-                    print("\n\n")
-
-                    count_trade_taken: int = np.sum(trade_taken_list)
-                    count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
-                    count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
-                    count_completed_at_closing: int = np.sum(completed_at_closing_list)
-                    count_expected_trades: int = np.sum(expected_trades_list)
-
-                    number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
-
-                    print("\t\t\tnumber Of Days\t\t\t", number_of_days)
-                    print(
-                        "\n\t\t\tpercent Trade Taken\t\t",
-                        "{:.2f}".format(count_trade_taken / number_of_days * 100),
-                        " %",
-                    )
-                    print(
-                        "\t\t\tpercent Trade Taken And Out\t",
-                        "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
-                        " %",
-                    )
-                    print(
-                        "\t\t\tpercent Stop Loss Hit\t\t",
-                        "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
-                        " %",
-                    )
-                    print(
-                        "\t\t\tpercent Completed At Closing\t",
-                        "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
-                        " %",
-                    )
-                    print(
-                        "\t\t\tpercent Expected Trades\t\t",
-                        "{:.2f}".format(count_expected_trades / number_of_days * 100),
-                        " %",
-                    )
-                    print(
-                        "\n\t\t\tpercent Win Trades\t\t",
-                        "{:.2f}".format(number_of_win_trades / number_of_days * 100),
-                        " %",
-                    )
-
-                # ----- end: single rrr value stats
-
             percent_prefix: str = " " if round(days_250, 2) < 10 else ""
             percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
 
@@ -277,6 +229,85 @@ class Simulation:
                 "\t" * 2,
                 " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
             )
+
+            if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
+                self.is_model_worth_saving = True
+
+                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
+                    self.is_model_worth_double_saving = True
+
+            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
+                self.real_data_for_analysis = arr_real_percent
+                self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
+                self.stoploss_rrr_for_analysis = 1
+
+                self.simulation_250_days = days_250
+
+                # ----- start: single rrr value stats
+                count_trade_taken: int = np.sum(trade_taken_list)
+                count_trade_taken_and_out: int = np.sum(trade_taken_and_out_list)
+                count_stop_loss_hit: int = np.sum(stop_loss_hit_list)
+                count_completed_at_closing: int = np.sum(completed_at_closing_list)
+                count_expected_trades: int = np.sum(expected_trades_list)
+
+                number_of_win_trades: int = np.sum(np.array(wins_day_wise_list) > 0)
+
+                # completed_at_closing
+                closing_arr_percent_avg_win_per_day = np.mean(
+                    (completed_at_closing_reward / new_invested_day_wise_list) * 100,
+                )
+
+                if count_trade_taken == 0:
+                    count_trade_taken = 1
+
+                # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
+                print(
+                    "\n\t\t\t Percent Trade Taken\t\t\t",
+                    "{:.2f}".format(count_trade_taken / number_of_days * 100),
+                    " %",
+                )
+                print(
+                    "\t\t\t Percent Trade Taken And Out\t\t",
+                    "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
+                    " % \t | \t",
+                    "{:.2f}".format(count_trade_taken_and_out / count_trade_taken * 100),
+                    " %",
+                )
+                print(
+                    "\t\t\t Percent Stop Loss Hit\t\t\t",
+                    "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
+                    " % \t | \t",
+                    "{:.2f}".format(count_stop_loss_hit / count_trade_taken * 100),
+                    " %",
+                )
+                print(
+                    "\t\t\t Percent Completed At Closing\t\t",
+                    "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
+                    " % \t | \t",
+                    "{:.2f}".format(count_completed_at_closing / count_trade_taken * 100),
+                    " %",
+                )
+                print(
+                    "\t\t\t Closing Trades Per Day contribution\t",
+                    "{:.2f}".format(closing_arr_percent_avg_win_per_day),
+                )
+                print(
+                    "\t\t\t Percent Expected Trades\t\t",
+                    "{:.2f}".format(count_expected_trades / number_of_days * 100),
+                    " % \t | \t",
+                    "{:.2f}".format(count_expected_trades / count_trade_taken * 100),
+                    " %",
+                )
+                print(
+                    "\n\t\t\t Percent Win Trades\t\t\t",
+                    "{:.2f}".format(number_of_win_trades / number_of_days * 100),
+                    " % \t | \t",
+                    "{:.2f}".format(number_of_win_trades / count_trade_taken * 100),
+                    " %\n",
+                )
+
+                # ----- end: single rrr value stats
+
             """# graph making
 
             # plt.figure(figsize=(16, 9))
@@ -297,10 +328,10 @@ class Simulation:
             """
 
     def display_stats(self) -> None:
-        print("count_something = ", self.count_something)
+        # print("count_something =", self.count_something)
 
-        if not self.is_model_worth_saving:
-            return
+        # if not self.is_model_worth_saving:
+        #     return
 
         print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
