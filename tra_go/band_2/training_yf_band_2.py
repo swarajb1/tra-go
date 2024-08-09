@@ -54,8 +54,6 @@ class CustomEvaluation:
         self.model_num = model_num
         self.model_location_type = model_location_type
 
-        self.safety_factor = SAFETY_FACTOR
-
         self.number_of_days = self.X_data.shape[0]
 
         self.is_model_worth_saving: bool = False
@@ -161,9 +159,9 @@ class CustomEvaluation:
         for i in range(last_skipped_elements):
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
-        if self.safety_factor < 1:
-            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 * self.safety_factor
+        if SAFETY_FACTOR > 1:
+            res[:, :, 0] = (res[:, :, 1] + res[:, :, 0]) / 2 - (res[:, :, 1] - res[:, :, 0]) / 2 / SAFETY_FACTOR
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 0]) / 2 + (res[:, :, 1] - res[:, :, 0]) / 2 / SAFETY_FACTOR
 
         return res
 
@@ -246,7 +244,7 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={self.safety_factor} - model_{self.model_num}.png"
+        filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - abs - sf={SAFETY_FACTOR} - model_{self.model_num}.png"
         if self.test_size == 0:
             filename = filename[:-4] + "- valid.png"
 
@@ -464,10 +462,10 @@ class CustomEvaluation:
         #     fontsize=20,
         # )
 
-        # filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR}.png"
+        # filename = f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={SAFETY_FACTOR}.png"
         # if self.test_size == 0:
         #     filename = (
-        #         f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={self.SAFETY_FACTOR} - valid.png"
+        #         f"training/graphs/{self.y_type.value.lower()} - {self.now_datetime} - Splot - sf={SAFETY_FACTOR} - valid.png"
         #     )
 
         # plt.savefig(filename, dpi=300, bbox_inches="tight")
@@ -575,7 +573,7 @@ class CustomEvaluation:
             real_price_arr=y_true,
         )
 
-        self.is_model_worth_saving = simulation.is_worth_saving
+        self.is_model_worth_saving = simulation.is_model_worth_saving
 
         fraction_valid_pred: float = np.mean(valid_pred.astype(np.float64))
 
