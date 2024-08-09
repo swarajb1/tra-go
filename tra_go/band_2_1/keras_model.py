@@ -14,6 +14,7 @@ from tensorflow.keras.layers import (
     Layer,
     TimeDistributed,
 )
+from tensorflow.keras.models import Model
 
 import tra_go.band_2_1.model_metrics as km_21_metrics
 
@@ -61,7 +62,7 @@ class CustomActivationLayer(Layer):
         return tf.concat([first_two_features, third_feature], axis=-1)
 
 
-def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> tf.keras.models.Model:
+def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
     model = tf.keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -77,7 +78,15 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> tf.keras.models.M
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (layer_num + 1)) - 1))
+        model.add(
+            Dropout(
+                pow(
+                    1 + INITIAL_DROPOUT_PERCENT / 100,
+                    1 / (layer_num + 1),
+                )
+                - 1,
+            ),
+        )
 
     # model.add(TimeDistributed(Dense(units=NUMBER_OF_NEURONS)))
 
