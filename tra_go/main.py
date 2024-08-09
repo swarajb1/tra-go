@@ -25,14 +25,28 @@ BATCH_SIZE: int = int(os.getenv("BATCH_SIZE"))
 LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
 TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
+SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
+
 
 X_TYPE: BandType = BandType.BAND_4
 Y_TYPE: BandType = BandType.BAND_2_1
 
-# (HDFCBANK,    RELIANCE,    ICICIBANK,    INFY,    LT,    ITC,    TCS,    BHARTIARTL,    AXISBANK,    SBIN)
-
-TICKER: TickerOne = TickerOne.LT
+TICKER: TickerOne = TickerOne.ICICIBANK
 INTERVAL: IntervalType = IntervalType.MIN_1
+
+
+list_of_tickers: list[TickerOne] = [
+    TickerOne.ICICIBANK,
+    TickerOne.RELIANCE,
+    TickerOne.SBIN,
+    TickerOne.LT,
+    TickerOne.ITC,
+    TickerOne.TCS,
+    TickerOne.HDFCBANK,
+    TickerOne.BHARTIARTL,
+    TickerOne.AXISBANK,
+    TickerOne.HINDUNILVR,
+]
 
 
 def main_training():
@@ -216,8 +230,6 @@ def main_training():
         #     interval=INTERVAL,
         # )
 
-        train_prev_close, test_prev_close = data_loader.get_prev_close_data()
-
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
         print("training x data shape\t", X_train.shape)
@@ -244,13 +256,15 @@ def main_training():
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
     print("-" * 30)
 
-    number_of_model_checkpoints: int = 6
+    # number_of_model_checkpoints: int = 6
 
-    evaluate_models(
-        model_location_type=ModelLocationType.TRAINED_NEW,
-        number_of_models=number_of_model_checkpoints,
-        newly_trained_models=True,
-    )
+    # num_models_to_evaluate: int = number_of_model_checkpoints + 1
+
+    # evaluate_models(
+    #     model_location_type=ModelLocationType.TRAINED_NEW,
+    #     number_of_models=num_models_to_evaluate,
+    #     newly_trained_models=True,
+    # )
 
     battery = psutil.sensors_battery()
 
@@ -281,11 +295,32 @@ def main():
     os.system("clear")
     time_1 = time.time()
 
+    assert SAFETY_FACTOR >= 1, f"Safety factor should be greater than or equal to 1 =={SAFETY_FACTOR}"
+
     suppress_cpu_usage()
 
     if len(sys.argv) > 1:
+        number_of_models: int = 7
+        move_files: bool = False
+
+        if len(sys.argv) > 2:
+            number_of_models = int(sys.argv[2])
+
+        if len(sys.argv) > 3:
+            move_files = bool(int(sys.argv[3]))
+
         if sys.argv[1] == "true":
-            main_training()
+            global TICKER
+
+            for ticker in list_of_tickers:
+                TICKER = ticker
+                main_training()
+
+                # evaluate_models(
+                #     model_location_type=ModelLocationType.SAVED,
+                #     number_of_models=number_of_models,
+                #     move_files=move_files,
+                # )
 
         elif sys.argv[1] == "training_new":
             evaluate_models(
@@ -295,25 +330,46 @@ def main():
             )
 
         elif sys.argv[1] == "training":
-            evaluate_models(model_location_type=ModelLocationType.TRAINED_NEW, number_of_models=24, move_files=True)
+            evaluate_models(
+                model_location_type=ModelLocationType.TRAINED_NEW,
+                number_of_models=number_of_models,
+                move_files=move_files,
+            )
 
         elif sys.argv[1] == "saved":
-            evaluate_models(model_location_type=ModelLocationType.SAVED, number_of_models=24, move_files=True)
+            evaluate_models(
+                model_location_type=ModelLocationType.SAVED,
+                number_of_models=number_of_models,
+                move_files=move_files,
+            )
 
         elif sys.argv[1] == "saved_double":
-            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=6)
+            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=number_of_models)
 
         elif sys.argv[1] == "saved_triple":
-            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=3)
+            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=number_of_models)
 
         elif sys.argv[1] == "old":
-            evaluate_models(model_location_type=ModelLocationType.OLD, number_of_models=24, move_files=True)
+            evaluate_models(
+                model_location_type=ModelLocationType.OLD,
+                number_of_models=number_of_models,
+                move_files=move_files,
+            )
 
         elif sys.argv[1] == "discarded":
-            evaluate_models(model_location_type=ModelLocationType.DISCARDED, number_of_models=24, move_files=True)
+            evaluate_models(
+                model_location_type=ModelLocationType.DISCARDED,
+                number_of_models=number_of_models,
+                move_files=True,
+            )
 
     else:
-        main_training()
+        # main_training()
+        evaluate_models(
+            model_location_type=ModelLocationType.SAVED,
+            number_of_models=6,
+            move_files=False,
+        )
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
 
