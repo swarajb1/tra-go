@@ -4,19 +4,20 @@ import sys
 import time
 from datetime import datetime
 
+import band_2.keras_model_band_2 as km_2
+import band_2_1.keras_model as km_21_model
+import band_4.keras_model_band_4 as km_4
 import keras_model as km
 import psutil
 import training_zero as an
+from core.assertions import assert_env_vals
+from core.evaluate_models import evaluate_models
 from data_loader import DataLoader
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard, TerminateOnNaN
 from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 
-import tra_go.band_2.keras_model_band_2 as km_2
-import tra_go.band_2_1.keras_model as km_21_model
-import tra_go.band_4.keras_model_band_4 as km_4
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
-from tra_go.core.evaluate_models import evaluate_models
 
 NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
 
@@ -24,8 +25,6 @@ NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 BATCH_SIZE: int = int(os.getenv("BATCH_SIZE"))
 LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
 TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
 
 X_TYPE: BandType = BandType.BAND_4
@@ -295,7 +294,7 @@ def main():
     os.system("clear")
     time_1 = time.time()
 
-    assert SAFETY_FACTOR >= 1, f"Safety factor should be greater than or equal to 1 =={SAFETY_FACTOR}"
+    assert_env_vals()
 
     suppress_cpu_usage()
 
