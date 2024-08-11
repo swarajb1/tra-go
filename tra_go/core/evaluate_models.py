@@ -20,7 +20,7 @@ def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
         from band_2.training_yf_band_2 import CustomEvaluation
 
     elif y_type == BandType.BAND_2_1:
-        from band_2_1.evaluation_new import CustomEvaluation
+        from band_2_1.evaluation import CustomEvaluation
 
     return CustomEvaluation
 
