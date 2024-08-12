@@ -667,8 +667,8 @@ def get_x_y_individual_data(
     arr_x = split_by_date(data_df=data_df_x, interval=interval, columns=columns)
     arr_y = split_by_date(data_df=data_df_y, interval=interval, columns=columns)
 
-    arr_x = arr_x.astype(np.float32)
-    arr_y = arr_y.astype(np.float32)
+    arr_x = arr_x.astype(np.float64)
+    arr_y = arr_y.astype(np.float64)
 
     return arr_x, arr_y
 
