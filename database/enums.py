@@ -3,6 +3,7 @@ from enum import Enum
 
 class BandType(Enum):
     BAND_2 = "band_2"
+    BAND_2_1 = "band_2_1"
     BAND_4 = "band_4"
     BAND_5 = "band_5"
 
@@ -79,12 +80,31 @@ class ModelLocationType(Enum):
     SAVED_DOUBLE = "training/models_saved_double"
     SAVED_TRIPLE = "training/models_saved_triple"
 
+    OLD = "training/models_z_old"
+    DISCARDED = "training/models_zz_discarded"
+
 
 class IODataType(Enum):
     INPUT_DATA = "input_data"
-    OUTPUT_DATA = "ouput_data"
+    OUTPUT_DATA = "output_data"
+
+
+class RequiredDataType(Enum):
+    TRAINING = "training"
+    REAL = "real_and_cleaned"
 
 
 class OrderType(Enum):
     BUY = "buy"
     SELL = "sell"
+
+
+class ProcessedDataType(Enum):
+    REAL = "real"
+    EXPECTED_REWARD = "expected_reward"
+    REAL_FULL_REWARD = "real_full_reward"
+
+
+class TickerDataType(Enum):
+    TRAINING = "training"
+    REAL_AND_CLEANED = "cleaned"
