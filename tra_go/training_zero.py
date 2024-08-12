@@ -1,12 +1,18 @@
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
-from database.enums import BandType, IODataType, TickerOne
+from database.enums import BandType, IODataType, RequiredDataType, TickerOne
 
 TOTAL_POINTS_IN_ONE_DAY: int = 375
 
+# NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 132
+# NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 132
+
+
 NUMBER_OF_POINTS_IN_ZONE_1_ST: int = 150
 NUMBER_OF_POINTS_IN_ZONE_2_ND: int = 150
+
 
 NUMBER_OF_POINTS_IN_ZONE_DAY: int = NUMBER_OF_POINTS_IN_ZONE_1_ST + NUMBER_OF_POINTS_IN_ZONE_2_ND
 
@@ -22,7 +28,7 @@ def get_csv_file_path(ticker, interval) -> str:
     return file_path
 
 
-def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
+def data_split_train_test(df: pd.DataFrame, test_size: float, data_required: RequiredDataType) -> pd.DataFrame:
     # split into train and test
 
     # 1 days points inside zone = 264
@@ -39,9 +45,16 @@ def data_split_train_test(df: pd.DataFrame, test_size) -> pd.DataFrame:
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
+    columns: list[str]
+
+    if data_required == RequiredDataType.TRAINING:
+        columns = ["open", "high", "low", "close", "volume", "real_close"]
+    elif data_required == RequiredDataType.REAL:
+        columns = ["open", "high", "low", "close", "volume"]
+
     return (
-        train_df[["open", "high", "low", "close", "volume", "real_close"]],
-        test_df[["open", "high", "low", "close", "volume", "real_close"]],
+        train_df[columns],
+        test_df[columns],
     )
 
 
@@ -57,10 +70,11 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
     number_of_days: int = len(df) // NUMBER_OF_POINTS_IN_ZONE_DAY
 
     for day in range(number_of_days):
-        day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
-        day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
+        day_start_index: int = day * NUMBER_OF_POINTS_IN_ZONE_DAY
 
-        first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
+        first_2_nd_zone_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST
+
+        day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
         df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
         df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
@@ -84,9 +98,9 @@ def data_split_x_y_close(df: pd.DataFrame, interval: str, x_type: BandType, y_ty
 
     if y_type == BandType.BAND_4:
         columns_y = ["open", "high", "low", "close"]
-    elif y_type == BandType.BAND_2:
+    elif y_type in [BandType.BAND_2, BandType.BAND_2_1]:
         columns_y = ["low", "high"]
-    elif x_type == BandType.BAND_5:
+    elif y_type == BandType.BAND_5:
         columns_y = ["open", "high", "low", "close", "volume"]
 
     return (
@@ -100,19 +114,26 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     res_df = pd.DataFrame()
 
     # # when taking from 915 (165, 165)
-    # INITIAL_INDEX_OFFSET: int = 0
+    # initial_index_offset: int = 0
 
     # when taking from 1000  (132, 132)
-    # INITIAL_INDEX_OFFSET: int = 47
+    # initial_index_offset: int = 47
 
     # when taking from 951 (150, 150)
-    INITIAL_INDEX_OFFSET: int = 36
+    # initial_index_offset: int = 36
+
+    initial_index_offset: int
+
+    if NUMBER_OF_POINTS_IN_ZONE_2_ND == 132:
+        initial_index_offset = 47
+    elif NUMBER_OF_POINTS_IN_ZONE_2_ND == 150:
+        initial_index_offset = 36
 
     number_of_days = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
     for day in range(number_of_days):
-        start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + INITIAL_INDEX_OFFSET
-        end_index: int = day * TOTAL_POINTS_IN_ONE_DAY + (INITIAL_INDEX_OFFSET + NUMBER_OF_POINTS_IN_ZONE_DAY)
+        start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
+        end_index: int = start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
         res_df = pd.concat([res_df, df.iloc[start_index : end_index + 1]])
 
@@ -121,7 +142,7 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     return res_df[["open", "high", "low", "close", "real_close", "volume"]]
 
 
-def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> np.ndarray:
+def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> NDArray:
     array = df.values
 
     points_in_each_day: int
@@ -134,7 +155,7 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     if band_type == BandType.BAND_4:
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 4)
 
-    elif band_type == BandType.BAND_2:
+    elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
         res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 2)
 
     elif band_type == BandType.BAND_5:
@@ -154,7 +175,7 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
 
     df = data_inside_zone(df=df, interval=interval)
 
-    df_train, df_test = data_split_train_test(df=df, test_size=test_size)
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size, data_required=RequiredDataType.TRAINING)
 
     df_train_x, df_train_y, df_train_close = data_split_x_y_close(
         df=df_train,
@@ -182,4 +203,72 @@ def train_test_split(data_df, interval, x_type: BandType, y_type: BandType, test
     return (
         (train_x, train_y, train_prev_close),
         (test_x, test_y, test_prev_close),
+    )
+
+
+def df_data_into_3_feature_array(arr: NDArray) -> NDArray:
+    res = np.zeros((arr.shape[0], 3))
+
+    min_values = np.min(arr[:, :, 2], axis=1)
+    max_values = np.max(arr[:, :, 1], axis=1)
+    is_buy_trend = np.argmax(arr[:, :, 2], axis=1) > np.argmin(arr[:, :, 1], axis=1)
+
+    res[:, 0] = min_values
+    res[:, 1] = max_values
+    res[:, 2] = is_buy_trend.astype(int)
+
+    return res
+
+
+def train_test_split_lh(
+    data_df: pd.DataFrame,
+    interval: str,
+    x_type: BandType,
+    test_size: float = 0.2,
+) -> pd.DataFrame:
+    # separate into 178, 132 entries df. for train and test df.
+    # # separate into 132, 132 entries df. for train and test df.
+
+    # divide the price data of that day by the closing price of the previous day.
+    # for the very first day of the dataset - divide the prices by the opening price.
+
+    # y_type: BandType = BandType.BAND_2_1
+
+    df = data_df.copy(deep=True)
+
+    df = data_inside_zone(df=df, interval=interval)
+
+    df_train, df_test = data_split_train_test(df=df, test_size=test_size, data_required=RequiredDataType.TRAINING)
+
+    y_type = BandType.BAND_4
+
+    df_train_x, df_train_y, df_train_close = data_split_x_y_close(
+        df=df_train,
+        interval=interval,
+        x_type=x_type,
+        y_type=y_type,
+    )
+
+    df_test_x, df_test_y, df_test_close = data_split_x_y_close(
+        df=df_test,
+        interval=interval,
+        x_type=x_type,
+        y_type=y_type,
+    )
+
+    train_x = by_date_df_array(df_train_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
+    test_x = by_date_df_array(df_test_x, band_type=x_type, io_type=IODataType.INPUT_DATA)
+
+    train_y = by_date_df_array(df_train_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
+    test_y = by_date_df_array(df_test_y, band_type=y_type, io_type=IODataType.OUTPUT_DATA)
+
+    train_y_arr = df_data_into_3_feature_array(train_y)
+    test_y_arr = df_data_into_3_feature_array(test_y)
+
+    train_prev_close = df_train_close.values
+    test_prev_close = df_test_close.values
+
+    return (
+        (train_x, train_y_arr, train_y, train_prev_close),
+        (test_x, test_y_arr, test_y, test_prev_close),
     )
