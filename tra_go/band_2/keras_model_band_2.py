@@ -147,9 +147,7 @@ def metric_loss_comp_2(y_true, y_pred):
         (1 - K.cast(K.all([min_pred >= min_true], axis=0), dtype=K.floatx())) * K.abs(min_pred - min_true),
     )
 
-    win_amt_true_error = K.mean(
-        (1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true),
-    )
+    win_amt_true_error = K.mean((1 - K.cast(wins, dtype=K.floatx())) * K.abs(max_true - min_true))
 
     win_amt_pred_error = K.mean(
         K.abs(max_true - min_true) - (K.cast(wins, dtype=K.floatx()) * K.abs(max_pred - min_pred)),
@@ -196,7 +194,7 @@ def metric_loss_comp_2(y_true, y_pred):
         + win_amt_true_error * 2
         + win_amt_pred_error * 4
         + trend_error_win * 8
-        + trend_error_win_pred_error * 24
+        + trend_error_win_pred_error * 16
     )
 
 
