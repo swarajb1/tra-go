@@ -1,9 +1,16 @@
 import os
 
-import keras
-import keras.backend as K
+import tensorflow as tf
 from dotenv import load_dotenv
-from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
+from tensorflow.keras.layers import (
+    LSTM,
+    Bidirectional,
+    Dense,
+    Dropout,
+    Input,
+    TimeDistributed,
+)
+from tensorflow.keras.models import Sequential
 
 load_dotenv()
 
@@ -14,7 +21,7 @@ INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 def get_untrained_model(X_train, Y_train):
-    model = keras.models.Sequential()
+    model = Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
 
@@ -33,8 +40,6 @@ def get_untrained_model(X_train, Y_train):
 
     model.add(TimeDistributed(Dense(units=Y_train[0].shape[1])))
 
-    # model.add(Dense(units=Y_train[0].shape[1]))
-
     model.summary()
 
     print("\n" * 2)
@@ -43,7 +48,7 @@ def get_untrained_model(X_train, Y_train):
 
 
 def get_optimiser(learning_rate: float):
-    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
 def metric_rmse(y_true, y_pred):
@@ -51,7 +56,7 @@ def metric_rmse(y_true, y_pred):
 
     error = y_true - y_pred
 
-    return K.sqrt(K.mean(K.square(error)))
+    return tf.sqrt(tf.reduce_mean(tf.square(error)))
 
 
 def metric_abs(y_true, y_pred):
@@ -59,16 +64,16 @@ def metric_abs(y_true, y_pred):
 
     error = y_true - y_pred
 
-    return K.mean(K.abs(error))
+    return tf.reduce_mean(tf.abs(error))
 
 
 def metric_abs_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    return K.mean(K.abs(error)) / K.mean(K.abs(y_true)) * 100
+    return tf.reduce_mean(tf.abs(error)) / tf.reduce_mean(tf.abs(y_true)) * 100
 
 
 def metric_rmse_percent(y_true, y_pred):
     error = y_true - y_pred
 
-    return K.sqrt(K.mean(K.square(error))) / K.mean(K.abs(y_true)) * 100
+    return tf.sqrt(tf.reduce_mean(tf.square(error))) / tf.reduce_mean(tf.abs(y_true)) * 100
