@@ -339,13 +339,18 @@ class Simulation:
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
-        print("\n\nCapture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
+        print(
+            "\n\nCapture Return Percent:\t\t",
+            "{:.2f}".format(self.real_full_reward_mean / self.expected_mean * 100),
+            " %",
+        )
 
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
 
         # Central Tendency
         mean = np.mean(sorted_arr)
+
         if data_type == ProcessedDataType.REAL:
             self.real_mean = mean
         elif data_type == ProcessedDataType.EXPECTED_REWARD:
