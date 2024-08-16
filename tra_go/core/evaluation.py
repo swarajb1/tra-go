@@ -142,7 +142,6 @@ class CoreEvaluation:
             y_real=self.y_data_real,
         )
 
-        # self.win_250_days, self.win_pred_capture_percent = win_graph.get_win_values()
         # self.is_model_worth_saving, self.is_model_worth_double_saving = win_graph.get_model_worthiness()
 
         copy_attributes: list[str] = [
