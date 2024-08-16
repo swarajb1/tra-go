@@ -24,6 +24,8 @@ def with_leverage(val: float) -> float:
 
 
 def from_per_day_to_year(val: float) -> float:
+    print("\n(250_days, 250_days_5)")
+
     return (round((pow(val / 100 + 1, 250) - 1) * 100), round((pow(val * 5 / 100 + 1, 250) - 1) * 100))
 
 
