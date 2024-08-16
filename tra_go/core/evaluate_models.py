@@ -10,7 +10,7 @@ TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
 
 def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
-    if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1]:
+    if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1, BandType.BAND_1_1]:
         raise ValueError(f"Invalid y_type: {y_type}")
 
     if y_type == BandType.BAND_4:
@@ -19,7 +19,7 @@ def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
     elif y_type == BandType.BAND_2:
         from band_2.training_yf_band_2 import CustomEvaluation
 
-    elif y_type == BandType.BAND_2_1:
+    elif y_type in [BandType.BAND_2_1, BandType.BAND_1_1]:
         from band_2_1.evaluation import CustomEvaluation
 
     return CustomEvaluation
@@ -121,23 +121,10 @@ def evaluate_models(
 
         Y_train_data_real, Y_test_data_real = data_loader.get_real_y_data()
 
-        if model_y_type == BandType.BAND_2_1 and model_x_type == BandType.BAND_4:
+        if model_y_type in [BandType.BAND_2_1, BandType.BAND_1_1]:
             train_prev_close, test_prev_close = data_loader.get_prev_close_data()
 
             (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
-
-            # (
-            #     (X_train, Y_train, Y_train_full, train_prev_close),
-            #     (X_test, Y_test, Y_test_full, test_prev_close),
-            # ) = an.train_test_split_lh(
-            #     data_df=df,
-            #     test_size=TEST_SIZE,
-            #     x_type=model_x_type,
-            #     interval=model_interval.value,
-            # )
-
-            # Y_train = Y_train_full
-            # Y_test = Y_test_full
 
         else:
             (
