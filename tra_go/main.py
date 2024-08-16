@@ -27,8 +27,8 @@ LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
 TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
 
-X_TYPE: BandType = BandType.BAND_4
-Y_TYPE: BandType = BandType.BAND_2_1
+X_TYPE: BandType = BandType.BAND_1_CLOSE
+Y_TYPE: BandType = BandType.BAND_1_1
 
 TICKER: TickerOne = TickerOne.ICICIBANK
 INTERVAL: IntervalType = IntervalType.MIN_1
@@ -210,7 +210,7 @@ def main_training():
             ],
         )
 
-    elif Y_TYPE == BandType.BAND_2_1:
+    elif Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]:
         data_loader = DataLoader(
             ticker=TICKER,
             interval=INTERVAL,
@@ -218,16 +218,6 @@ def main_training():
             y_type=Y_TYPE,
             test_size=TEST_SIZE,
         )
-
-        # (
-        #     (X_train, Y_train, Y_train_full, train_prev_close),
-        #     (X_test, Y_test, Y_test_full, test_prev_close),
-        # ) = an.train_test_split_lh(
-        #     data_df=df,
-        #     test_size=TEST_SIZE,
-        #     x_type=X_TYPE,
-        #     interval=INTERVAL,
-        # )
 
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
@@ -315,12 +305,6 @@ def main():
                 TICKER = ticker
                 main_training()
 
-                # evaluate_models(
-                #     model_location_type=ModelLocationType.SAVED,
-                #     number_of_models=number_of_models,
-                #     move_files=move_files,
-                # )
-
         elif sys.argv[1] == "training_new":
             evaluate_models(
                 model_location_type=ModelLocationType.TRAINED_NEW,
@@ -363,12 +347,13 @@ def main():
             )
 
     else:
-        # main_training()
-        evaluate_models(
-            model_location_type=ModelLocationType.SAVED,
-            number_of_models=6,
-            move_files=False,
-        )
+        main_training()
+
+        # evaluate_models(
+        #     model_location_type=ModelLocationType.SAVED,
+        #     number_of_models=6,
+        #     move_files=False,
+        # )
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
 

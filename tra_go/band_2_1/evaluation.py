@@ -70,10 +70,14 @@ class CustomEvaluation(CoreEvaluation):
 
         self.y_pred: NDArray = model.predict(self.x_data)
 
+        x_last_zone_close: NDArray
+
         if self.x_type == BandType.BAND_4:
-            x_last_zone_close: NDArray = self.x_data[:, -1, 3]
+            x_last_zone_close = self.x_data[:, -1, 3]
         elif self.x_type == BandType.BAND_2:
-            x_last_zone_close: NDArray = (self.x_data[:, -1, 0] + self.x_data[:, -1, 1]) / 2
+            x_last_zone_close = (self.x_data[:, -1, 0] + self.x_data[:, -1, 1]) / 2
+        elif self.x_type == BandType.BAND_1_CLOSE:
+            x_last_zone_close = self.x_data[:, -1, 0]
 
         self.x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_day_close)
 

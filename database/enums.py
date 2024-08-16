@@ -2,6 +2,8 @@ from enum import Enum
 
 
 class BandType(Enum):
+    BAND_1_CLOSE = "band_1_close"
+    BAND_1_1 = "band_1_1"
     BAND_2 = "band_2"
     BAND_2_1 = "band_2_1"
     BAND_4 = "band_4"

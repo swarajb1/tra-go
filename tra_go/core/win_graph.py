@@ -30,6 +30,9 @@ class WinGraph:
         self.win_pred_capture_percent: float = 0
         self.simulation_250_days: float = 0
 
+        self.is_model_worth_saving: bool
+        self.is_model_worth_double_saving: bool
+
         self._make_win_graph()
 
     def _make_win_graph(self) -> None:
@@ -128,17 +131,24 @@ class WinGraph:
 
         self.win_250_days = round(pro_250 * 100, 2)
 
-        # special conditions
+        SPECIAL_THRESHOLD = 0.75
 
-        # self.is_model_worth_saving &= fraction_win > 0.2
+        # special_condition
+        if (
+            fraction_win > SPECIAL_THRESHOLD
+            and fraction_average_in > SPECIAL_THRESHOLD
+            and fraction_max_inside > SPECIAL_THRESHOLD
+            and fraction_min_inside > SPECIAL_THRESHOLD
+        ):
+            self.is_model_worth_saving = True
 
-        # self.is_model_worth_double_saving &= self.is_model_worth_saving and self.win_pred_capture_percent > 5
+            print(f"\nall fractions are greater than {SPECIAL_THRESHOLD}")
 
-        # if self.is_model_worth_saving:
-        #     print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")
+        if self.is_model_worth_saving:
+            print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")
 
-        # if self.is_model_worth_double_saving:
-        #     print("\n\nIs Model Worth Double Saving\t \033[92m++++\033[0m ")
+        if self.is_model_worth_double_saving:
+            print("\n\nIs Model Worth Double Saving\t \033[92m++++\033[0m ")
 
         print("\n")
         # print("Valid Pred:\t\t\t", round(fraction_valid_pred * 100, 2), " %")
@@ -162,9 +172,6 @@ class WinGraph:
         # print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT)
 
         return
-
-    def get_win_values(self) -> tuple[bool, bool]:
-        return self.win_250_days, self.win_pred_capture_percent
 
     def get_model_worthiness(self) -> tuple[bool, bool]:
         return self.is_model_worth_saving, self.is_model_worth_double_saving
