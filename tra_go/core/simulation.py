@@ -47,7 +47,7 @@ class Simulation:
 
         self.real_mean: float
         self.expected_mean: float
-        self.real_full_reward_mean: float
+        self.actual_full_reward_mean: float
 
         self.simulation_250_days: float = 0
 
@@ -71,7 +71,14 @@ class Simulation:
 
         self.count_something: int = 0
 
-        for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
+        rrr_list: list[float] = [0.5]
+        for i in range(11):
+            rrr_list.append(i * 0.2)
+
+        rrr_list.sort()
+
+        for RISK_TO_REWARD_RATIO in rrr_list:
+            # for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
             number_of_days: int = self.real_price_arr.shape[0]
 
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
@@ -339,13 +346,18 @@ class Simulation:
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
-        print("\n\nCapture Return Percent:\t\t", "{:.2f}".format(self.real_mean / self.expected_mean * 100), " %")
+        print(
+            "\n\nCapture Return Percent:\t\t",
+            "{:.2f}".format(self.real_mean / self.actual_full_reward_mean * 100),
+            " %",
+        )
 
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
 
         # Central Tendency
         mean = np.mean(sorted_arr)
+
         if data_type == ProcessedDataType.REAL:
             self.real_mean = mean
         elif data_type == ProcessedDataType.EXPECTED_REWARD:
@@ -435,7 +447,7 @@ class Simulation:
 
             real_full_reward_percent_day_wise_list[i_day] = full_reward / invested_day_wise_list[i_day] * 100
 
-        self.real_full_reward_mean = np.mean(real_full_reward_percent_day_wise_list)
+        self.actual_full_reward_mean = np.mean(real_full_reward_percent_day_wise_list)
 
     def get_model_worthiness(self) -> tuple[bool, bool]:
         """Returns a tuple indicating the worthiness of the model.
