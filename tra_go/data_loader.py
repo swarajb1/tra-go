@@ -152,6 +152,9 @@ class DataLoader:
         df_i.reset_index(drop=True, inplace=True)
         df_o.reset_index(drop=True, inplace=True)
 
+        df_i["close_average"] = (df_i["close"] + df_i["open"] + df_i["high"] + df_i["low"]) / 4
+        df_o["close_average"] = (df_o["close"] + df_o["open"] + df_o["high"] + df_o["low"]) / 4
+
         assert (
             len(df_i) % NUMBER_OF_POINTS_IN_ZONE_1_ST == 0
         ), "Input Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_1_ST"
@@ -164,6 +167,8 @@ class DataLoader:
         columns_y: list[str]
 
         band_columns: dict[BandType, list[str]] = {
+            BandType.BAND_1_CLOSE: ["close_average"],
+            BandType.BAND_1_1: ["close_average"],
             BandType.BAND_2: ["low", "high"],
             BandType.BAND_2_1: ["low", "high"],
             BandType.BAND_4: ["open", "high", "low", "close"],
@@ -244,9 +249,9 @@ class DataLoader:
         train_y = by_date_df_array(df_train_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
         test_y = by_date_df_array(df_test_y, band_type=self.y_type, io_type=IODataType.OUTPUT_DATA)
 
-        if self.y_type == BandType.BAND_2_1:
-            train_y = df_data_into_3_feature_array(train_y)
-            test_y = df_data_into_3_feature_array(test_y)
+        if self.y_type == BandType.BAND_2_1 or self.y_type == BandType.BAND_1_1:
+            train_y = self.df_data_into_3_feature_array(train_y)
+            test_y = self.df_data_into_3_feature_array(test_y)
 
         self.train_x_data = train_x
         self.train_y_data = train_y
@@ -307,6 +312,37 @@ class DataLoader:
 
         return (self.train_prev_close, self.test_prev_close)
 
+    def df_data_into_3_feature_array(self, arr: NDArray) -> NDArray:
+        res = np.zeros((arr.shape[0], 3))
+
+        min_values: NDArray
+        max_values: NDArray
+        is_buy_trend: NDArray
+
+        if self.y_type == BandType.BAND_2_1:
+            assert arr.shape[2] == 2, "Array.shape[2] is not equal to 2, the data is not coming in the form of BAND_2"
+
+            min_values = np.min(arr[:, :, 0], axis=1)
+            max_values = np.max(arr[:, :, 1], axis=1)
+
+            # buy trend when max comes after min
+            is_buy_trend = np.argmax(arr[:, :, 1], axis=1) > np.argmin(arr[:, :, 0], axis=1)
+
+        elif self.y_type == BandType.BAND_1_1:
+            assert arr.shape[2] == 1, "Array.shape[1] is not equal to 1, the data is not coming in the form of BAND_1"
+
+            min_values = np.min(arr[:, :, 0], axis=1)
+            max_values = np.max(arr[:, :, 0], axis=1)
+
+            # buy trend when max comes after min
+            is_buy_trend = np.argmax(arr[:, :, 0], axis=1) > np.argmin(arr[:, :, 0], axis=1)
+
+        res[:, 0] = min_values
+        res[:, 1] = max_values
+        res[:, 2] = is_buy_trend.astype(int)
+
+        return res
+
 
 def check_gaps(data: NDArray[np.float64]) -> None:
     count_gaps_train = 0
@@ -341,34 +377,19 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     assert len(array) % points_in_each_day == 0, "Array length is not divisible by points_in_each_day"
 
     if band_type == BandType.BAND_4:
-        assert array.shape[1] == 4, "Array.shape[1] is not equal to 4 "
+        assert array.shape[1] == 4, "Array.shape[1] is not equal to 4"
 
     elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
-        assert array.shape[1] == 2, "Array.shape[1] is not equal to 2 "
+        assert array.shape[1] == 2, "Array.shape[1] is not equal to 2"
 
     elif band_type == BandType.BAND_5:
-        assert array.shape[1] == 5, "Array.shape[1] is not equal to 5 "
+        assert array.shape[1] == 5, "Array.shape[1] is not equal to 5"
+
+    elif band_type == BandType.BAND_1_1:
+        assert array.shape[1] == 1, "Array.shape[1] is not equal to 1"
 
     num_feature: int = array.shape[1]
 
     res = array.reshape(len(array) // points_in_each_day, points_in_each_day, num_feature)
-
-    return res
-
-
-def df_data_into_3_feature_array(arr: NDArray) -> NDArray:
-    res = np.zeros((arr.shape[0], 3))
-
-    assert arr.shape[2] == 2, "Array.shape[2] is not equal to 2, the data is not coming in the form of BAND_2"
-
-    min_values = np.min(arr[:, :, 0], axis=1)
-    max_values = np.max(arr[:, :, 1], axis=1)
-
-    # buy trend when max comes after min
-    is_buy_trend = np.argmax(arr[:, :, 1], axis=1) > np.argmin(arr[:, :, 0], axis=1)
-
-    res[:, 0] = min_values
-    res[:, 1] = max_values
-    res[:, 2] = is_buy_trend.astype(int)
 
     return res
