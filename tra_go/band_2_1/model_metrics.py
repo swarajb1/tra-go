@@ -1,11 +1,12 @@
 import tensorflow as tf
-from keras_model_tf import metric_abs, metric_rmse
+from keras_model_tf import metric_abs
 
 
 def loss_function(y_true, y_pred):
     return (
-        metric_rmse(y_true[:, :2], y_pred[:, :2])
-        + metric_abs(y_true[:, :2], y_pred[:, :2]) / 3
+        # metric_rmse(y_true[:, :2], y_pred[:, :2])
+        +metric_abs(y_true[:, :2], y_pred[:, :2])
+        # + metric_abs(y_true[:, 2:], y_pred[:, 2:]) / 50
         # + metric_average_in(y_true, y_pred) / 3
         + metric_loss_comp_2(y_true, y_pred)
     )
@@ -109,10 +110,10 @@ def metric_loss_comp_2(y_true, y_pred):
         z_max_above_error
         + z_pred_valid_error
         + z_min_below_error
-        + win_amt_true_error * 2
-        + win_amt_pred_error * 5
-        + trend_error_win * 10
-        + trend_error_win_pred_error * 25
+        + win_amt_true_error
+        + win_amt_pred_error
+        + trend_error_win
+        + trend_error_win_pred_error
     )
 
 
