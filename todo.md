@@ -2,21 +2,13 @@
 
 ## Paradigm changes
 
-- ### Heikin Ashi Candles
+- ### Heikin Ashi Candles - paradigm
 
   - use this candle paradigm for band_4
   - calculations:
     - very 1st candle, open (ha) = open
 
-- ### band_1_1
-
-  - use average of 4 ohlc for input.
-
 ## Optimization changes
-
-- ### config file
-
-  - all env values
 
 ## Experiments
 
@@ -36,3 +28,13 @@
   - correlation of all 50 stocks with each other.
 
   - correlation with nifty 50 index
+
+- clear out the previous files folder
+
+## communication
+
+- ### mailgun
+
+  - use mail gun to receive email of current status of you positions at intervals.
+
+  - tutorial : [https://www.youtube.com/watch?v=LnVRGV-9NOY]
