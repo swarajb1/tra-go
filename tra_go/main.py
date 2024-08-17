@@ -11,6 +11,7 @@ import keras_model as km
 import psutil
 import training_zero as an
 from core.assertions import assert_env_vals
+from core.config import settings
 from core.evaluate_models import evaluate_models
 from data_loader import DataLoader
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard, TerminateOnNaN
@@ -18,14 +19,6 @@ from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
-
-NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
-BATCH_SIZE: int = int(os.getenv("BATCH_SIZE"))
-LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
-TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
-
 
 X_TYPE: BandType = BandType.BAND_1_CLOSE
 Y_TYPE: BandType = BandType.BAND_1_1
@@ -141,7 +134,7 @@ def main_training():
             test_prev_close,
         ) = an.train_test_split(
             data_df=df,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
             x_type=X_TYPE,
             y_type=Y_TYPE,
             interval=INTERVAL.value,
@@ -154,7 +147,7 @@ def main_training():
 
         print("model output shape\t", model.output_shape)
 
-        optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
+        optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
         loss = km_4.metric_new_idea
 
@@ -178,7 +171,7 @@ def main_training():
             (X_test, Y_test, test_prev_close),
         ) = an.train_test_split(
             data_df=df,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
             x_type=X_TYPE,
             y_type=Y_TYPE,
             interval=INTERVAL.value,
@@ -191,7 +184,7 @@ def main_training():
 
         print("model output shape\t", model.output_shape)
 
-        optimizer = km.get_optimiser(learning_rate=LEARNING_RATE)
+        optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
         loss = km_2.metric_new_idea
 
@@ -216,7 +209,7 @@ def main_training():
             interval=INTERVAL,
             x_type=X_TYPE,
             y_type=Y_TYPE,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
         )
 
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
@@ -232,8 +225,8 @@ def main_training():
     history = model.fit(
         x=X_train,
         y=Y_train,
-        epochs=NUMBER_OF_EPOCHS,
-        batch_size=BATCH_SIZE,
+        epochs=settings.NUMBER_OF_EPOCHS,
+        batch_size=settings.BATCH_SIZE,
         validation_data=(X_test, Y_test),
         callbacks=callbacks,
     )
@@ -263,7 +256,7 @@ def main_training():
 
 
 def suppress_cpu_usage():
-    if NUMBER_OF_NEURONS <= 128:
+    if settings.NUMBER_OF_NEURONS <= 128:
         return
 
     # Get the current process ID
@@ -347,13 +340,13 @@ def main():
             )
 
     else:
-        main_training()
+        # main_training()
 
-        # evaluate_models(
-        #     model_location_type=ModelLocationType.SAVED,
-        #     number_of_models=6,
-        #     move_files=False,
-        # )
+        evaluate_models(
+            model_location_type=ModelLocationType.SAVED,
+            number_of_models=6,
+            move_files=False,
+        )
 
     print(f"\ntime taken = {round(time.time() - time_1, 2)} sec\n")
 

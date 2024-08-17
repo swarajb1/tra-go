@@ -22,33 +22,33 @@ class EnvFlavour(StrEnum):
 class GlobalConfig(BaseSettings):
     """Global configurations."""
 
-    FLAVOUR: EnvFlavour = Field(default=EnvFlavour.dev)
-
     PROJECT_NAME: str = Field(default="tra_go")
 
-    API_PREFIX: str = "/api"
     VERSION: str = "1.0"
 
-    DOCS_URL: str = "/docs"
+    FLAVOUR: EnvFlavour = Field(default=EnvFlavour.dev)
 
-    HOST: str = Field(default="0.0.0.0")
-    PORT: int = Field(default=8000)
-    WORKERS_COUNT: int = Field(default=10)
+    ZERODHA_ID: str
+    PASSWORD: str
 
-    DB_USER: str
-    DB_PASS: str
-    DB_HOST: str
-    RO_DB_HOST: str
-    DB_PORT: int
-    DB_NAME: str
-    DB_SCHEMA: str
+    API_KEY: str
+    ACCESS_TOKEN: str
+
+    NUMBER_OF_EPOCHS: int = Field(default=1000)
+    BATCH_SIZE: int = Field(default=512)
+    LEARNING_RATE: float = Field(default=0.0001)
+    TEST_SIZE: float = Field(default=0.2)
+
+    NUMBER_OF_NEURONS: int = Field(default=128)
+    NUMBER_OF_LAYERS: int = Field(default=3)
+    INITIAL_DROPOUT_PERCENT: int = Field(default=0)
+
+    RISK_TO_REWARD_RATIO: float
+
+    SAFETY_FACTOR: int = Field(default=1)
 
     DEBUG: bool = Field(default=False)
     LOGGING_LEVEL: int = logging.DEBUG if DEBUG else logging.INFO
-
-    AUTH_SECRET: str
-
-    PROFILING_ENABLED: bool = False
 
     model_config = SettingsConfigDict()
 
@@ -91,20 +91,3 @@ class FactoryConfig:
 settings: GlobalConfig = FactoryConfig(config("FLAVOUR", default=EnvFlavour.dev, cast=EnvFlavour))()
 
 __all__ = ["settings"]
-
-
-# ------------------------------
-
-
-# from core.config import settings
-
-# {
-#                 "main:app",
-#             "host":settings.HOST,
-#             "port":settings.PORT,
-#             "workers":settings.WORKERS_COUNT,
-#             "reload":settings.RELOAD,
-#             "reload_includes":["policy.polar"],
-#             "log_level":settings.LOGGING_LEVEL,
-
-# }
