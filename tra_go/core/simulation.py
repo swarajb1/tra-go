@@ -64,15 +64,10 @@ class Simulation:
 
         self.count_something: int = 0
 
-        rrr_list: list[float] = [settings.RISK_TO_REWARD_RATIO]
-        for i in range(11):
-            rrr_list.append(i * 0.2)
+        number_of_days: int = self.real_price_arr.shape[0]
 
-        rrr_list.sort()
-
-        for RISK_TO_REWARD_RATIO in rrr_list:
-            # for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            number_of_days: int = self.real_price_arr.shape[0]
+        for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
+            RISK_TO_REWARD_RATIO = round(RISK_TO_REWARD_RATIO, 1)
 
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
             invested_day_wise_list: NDArray = np.zeros(number_of_days)
@@ -118,7 +113,7 @@ class Simulation:
                     # if (
                     #     tick_low <= buy_price <= tick_high
                     #     and tick_low <= sell_price <= tick_high
-                    #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
+                    #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                     # ):
                     #     print("WARNING: buy_price and sell_price both inside the 1 tick", i_tick, tick_low, tick_high)
 
@@ -142,7 +137,7 @@ class Simulation:
                             # if (
                             #     tick_low <= buy_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
+                            #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: buy_price and stop_loss both inside the 1 tick ")
 
@@ -166,7 +161,7 @@ class Simulation:
                             # if (
                             #     tick_low <= sell_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
+                            #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: sell_price and stop_loss both inside the 1 tick ")
 
@@ -233,10 +228,10 @@ class Simulation:
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_model_worth_saving = True
 
-                if round(RISK_TO_REWARD_RATIO, 1) <= settings.RISK_TO_REWARD_RATIO:
+                if RISK_TO_REWARD_RATIO <= settings.RISK_TO_REWARD_RATIO:
                     self.is_model_worth_double_saving = True
 
-            if round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO:
+            if RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO:
                 self.real_data_for_analysis = arr_real_percent
                 self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
                 self.stoploss_rrr_for_analysis = 1
