@@ -1,9 +1,7 @@
-import os
-
 import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import tensorflow as tf
-from dotenv import load_dotenv
+from core.config import settings
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (
     LSTM,
@@ -16,13 +14,6 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 from tensorflow.keras.models import Model
-
-load_dotenv()
-
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
-NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
-INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 class ModelCompileDetails:
@@ -66,11 +57,11 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
 
     model.add(Input(shape=(X_train[0].shape)))
 
-    for layer_num in range(NUMBER_OF_LAYERS):
+    for layer_num in range(settings.NUMBER_OF_LAYERS):
         model.add(
             Bidirectional(
                 LSTM(
-                    units=NUMBER_OF_NEURONS,
+                    units=settings.NUMBER_OF_NEURONS,
                     return_sequences=True,
                     activation="relu",
                 ),
@@ -80,7 +71,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
         model.add(
             Dropout(
                 pow(
-                    1 + INITIAL_DROPOUT_PERCENT / 100,
+                    1 + settings.INITIAL_DROPOUT_PERCENT / 100,
                     1 / (layer_num + 1),
                 )
                 - 1,
