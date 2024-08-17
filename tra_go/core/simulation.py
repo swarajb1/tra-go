@@ -1,18 +1,11 @@
-import os
-
 import numpy as np
-from dotenv import load_dotenv
+from core.config import settings
 from numpy.typing import NDArray
 from scipy import stats
 from scipy.stats import kurtosis, skew
 from utils.functions import round_num_str
 
 from database.enums import ProcessedDataType
-
-load_dotenv()
-
-
-RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
 PERCENT_250_DAYS_WORTH_SAVING: int = 5
@@ -71,7 +64,7 @@ class Simulation:
 
         self.count_something: int = 0
 
-        rrr_list: list[float] = [0.5]
+        rrr_list: list[float] = [settings.RISK_TO_REWARD_RATIO]
         for i in range(11):
             rrr_list.append(i * 0.2)
 
@@ -125,7 +118,7 @@ class Simulation:
                     # if (
                     #     tick_low <= buy_price <= tick_high
                     #     and tick_low <= sell_price <= tick_high
-                    #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                    #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
                     # ):
                     #     print("WARNING: buy_price and sell_price both inside the 1 tick", i_tick, tick_low, tick_high)
 
@@ -149,7 +142,7 @@ class Simulation:
                             # if (
                             #     tick_low <= buy_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: buy_price and stop_loss both inside the 1 tick ")
 
@@ -173,7 +166,7 @@ class Simulation:
                             # if (
                             #     tick_low <= sell_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            #     and round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: sell_price and stop_loss both inside the 1 tick ")
 
@@ -240,10 +233,10 @@ class Simulation:
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_model_worth_saving = True
 
-                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
+                if round(RISK_TO_REWARD_RATIO, 1) <= settings.RISK_TO_REWARD_RATIO:
                     self.is_model_worth_double_saving = True
 
-            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
+            if round(RISK_TO_REWARD_RATIO, 1) == settings.RISK_TO_REWARD_RATIO:
                 self.real_data_for_analysis = arr_real_percent
                 self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
                 self.stoploss_rrr_for_analysis = 1
@@ -340,7 +333,7 @@ class Simulation:
         # if not self.is_model_worth_saving:
         #     return
 
-        print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
+        print("\n\n\n", "-" * 30, f"\nReal End of Day Stats, , RRR = {settings.RISK_TO_REWARD_RATIO}\n")
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
 
         print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")

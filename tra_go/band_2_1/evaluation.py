@@ -4,12 +4,12 @@ import band_2_1.keras_model as km_21_model
 import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import numpy as np
+from core.evaluation import CoreEvaluation
 from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
-from tra_go.core.evaluation import CoreEvaluation
 
 SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
