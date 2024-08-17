@@ -60,8 +60,9 @@ repos:
     rev: v0.41.0
     hooks:
       - id: markdownlint
-        args: ['--fix']
-        
+        # args: ['--fix']
+        args: ['--fix', '.markdownlint.json']
+
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v4.6.0
   #   hooks:
