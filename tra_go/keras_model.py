@@ -1,16 +1,7 @@
-import os
-
 import keras
 import keras.backend as K
-from dotenv import load_dotenv
+from core.config import settings
 from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
-
-load_dotenv()
-
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
-NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
-INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 def get_untrained_model(X_train, Y_train):
@@ -18,18 +9,18 @@ def get_untrained_model(X_train, Y_train):
 
     model.add(Input(shape=(X_train[0].shape)))
 
-    for i in range(NUMBER_OF_LAYERS):
+    for i in range(settings.NUMBER_OF_LAYERS):
         model.add(
             Bidirectional(
                 LSTM(
-                    units=NUMBER_OF_NEURONS,
+                    units=settings.NUMBER_OF_NEURONS,
                     return_sequences=True,
                     activation="relu",
                 ),
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(1 + INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
+        model.add(Dropout(pow(1 + settings.INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
 
     model.add(TimeDistributed(Dense(units=Y_train[0].shape[1])))
 
