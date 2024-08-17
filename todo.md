@@ -10,6 +10,8 @@
 
 ## Optimization changes
 
+- ### combo callback
+
 ## Experiments
 
 ## Data collection and stats
@@ -31,10 +33,16 @@
 
 - clear out the previous files folder
 
-## communication
+## Communication
 
-- ### mailgun
+- ### Mailgun
 
   - use mail gun to receive email of current status of you positions at intervals.
 
   - tutorial : [https://www.youtube.com/watch?v=LnVRGV-9NOY]
+
+## Production
+
+- ### API
+
+  - use 3 brokers
