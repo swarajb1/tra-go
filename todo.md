@@ -12,7 +12,35 @@
 
 - ### combo callback
 
+- ### robustness
+
+  - shuffled test
+    - add shuffling to win per days array and, take a compounding product, reduce it back to per day, then check 250 days value in simulation. and compare 10 such instances.
+
+- ### more data
+
+  - in win graph - check how far the avg pred_max was from true_max, when inside the band. same for min.
+
+- ### 5 min data
+
+  - areas (1) - from start candle to 1200 cangle, zone 2 - 1205 candle to last
+  - 2 trades in a single day (2) - both 1m for 5m.
+  - 10-11/11-12 and 12-13/13-14
+
+     check feasibility
+
 ## Experiments
+
+- ### feature engineering
+
+  - features:
+    - 5 min average
+    - 15 min average
+    - diff
+    - lag features: -1m, -2m
+    - 15 min standard deviation
+    - vwap - volume weighted average price
+    - vwap - volume weighted average price (5m)
 
 ## Data collection and stats
 

@@ -1,7 +1,23 @@
 # notes
 
+## tricks
+
+- in simulation.
+  - if expected_reward_percent < 0.05 %:
+        no trade that day.
+
+    - ```python
+        # special_condition
+        if expected_reward / ((buy_price + sell_price) / 2) * 100 < 0.05:
+            # reward is less than 0.05% of the invested amount
+            # so, not worth trading
+            continue
+      ```
+
+## other info
+
 - find out 5 day hl from some amount of input data. (5 days or may be 3 months)
-  - capture changes that occur outside of given timeframe
+  - capture changes that occur outside of given time-frame
   - the close and open
 
 - learnings gpt:
