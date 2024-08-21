@@ -28,7 +28,10 @@ class WinGraph:
 
         self.win_250_days: float = 0
         self.win_pred_capture_percent: float = 0
+
+        # copied values form simulation
         self.simulation_250_days: float = 0
+        self.all_simulations_max_250_days: float = 0
 
         self.is_model_worth_saving: bool
         self.is_model_worth_double_saving: bool
@@ -90,6 +93,7 @@ class WinGraph:
             "is_model_worth_saving",
             "is_model_worth_double_saving",
             "simulation_250_days",
+            "all_simulations_max_250_days",
         ]
 
         for attr in copy_attributes:
