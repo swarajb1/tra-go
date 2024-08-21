@@ -10,6 +10,9 @@ def assert_env_vals() -> None:
 
     print("\n")
     for item in settings:
+        if item[0] in ["NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"]:
+            print("")
+
         print(f"{item[0]}:", " " * (50 - len(item[0])), f"{item[1]}")
 
     del item
