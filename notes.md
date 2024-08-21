@@ -14,6 +14,10 @@
             continue
       ```
 
+- zones (1m)
+  - 150/150
+    - from 0915+36th index. 0950 to 1219 [150 indexes] and 1220 to 1449
+
 ## other info
 
 - find out 5 day hl from some amount of input data. (5 days or may be 3 months)
