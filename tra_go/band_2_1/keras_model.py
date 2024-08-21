@@ -61,7 +61,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
         model.add(
             Bidirectional(
                 LSTM(
-                    units=settings.NUMBER_OF_NEURONS,
+                    units=settings.NUMBER_OF_NEURONS // (pow(2, layer_num)),
                     return_sequences=True,
                     activation="relu",
                 ),
@@ -83,6 +83,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
     # model.add(GlobalAveragePooling1D())
 
     model.add(TimeDistributed(Dense(units=3)))
+    # model.add(Dense(units=3))
 
     model.add(GlobalAveragePooling1D())
 
