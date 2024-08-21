@@ -70,6 +70,7 @@ def evaluate_models(
     max_250_days_win_value: float = 0
     max_win_pred_capture_percent_value: float = 0
     max_250_days_simulation_value: float = 0
+    max_all_simulations_max_250_days: float = 0
 
     for index, file_name in enumerate(list_of_files):
         print("\n" * 25, "*" * 280, "\n" * 4, sep="")
@@ -210,6 +211,12 @@ def evaluate_models(
             valid_data_custom_evaluation.simulation_250_days,
         )
 
+        max_all_simulations_max_250_days = max(
+            max_all_simulations_max_250_days,
+            training_data_custom_evaluation.all_simulations_max_250_days,
+            valid_data_custom_evaluation.all_simulations_max_250_days,
+        )
+
         # move files into discarded/saved/saved_double folders
         if move_files and model_location_type in [
             ModelLocationType.TRAINED_NEW,
@@ -236,9 +243,10 @@ def evaluate_models(
 
     print("\n\n", "-" * 280, "\n", sep="")
 
-    print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
-    print("\nMAX Win Pred Capture Percent achieved:\t", max_win_pred_capture_percent_value, "%")
-    print("\nMAX 250 Days Simulation Value:\t\t", max_250_days_simulation_value, "%")
+    print("\nMAX 250 days Win Value achieved:\t\t", max_250_days_win_value, "%")
+    print("\nMAX Win Pred Capture Percent achieved:\t\t", max_win_pred_capture_percent_value, "%")
+    print("\nMAX 250 Days Simulation Value:\t\t\t", max_250_days_simulation_value, "%")
+    print("\nMAX All Possible 250 Days Simulation Value:\t", max_all_simulations_max_250_days, "%")
 
     print(f"\n\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:

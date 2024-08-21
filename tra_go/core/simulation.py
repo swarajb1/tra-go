@@ -42,13 +42,28 @@ class Simulation:
         self.expected_mean: float
         self.actual_full_reward_mean: float
 
-        self.simulation_250_days: float = 0
+        self.simulation_250_days: float
+        self.all_simulations_max_250_days: float
 
         self.simulation()
 
         self.set_real_full_reward_mean()
 
         self.display_stats()
+
+    def create_rrr_list(self) -> list[float]:
+        rrr_list: list[float] = []
+
+        for i in range(11):
+            rrr_list.append(round(i / 2.5, 2))
+
+        if settings.RISK_TO_REWARD_RATIO not in rrr_list:
+            rrr_list.append(settings.RISK_TO_REWARD_RATIO)
+
+        rrr_list.extend([6, 8, 10])
+        rrr_list.sort()
+
+        return rrr_list
 
     def simulation(self) -> None:
         # 3 orders are placed when the simulation starts
@@ -62,13 +77,11 @@ class Simulation:
 
         print("simulation started....")
 
-        self.count_something: int = 0
-
         number_of_days: int = self.real_price_arr.shape[0]
 
-        for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            RISK_TO_REWARD_RATIO = round(RISK_TO_REWARD_RATIO, 1)
+        rrr_list: list[float] = self.create_rrr_list()
 
+        for RISK_TO_REWARD_RATIO in rrr_list:
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
             invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
@@ -97,12 +110,18 @@ class Simulation:
 
                 net_day_reward: float = 0
 
+                # special_condition
+                if expected_reward / ((buy_price + sell_price) / 2) * 100 < 0.05:
+                    # reward is less than 0.05% of the invested amount
+                    # so, not worth trading
+                    continue
+
                 # step 1 - find stop loss based on trade type
                 if is_trade_type_buy:
-                    # pred is up
+                    # prediction order type is up
                     stop_loss = buy_price - expected_reward * RISK_TO_REWARD_RATIO
                 else:
-                    # pred is down
+                    # prediction order type is down
                     stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
 
                 # step 2 - simulating each tick inside the interval
@@ -225,6 +244,8 @@ class Simulation:
                 " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
             )
 
+            self.all_simulations_max_250_days = max(self.all_simulations_max_250_days, round(days_250, 2))
+
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_model_worth_saving = True
 
@@ -323,8 +344,6 @@ class Simulation:
             """
 
     def display_stats(self) -> None:
-        # print("count_something =", self.count_something)
-
         # if not self.is_model_worth_saving:
         #     return
 
@@ -357,24 +376,26 @@ class Simulation:
         print("Mean: \t\t\t\t", round_num_str(mean, 2))
         print("Median: \t\t\t", round_num_str(median, 2))
 
-        # Dispersion
-        Q3, Q1 = np.percentile(sorted_arr, [75, 25])
-        Q3 - Q1
-        # print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 2))
-        # print("Standard Deviation: \t\t", round_num_str(std_deviation, 2))
         print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 2))
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
-        # print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 2))
-
-        # coefficient_of_variation = std_deviation / mean * 100
-
-        # print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
 
         # self._log_statistics_extra(self, sorted_arr)
 
         return
 
     def _log_statistics_extra(self, sorted_arr: NDArray) -> None:
+        # Dispersion
+
+        # Q3, Q1 = np.percentile(sorted_arr, [75, 25])
+        # IQR = Q3 - Q1
+        # print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 2))
+        # print("Standard Deviation: \t\t", round_num_str(std_deviation, 2))
+        # print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 2))
+
+        # coefficient_of_variation = std_deviation / mean * 100
+
+        # print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
+
         # Measures of Position
         z_scores = stats.zscore(sorted_arr)
         stats.rankdata(sorted_arr)

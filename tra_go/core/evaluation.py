@@ -150,6 +150,7 @@ class CoreEvaluation:
             "win_250_days",
             "win_pred_capture_percent",
             "simulation_250_days",
+            "all_simulations_max_250_days",
         ]
 
         for attr in copy_attributes:
