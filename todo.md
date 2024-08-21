@@ -21,9 +21,9 @@
 
   - in win graph - check how far the avg pred_max was from true_max, when inside the band. same for min.
 
-- ### 5 min data
+- ### 5 min data model
 
-  - areas (1) - from start candle to 1200 cangle, zone 2 - 1205 candle to last
+  - areas (1) - from start candle to 1200 candle, zone 2 - 1205 candle to last
   - 2 trades in a single day (2) - both 1m for 5m.
   - 10-11/11-12 and 12-13/13-14
 
