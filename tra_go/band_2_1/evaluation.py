@@ -66,8 +66,6 @@ class CustomEvaluation(CoreEvaluation):
 
         model: Model = self.load_model(custom_scope)
 
-        # model.summary()
-
         self.y_pred: NDArray = model.predict(self.x_data)
 
         x_last_zone_close: NDArray

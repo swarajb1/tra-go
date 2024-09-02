@@ -42,6 +42,13 @@
     - vwap - volume weighted average price
     - vwap - volume weighted average price (5m)
 
+  - other features:
+    - average true range
+    - standard deviation
+    - Stochastic Oscillator
+    - moving average convergence divergence
+    - relative strength index
+
 ## Data collection and stats
 
 - get mean from open of 2nd zone. and from prev day close.
@@ -53,11 +60,13 @@
   - graph
   - cumulative 30 days, always positive.
 
-- ### correlation
+- ### Correlation data
 
   - correlation of all 50 stocks with each other.
 
   - correlation with nifty 50 index
+
+## Others
 
 - clear out the previous files folder
 
