@@ -37,7 +37,7 @@ def is_file_after_date(file_path: str) -> bool:
 
 def evaluate_models(
     model_location_type: ModelLocationType,
-    number_of_models: int,
+    number_of_models: int = 6,
     newly_trained_models: bool = False,
     move_files: bool = False,
 ) -> None:
