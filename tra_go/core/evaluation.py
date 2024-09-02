@@ -1,4 +1,5 @@
 import os
+import pprint
 from copy import deepcopy
 from pathlib import Path
 
@@ -81,12 +82,26 @@ class CoreEvaluation:
 
         return
 
-    def load_model(self, custom_objects: dict | None = None) -> Model:
+    def load_model(
+        self,
+        custom_objects: dict | None = None,
+        print_summary: bool = False,
+        print_detailed_config: bool = False,
+    ) -> Model:
         if custom_objects is None:
             custom_objects = {}
 
         with custom_object_scope(custom_objects):
             model = load_model(self.model_file_path)
+
+        if print_summary:
+            # print model summary
+            model.summary()
+
+        if print_detailed_config:
+            # Get detailed configuration of the model
+            model_config = model.get_config()
+            pprint.pprint(model_config)
 
         return model
 
