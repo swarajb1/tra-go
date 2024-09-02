@@ -38,6 +38,16 @@ list_of_tickers: list[TickerOne] = [
     TickerOne.BHARTIARTL,
     TickerOne.AXISBANK,
     TickerOne.HINDUNILVR,
+    TickerOne.KOTAKBANK,
+    TickerOne.INFY,
+    TickerOne.BAJFINANCE,
+    TickerOne.ASIANPAINT,
+    TickerOne.M_M,
+    TickerOne.TITAN,
+    TickerOne.HCLTECH,
+    TickerOne.MARUTI,
+    TickerOne.SUNPHARMA,
+    TickerOne.NTPC,
 ]
 
 
@@ -142,11 +152,6 @@ def main_training():
 
         model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
-        print("training data shape\t", X_train.shape)
-        print("training element shape\t", X_train[0].shape)
-
-        print("model output shape\t", model.output_shape)
-
         optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
         loss = km_4.metric_new_idea
@@ -177,12 +182,7 @@ def main_training():
             interval=INTERVAL.value,
         )
 
-        print("training x data shape\t", X_train.shape)
-        print("training y data shape\t", Y_train.shape)
-
         model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
-
-        print("model output shape\t", model.output_shape)
 
         optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
@@ -214,13 +214,13 @@ def main_training():
 
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
-        print("training x data shape\t", X_train.shape)
-        print("training y data shape\t", Y_train.shape)
-
         model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
-        print("model input shape\t", model.input_shape)
-        print("model output shape\t", model.output_shape)
+    print("training x data shape\t", X_train.shape)
+    print("training y data shape\t", Y_train.shape)
+
+    print("model input shape\t", model.input_shape)
+    print("model output shape\t", model.output_shape)
 
     history = model.fit(
         x=X_train,

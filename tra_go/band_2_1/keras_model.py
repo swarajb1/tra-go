@@ -78,18 +78,33 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
             ),
         )
 
+    # ---start - Plan - london
     # model.add(TimeDistributed(Dense(units=NUMBER_OF_NEURONS)))
 
     # model.add(GlobalAveragePooling1D())
+    # ---end - Plan - london
 
+    # ---start - Plan - now
     model.add(TimeDistributed(Dense(units=3)))
-    # model.add(Dense(units=3))
 
     model.add(GlobalAveragePooling1D())
+    # ---end - Plan - now
 
-    # # model.add(Flatten())
+    # ---start - Plan zero
+    # model.add(
+    #     TimeDistributed(
+    #         Dense(units=settings.NUMBER_OF_NEURONS // (pow(2, settings.NUMBER_OF_LAYERS)), activation="relu")
+    #     )
+    # )
 
-    # # model.add(Dense(units=3))
+    # model.add(Flatten())
+
+    # model.add(Dense(units=3))
+    # ---end - Plan zero
+
+    # ---start - Plan polo
+    # model.add(Dense(units=3))
+    # ---end - Plan polo
 
     model.add(CustomActivationLayer())
 
