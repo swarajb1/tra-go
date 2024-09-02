@@ -18,16 +18,19 @@ class Simulation:
         sell_price_arr: NDArray[np.float64],
         order_type_buy_arr: NDArray[np.bool_],
         real_price_arr: NDArray[np.float64],
+        print_log_stats_extra: bool = False,
     ):
         self.buy_price_arr = buy_price_arr
         self.sell_price_arr = sell_price_arr
         self.order_type_buy_arr = order_type_buy_arr
         self.real_price_arr = real_price_arr
+        self.print_log_stats_extra = print_log_stats_extra
 
         del buy_price_arr
         del sell_price_arr
         del order_type_buy_arr
         del real_price_arr
+        del print_log_stats_extra
 
         # real_price_arr = o,h,l,c
 
@@ -43,7 +46,7 @@ class Simulation:
         self.actual_full_reward_mean: float
 
         self.simulation_250_days: float
-        self.all_simulations_max_250_days: float
+        self.all_simulations_max_250_days: float = float("-inf")
 
         self.simulation()
 
@@ -54,13 +57,13 @@ class Simulation:
     def create_rrr_list(self) -> list[float]:
         rrr_list: list[float] = []
 
-        for i in range(11):
-            rrr_list.append(round(i / 2.5, 2))
+        for i in range(7):
+            rrr_list.append(round(i / 3, 2))
 
         if settings.RISK_TO_REWARD_RATIO not in rrr_list:
             rrr_list.append(settings.RISK_TO_REWARD_RATIO)
 
-        rrr_list.extend([6, 8, 10])
+        rrr_list.extend([3, 5, 8, 10])
         rrr_list.sort()
 
         return rrr_list
@@ -379,7 +382,8 @@ class Simulation:
         print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 2))
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
 
-        # self._log_statistics_extra(self, sorted_arr)
+        if self.print_log_stats_extra:
+            self._log_statistics_extra(self, sorted_arr)
 
         return
 
