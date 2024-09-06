@@ -71,7 +71,7 @@ def metric_loss_comp_2(y_true, y_pred):
 
     is_min_pred_more_than_min_true = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
 
-    is_max_min_diff_more_than_00_2 = tf.math.greater_equal(y_pred[:, 1] - y_pred[:, 0], 0.015)
+    is_max_min_diff_more_than_00_1 = tf.math.greater_equal(y_pred[:, 1] - y_pred[:, 0], 0.01)
 
     band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
@@ -84,7 +84,7 @@ def metric_loss_comp_2(y_true, y_pred):
     )
 
     z_max_min_diff_error = tf.reduce_mean(
-        (1 - tf.cast(is_max_min_diff_more_than_00_2, dtype=tf.float32)) * tf.abs(max_pred - min_pred),
+        (1 - tf.cast(is_max_min_diff_more_than_00_1, dtype=tf.float32)) * (tf.abs(max_pred - min_pred) - 0.01),
     )
 
     z_min_below_error = tf.reduce_mean(
@@ -104,6 +104,25 @@ def metric_loss_comp_2(y_true, y_pred):
         * tf.abs(max_true - min_true),
     )
 
+    penalty_half_inside = tf.reduce_mean(
+        (
+            tf.cast(
+                (tf.math.logical_not(is_max_pred_less_than_max_true) & is_min_pred_more_than_min_true),
+                dtype=tf.float32,
+            )
+            * tf.abs(max_pred - max_true)
+        )
+        # max outside, min inside
+        + (
+            tf.cast(
+                (tf.math.logical_not(is_min_pred_more_than_min_true) & is_max_pred_less_than_max_true),
+                dtype=tf.float32,
+            )
+            * tf.abs(min_pred - min_true)
+        ),
+        # max inside, min outside
+    )
+
     trend_error_win_pred_error = tf.reduce_mean(
         (
             tf.abs(max_true - min_true)
@@ -120,6 +139,7 @@ def metric_loss_comp_2(y_true, y_pred):
         + z_pred_valid_error
         + z_min_below_error
         + z_max_min_diff_error
+        + penalty_half_inside
         + win_amt_true_error * 1.5
         + win_amt_pred_error * 2
         + trend_error_win * 3
