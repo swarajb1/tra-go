@@ -148,6 +148,9 @@ class WinGraph:
 
             print(f"\nall fractions are greater than {SPECIAL_THRESHOLD}")
 
+            # TODOO: do a special simulation agian, if all fractions are greater than 0.75,
+            # where price 1 is that pred val, as most of times max/max are very close, and another will be price at 2m from the 2nd zone start, the trend will from set. based on 22 prices.
+
         if self.is_model_worth_saving:
             print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")
 
