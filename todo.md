@@ -10,6 +10,8 @@
 
 ## Optimization changes
 
+- add logger module
+
 - ### combo callback
 
 - ### robustness
