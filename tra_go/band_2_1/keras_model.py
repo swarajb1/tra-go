@@ -32,8 +32,12 @@ class ModelCompileDetails:
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
             km_21_metrics.metric_win_pred_capture_percent,
+            km_21_metrics.metric_win_pred_capture_total_percent,
             km_21_metrics.metric_win_correct_trend_percent,
             km_21_metrics.metric_win_pred_trend_capture_percent,
+            km_21_metrics.metric_try_1,
+            # km_21_metrics.metric_try_2,
+            km_21_metrics.stoploss_incurred,
         ]
 
 
