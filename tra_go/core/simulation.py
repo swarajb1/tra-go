@@ -350,10 +350,18 @@ class Simulation:
         # if not self.is_model_worth_saving:
         #     return
 
-        print("\n\n\n", "-" * 30, f"\nReal End of Day Stats, , RRR = {settings.RISK_TO_REWARD_RATIO}\n")
+        print(
+            "\n\n\n",
+            "-" * 30,
+            f"\nReal End of Day Stats (per day percent), RRR = {settings.RISK_TO_REWARD_RATIO}\n",
+        )
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
 
-        print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
+        print(
+            "\n\n\n",
+            "-" * 30,
+            f"\nStop Loss Data Stats (per day percent), RRR = {self.stoploss_rrr_for_analysis}\n",
+        )
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
         print(
@@ -365,11 +373,20 @@ class Simulation:
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
 
+        # arr - is per day percent return
+
         # Central Tendency
         mean = np.mean(sorted_arr)
 
         if data_type == ProcessedDataType.REAL:
             self.real_mean = mean
+
+            # special condition
+            # if per day mean is greater than 3% then model is skewed in the wrong way
+            if self.real_mean > 3:
+                self.is_model_worth_saving = False
+                self.is_model_worth_double_saving = False
+
         elif data_type == ProcessedDataType.EXPECTED_REWARD:
             self.expected_mean = mean
 
