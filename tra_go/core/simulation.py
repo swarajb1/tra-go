@@ -279,10 +279,16 @@ class Simulation:
                 if count_trade_taken == 0:
                     count_trade_taken = 1
 
+                percent_trades_taken = count_trade_taken / number_of_days * 100
+                percent_expected_trades = count_expected_trades / count_trade_taken * 100
+
+                if percent_trades_taken > 90 and percent_expected_trades > 40:
+                    self.is_model_worth_saving = True
+
                 # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
                 print(
                     "\n\t\t\t Percent Trade Taken\t\t\t",
-                    "{:.2f}".format(count_trade_taken / number_of_days * 100),
+                    "{:.2f}".format(percent_trades_taken),
                     " %",
                 )
                 print(
@@ -314,7 +320,7 @@ class Simulation:
                     "\t\t\t Percent Expected Trades\t\t",
                     "{:.2f}".format(count_expected_trades / number_of_days * 100),
                     " % \t | \t",
-                    "{:.2f}".format(count_expected_trades / count_trade_taken * 100),
+                    "{:.2f}".format(percent_expected_trades),
                     " %",
                 )
                 print(
