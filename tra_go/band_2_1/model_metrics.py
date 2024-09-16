@@ -316,12 +316,15 @@ def stoploss_incurred(y_true, y_pred):
 
     stoploss_hit_on_sell = tf.less_equal(max_true, stoploss_2_price) & sell_trade_possible
 
-    return tf.reduce_mean(
-        tf.cast(
-            (stoploss_hit_on_buy | stoploss_hit_on_sell) & is_valid_pred,
-            dtype=tf.float32,
+    return (
+        tf.reduce_mean(
+            tf.cast(
+                (stoploss_hit_on_buy | stoploss_hit_on_sell) & is_valid_pred,
+                dtype=tf.float32,
+            )
+            * tf.abs(max_pred - min_pred),
         )
-        * tf.abs(max_pred - min_pred),
+        * settings.RISK_TO_REWARD_RATIO
     )
 
 
