@@ -9,7 +9,7 @@ def loss_function(y_true, y_pred):
         # +
         # metric_abs(y_true[:, 2:], y_pred[:, 2:]) / 20
         # +
-        metric_average_in(y_true, y_pred) * 3
+        metric_average_in(y_true, y_pred)
         + metric_loss_comp_2(y_true, y_pred)
     )
 
@@ -26,11 +26,17 @@ def metric_average_in(y_true, y_pred):
 
 
 def _get_band_inside(y_true, y_pred):
-    is_valid_pred = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+    min_true = y_true[:, 0]
+    max_true = y_true[:, 1]
 
-    is_max_pred_less_than_max_true = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    min_pred = y_pred[:, 0]
+    max_pred = y_pred[:, 1]
 
-    is_min_pred_more_than_min_true = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_valid_pred = tf.math.greater_equal(max_pred, min_pred)
+
+    is_max_pred_less_than_max_true = tf.math.less_equal(max_pred, max_true)
+
+    is_min_pred_more_than_min_true = tf.math.greater_equal(min_pred, min_true)
 
     band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
@@ -58,13 +64,15 @@ def metric_loss_comp_2(y_true, y_pred):
     min_pred = y_pred[:, 0]
     max_pred = y_pred[:, 1]
 
-    is_valid_pred = tf.math.greater_equal(y_pred[:, 1], y_pred[:, 0])
+    trend_pred = y_pred[:, 2]
 
-    is_max_pred_less_than_max_true = tf.math.less_equal(y_pred[:, 1], y_true[:, 1])
+    is_valid_pred = tf.math.greater_equal(max_pred, min_pred)
 
-    is_min_pred_more_than_min_true = tf.math.greater_equal(y_pred[:, 0], y_true[:, 0])
+    is_max_pred_less_than_max_true = tf.math.less_equal(max_pred, max_true)
 
-    is_max_min_diff_more_than_00_1 = tf.math.greater_equal(y_pred[:, 1] - y_pred[:, 0], 0.01)
+    is_min_pred_more_than_min_true = tf.math.greater_equal(min_pred, min_true)
+
+    is_max_min_diff_more_than_00_1 = tf.math.greater_equal(max_pred - min_pred, 0.01)
 
     band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
 
@@ -100,7 +108,7 @@ def metric_loss_comp_2(y_true, y_pred):
     penalty_half_inside = tf.reduce_mean(
         (
             tf.cast(
-                (tf.math.logical_not(is_max_pred_less_than_max_true) & is_min_pred_more_than_min_true),
+                (tf.logical_not(is_max_pred_less_than_max_true) & is_min_pred_more_than_min_true),
                 dtype=tf.float32,
             )
             * tf.abs(max_true - min_pred)
@@ -108,7 +116,7 @@ def metric_loss_comp_2(y_true, y_pred):
         # max outside, min inside,
         + (
             tf.cast(
-                (tf.math.logical_not(is_min_pred_more_than_min_true) & is_max_pred_less_than_max_true),
+                (tf.logical_not(is_min_pred_more_than_min_true) & is_max_pred_less_than_max_true),
                 dtype=tf.float32,
             )
             * tf.abs(max_true - min_true)
@@ -120,9 +128,9 @@ def metric_loss_comp_2(y_true, y_pred):
         (
             tf.cast(
                 (
-                    tf.math.logical_not(is_max_pred_less_than_max_true)
+                    tf.logical_not(is_max_pred_less_than_max_true)
                     & is_min_pred_more_than_min_true
-                    & tf.equal(y_pred[:, 2], 1)
+                    & tf.equal(trend_pred, 1)
                 ),
                 dtype=tf.float32,
             )
@@ -132,9 +140,9 @@ def metric_loss_comp_2(y_true, y_pred):
         + (
             tf.cast(
                 (
-                    tf.math.logical_not(is_min_pred_more_than_min_true)
+                    tf.logical_not(is_min_pred_more_than_min_true)
                     & is_max_pred_less_than_max_true
-                    & tf.equal(y_pred[:, 2], 0)
+                    & tf.equal(trend_pred, 0)
                 ),
                 dtype=tf.float32,
             )
@@ -161,11 +169,11 @@ def metric_loss_comp_2(y_true, y_pred):
         + z_max_min_diff_error
         + penalty_half_inside
         + penalty_half_inside_trend
-        + stoploss_incurred(y_true, y_pred) * 30
-        + win_amt_true_error * 1.5
-        + win_amt_pred_error * 2
-        + trend_error_win * 3
-        + trend_error_win_pred_error * 8
+        + win_amt_true_error
+        + win_amt_pred_error
+        + trend_error_win
+        + trend_error_win_pred_error
+        + stoploss_incurred(y_true, y_pred)
     )
 
 
@@ -290,7 +298,7 @@ def stoploss_incurred(y_true, y_pred):
 
     trend_pred = y_pred[:, 2]
 
-    is_valid_pred = tf.math.greater_equal(max_pred, min_pred)
+    is_valid_pred = tf.greater_equal(max_pred, min_pred)
 
     buy_trade_possible = (
         (tf.less_equal(min_true, min_pred) & tf.less_equal(min_pred, max_true))
@@ -300,7 +308,7 @@ def stoploss_incurred(y_true, y_pred):
     )
 
     sell_trade_possible = (
-        (tf.less_equal(max_true, max_pred) & tf.less_equal(max_pred, min_true))
+        (tf.less_equal(min_true, max_pred) & tf.less_equal(max_pred, max_true))
         # max inside
         & tf.equal(trend_pred, 0)
         # pred trend sell
@@ -312,9 +320,9 @@ def stoploss_incurred(y_true, y_pred):
     # when the trend was sell, but the price went up
     stoploss_2_price = max_pred + tf.abs(max_pred - min_pred) * settings.RISK_TO_REWARD_RATIO
 
-    stoploss_hit_on_buy = tf.greater_equal(min_true, stoploss_1_price) & buy_trade_possible
+    stoploss_hit_on_buy = tf.less_equal(stoploss_1_price, min_true) & buy_trade_possible
 
-    stoploss_hit_on_sell = tf.less_equal(max_true, stoploss_2_price) & sell_trade_possible
+    stoploss_hit_on_sell = tf.greater_equal(stoploss_2_price, max_true) & sell_trade_possible
 
     return (
         tf.reduce_mean(
