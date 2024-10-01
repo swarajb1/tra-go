@@ -294,7 +294,7 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    SUPPRESSION_LEVEL: int = 14
+    SUPPRESSION_LEVEL: int = 15
 
     # The command you want to run
     command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
@@ -316,6 +316,9 @@ def main():
         move_files: bool = False
 
         if len(sys.argv) > 2:
+            if not sys.argv[2].isdigit():
+                raise ValueError("2nd argument should be an integer")
+
             number_of_models = int(sys.argv[2])
 
         if len(sys.argv) > 3:
