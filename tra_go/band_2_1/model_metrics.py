@@ -67,8 +67,6 @@ def metric_correct_trends_full(y_true, y_pred):
 def metric_loss_comp_2(y_true, y_pred):
     min_true, max_true, min_pred, max_pred = _get_min_max_values(y_true, y_pred)
 
-    trend_pred = y_pred[:, 2]
-
     is_valid_pred = tf.greater_equal(max_pred, min_pred)
 
     is_max_pred_less_than_max_true = tf.less_equal(max_pred, max_true)
@@ -122,7 +120,7 @@ def metric_loss_comp_2(y_true, y_pred):
         z_max_above_error
         + z_min_below_error
         + z_pred_valid_error
-        # + z_max_min_diff_error
+        + z_max_min_diff_error
         # + penalty_half_inside(y_true, y_pred)
         + win_amt_true_error
         + win_amt_pred_error
@@ -140,8 +138,6 @@ def penalty_half_inside(y_true, y_pred):
     is_max_pred_less_than_max_true = tf.less_equal(max_pred, max_true)
 
     is_min_pred_more_than_min_true = tf.greater_equal(min_pred, min_true)
-
-    tf.is_nan
 
     #  the part of the band inside is the error
     penalty_half_inside = tf.reduce_mean(

@@ -57,13 +57,14 @@ class Simulation:
     def create_rrr_list(self) -> list[float]:
         rrr_list: list[float] = []
 
-        for i in range(7):
-            rrr_list.append(round(i / 3, 2))
+        # for i in range(4):
+        #     rrr_list.append(round(i / 3, 2))
+
+        rrr_list.extend([0, 0.33, 0.66, 1, 1.5, 2, 3, 5, 8, 15])
 
         if settings.RISK_TO_REWARD_RATIO not in rrr_list:
             rrr_list.append(settings.RISK_TO_REWARD_RATIO)
 
-        rrr_list.extend([3, 5, 8, 10])
         rrr_list.sort()
 
         return rrr_list
@@ -114,7 +115,7 @@ class Simulation:
                 net_day_reward: float = 0
 
                 # special_condition
-                if expected_reward / ((buy_price + sell_price) / 2) * 100 < 0.05:
+                if expected_reward / ((buy_price + sell_price) / 2) * 100 < 0.05 and False:
                     # reward is less than 0.05% of the invested amount
                     # so, not worth trading
                     continue
@@ -282,7 +283,8 @@ class Simulation:
                 percent_trades_taken = count_trade_taken / number_of_days * 100
                 percent_expected_trades = count_expected_trades / count_trade_taken * 100
 
-                if percent_trades_taken > 90 and percent_expected_trades > 40:
+                if percent_trades_taken > 70 and percent_expected_trades > 50:
+                    # special_condition
                     self.is_model_worth_saving = True
 
                 # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
@@ -389,7 +391,7 @@ class Simulation:
 
             # special condition
             # if per day mean is greater than 3% then model is skewed in the wrong way
-            if self.real_mean > 3:
+            if self.real_mean > 3 or np.isnan(self.real_mean):
                 self.is_model_worth_saving = False
                 self.is_model_worth_double_saving = False
 
