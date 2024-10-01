@@ -1,4 +1,3 @@
-import os
 import pprint
 from copy import deepcopy
 from pathlib import Path
@@ -11,8 +10,6 @@ from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 
 from database.enums import BandType, ModelLocationType, TickerOne
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
 
 
 class CoreEvaluation:

@@ -1,19 +1,14 @@
-import os
-
 import band_2_1.keras_model as km_21_model
 import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import numpy as np
+from core.config import settings
 from core.evaluation import CoreEvaluation
 from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
-
-NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 
 
 class CustomEvaluation(CoreEvaluation):
@@ -110,15 +105,15 @@ class CustomEvaluation(CoreEvaluation):
         return
 
     def _apply_safety_factor_on_pred(self) -> None:
-        if SAFETY_FACTOR == 1:
+        if settings.SAFETY_FACTOR == 1:
             return
 
         y_pred_average: NDArray = (self.y_pred_real[:, 0] + self.y_pred_real[:, 1]) / 2
 
         y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]
 
-        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 / SAFETY_FACTOR
-        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 / SAFETY_FACTOR
+        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 / settings.SAFETY_FACTOR
+        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 / settings.SAFETY_FACTOR
 
         self.y_pred_real[:, 0] = round_to_nearest_0_05(new_y_pred_low)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(new_y_pred_high)

@@ -2,11 +2,10 @@ import os
 import time
 
 import training_zero as an
+from core.config import settings
 from data_loader import DataLoader
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
-
-TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
 
 def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
@@ -117,7 +116,7 @@ def evaluate_models(
             interval=IntervalType.MIN_1,
             x_type=model_x_type,
             y_type=model_y_type,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
         )
 
         Y_train_data_real, Y_test_data_real = data_loader.get_real_y_data()
@@ -133,7 +132,7 @@ def evaluate_models(
                 (X_test, Y_test, test_prev_close),
             ) = an.train_test_split(
                 data_df=df,
-                test_size=TEST_SIZE,
+                test_size=settings.TEST_SIZE,
                 x_type=model_x_type,
                 y_type=model_y_type,
                 interval=model_interval.value,
@@ -149,7 +148,7 @@ def evaluate_models(
             prev_day_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
             model_file_name=file_name,
             model_location_type=model_location_type,
         )
