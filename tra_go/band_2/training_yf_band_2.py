@@ -145,7 +145,7 @@ class CustomEvaluation:
 
         return
 
-    def truncated_y_pred(self, y_arr: NDArray) -> np.ndarray:
+    def truncated_y_pred(self, y_arr: NDArray) -> NDArray:
         first_non_eliminated_element_index: int = int(km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
         last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
 
@@ -165,7 +165,7 @@ class CustomEvaluation:
 
         return res
 
-    def correct_pred_values(self, y_arr: NDArray) -> np.ndarray:
+    def correct_pred_values(self, y_arr: NDArray) -> NDArray:
         res = y_arr.copy()
         # step 1 - correct /exchange low/high values if needed., for each candle
 
