@@ -28,7 +28,10 @@ class WinGraph:
 
         self.win_250_days: float = 0
         self.win_pred_capture_percent: float = 0
+
+        # copied values form simulation
         self.simulation_250_days: float = 0
+        self.all_simulations_max_250_days: float = 0
 
         self.is_model_worth_saving: bool
         self.is_model_worth_double_saving: bool
@@ -90,6 +93,7 @@ class WinGraph:
             "is_model_worth_saving",
             "is_model_worth_double_saving",
             "simulation_250_days",
+            "all_simulations_max_250_days",
         ]
 
         for attr in copy_attributes:
@@ -143,6 +147,19 @@ class WinGraph:
             self.is_model_worth_saving = True
 
             print(f"\nall fractions are greater than {SPECIAL_THRESHOLD}")
+
+            # TODOO: do a special simulation agian, if all fractions are greater than 0.75,
+            # where price 1 is that pred val, as most of times max/max are very close, and another will be price at 2m from the 2nd zone start, the trend will from set. based on 22 prices.
+
+            # price_pred = (self.max_pred + self.min_pred) / 2
+            # price_at_open = self.y_data_real[:, :, 0]
+
+            # simulation_point_1 = Simulation(
+            #     buy_price_arr=self.min_pred,
+            #     sell_price_arr=self.max_pred,
+            #     order_type_buy_arr=self.order_type_buy,
+            #     real_price_arr=self.y_data_real,
+            # )
 
         if self.is_model_worth_saving:
             print("\n\nIs Model Worth Saving\t\t \033[92m+++\033[0m ")

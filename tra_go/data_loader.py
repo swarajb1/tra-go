@@ -357,11 +357,7 @@ def check_gaps(data: NDArray[np.float64]) -> None:
                 count_gaps_train += 1
 
     print("Count Gaps:\t\t\t", count_gaps_train)
-    print(
-        "Count Gaps Percentage:\t\t",
-        "{:.2f}".format(count_gaps_train / (data.shape[0] * data.shape[1]) * 100),
-        " %\n",
-    )
+    print(f"Count Gaps Percentage:\t\t {count_gaps_train / (data.shape[0] * data.shape[1]) * 100:.2f} %\n")
 
 
 def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> NDArray:

@@ -41,7 +41,7 @@ class GlobalConfig(BaseSettings):
 
     NUMBER_OF_NEURONS: int = Field(default=128)
     NUMBER_OF_LAYERS: int = Field(default=3)
-    INITIAL_DROPOUT_PERCENT: int = Field(default=0)
+    INITIAL_DROPOUT_PERCENT: float = Field(default=0)
 
     RISK_TO_REWARD_RATIO: float
 
