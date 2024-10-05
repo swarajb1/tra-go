@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import pytz
+from numpy.typing import NDArray
 
 
 def is_in_half(check_datetime, which_half: int, interval: str) -> bool:
@@ -265,11 +266,11 @@ def data_scaling(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_prev_close(df: pd.DataFrame) -> np.ndarray:
+def get_prev_close(df: pd.DataFrame) -> NDArray:
     one_day = 375
     num_days = len(df) // one_day
 
-    res: np.ndarray = np.zeros(num_days)
+    res: NDArray = np.zeros(num_days)
 
     # for other days
     for j in range(num_days - 1, 0, -1):
@@ -454,7 +455,7 @@ def train_test_split_5(
     interval,
     y_type,
     test_size=0.2,
-) -> np.ndarray:
+) -> NDArray:
     # separate into 132, 132 entries df. for train and test df.
 
     # divide the price data of that day by the closing price of the previous day.
@@ -498,14 +499,14 @@ def train_test_split_5(
     )
 
 
-def get_day_trend(day_arr: np.ndarray) -> int:
-    min_index: np.ndarray = np.argmin(day_arr[:, 0])
-    max_index: np.ndarray = np.argmax(day_arr[:, 1])
+def get_day_trend(day_arr: NDArray) -> int:
+    min_index: NDArray = np.argmin(day_arr[:, 0])
+    max_index: NDArray = np.argmax(day_arr[:, 1])
 
     return int(max_index > min_index)
 
 
-def add_trend_parameter(arr: np.ndarray) -> np.ndarray:
+def add_trend_parameter(arr: NDArray) -> NDArray:
     res = np.zeros((arr.shape[0], arr.shape[1], 5))
 
     res[:, :, :4] = arr
@@ -516,7 +517,7 @@ def add_trend_parameter(arr: np.ndarray) -> np.ndarray:
     return res
 
 
-def last_close_value(df: pd.DataFrame) -> np.ndarray:
+def last_close_value(df: pd.DataFrame) -> NDArray:
     res = np.array([])
 
     res = np.append(res, df.iloc[0]["open"])
@@ -532,7 +533,7 @@ def train_test_split_2_mods(
     interval,
     y_type,
     test_size=0.2,
-) -> np.ndarray:
+) -> NDArray:
     # y_type = "2_mods"
 
     # separate into 132, 132 entries df. for train and test df.
@@ -589,7 +590,7 @@ def points_hl(df):
     return res
 
 
-def by_date_df_array(df: pd.DataFrame) -> np.ndarray:
+def by_date_df_array(df: pd.DataFrame) -> NDArray:
     res = []
     full_rows = []
     for index, row in df.iterrows():
@@ -604,7 +605,7 @@ def by_date_df_array(df: pd.DataFrame) -> np.ndarray:
     return res_1
 
 
-def array_transform_avg_band(array: np.ndarray) -> np.ndarray:
+def array_transform_avg_band(array: NDArray) -> NDArray:
     res = np.zeros_like(array)
     # index 0 is low, 1 is high
 
@@ -637,7 +638,7 @@ def split_by_date(data_df: pd.DataFrame, interval: str, columns: list[str]):
     if interval == "1m":
         number_of_points: int = 132
 
-    res: np.ndarray = np.empty((0, number_of_points, len(columns)))
+    res: NDArray = np.empty((0, number_of_points, len(columns)))
 
     temp = np.empty((0, len(columns)))
     for index, row in data_df.iterrows():
@@ -655,7 +656,7 @@ def get_x_y_individual_data(
     data_df: pd.DataFrame,
     interval: str,
     columns: list[str],
-) -> np.ndarray:
+) -> NDArray:
     df = data_cleaning(data_df)
     # getting clean and my zone data
     df = data_scaling(df)

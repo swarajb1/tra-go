@@ -1,19 +1,14 @@
-import os
-
 import band_2_1.keras_model as km_21_model
 import band_2_1.model_metrics as km_21_metrics
 import keras_model_tf as km_tf
 import numpy as np
+from core.config import settings
 from core.evaluation import CoreEvaluation
 from numpy.typing import NDArray
 from tensorflow.keras.models import Model
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
-
-NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
 
 
 class CustomEvaluation(CoreEvaluation):
@@ -57,16 +52,19 @@ class CustomEvaluation(CoreEvaluation):
             "metric_abs_percent": km_tf.metric_abs_percent,
             "metric_loss_comp_2": km_21_metrics.metric_loss_comp_2,
             "metric_win_percent": km_21_metrics.metric_win_percent,
+            "metric_pred_capture_per_win_percent": km_21_metrics.metric_pred_capture_per_win_percent,
             "metric_win_pred_capture_percent": km_21_metrics.metric_win_pred_capture_percent,
             "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
             "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
+            "metric_win_pred_capture_total_percent": km_21_metrics.metric_win_pred_capture_total_percent,
+            "metric_try_1": km_21_metrics.metric_try_1,
+            "metric_try_2": km_21_metrics.metric_try_2,
+            "stoploss_incurred": km_21_metrics.stoploss_incurred,
             "CustomActivationLayer": km_21_model.CustomActivationLayer,
             "metric_correct_trends_full": km_21_metrics.metric_correct_trends_full,
         }
 
         model: Model = self.load_model(custom_scope)
-
-        # model.summary()
 
         self.y_pred: NDArray = model.predict(self.x_data)
 
@@ -107,15 +105,15 @@ class CustomEvaluation(CoreEvaluation):
         return
 
     def _apply_safety_factor_on_pred(self) -> None:
-        if SAFETY_FACTOR == 1:
+        if settings.SAFETY_FACTOR == 1:
             return
 
         y_pred_average: NDArray = (self.y_pred_real[:, 0] + self.y_pred_real[:, 1]) / 2
 
         y_band_height: NDArray = self.y_pred_real[:, 1] - self.y_pred_real[:, 0]
 
-        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 / SAFETY_FACTOR
-        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 / SAFETY_FACTOR
+        new_y_pred_low: NDArray = y_pred_average - y_band_height / 2 / settings.SAFETY_FACTOR
+        new_y_pred_high: NDArray = y_pred_average + y_band_height / 2 / settings.SAFETY_FACTOR
 
         self.y_pred_real[:, 0] = round_to_nearest_0_05(new_y_pred_low)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(new_y_pred_high)

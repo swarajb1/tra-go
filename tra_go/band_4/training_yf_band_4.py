@@ -4,6 +4,7 @@ import band_4.keras_model_band_4 as km_4
 import keras_model as km
 import matplotlib.pyplot as plt
 import numpy as np
+from core.config import settings
 from core.simulation import Simulation
 from keras.models import load_model
 from keras.utils import custom_object_scope
@@ -11,14 +12,6 @@ from numpy.typing import NDArray
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
-
-NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
-NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
-INITIAL_DROPOUT_PERCENT: float = float(os.getenv("INITIAL_DROPOUT_PERCENT"))
 
 
 class CustomEvaluation:
@@ -99,11 +92,11 @@ class CustomEvaluation:
         # print("self.y_pred.shape", self.y_pred.shape)
 
         if self.x_type == BandType.BAND_2:
-            x_last_zone_close: np.ndarray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
+            x_last_zone_close: NDArray = (self.X_data[:, -1, 0] + self.X_data[:, -1, 1]) / 2
         elif self.x_type in [BandType.BAND_4, BandType.BAND_5]:
-            x_last_zone_close: np.ndarray = self.X_data[:, -1, 3]
+            x_last_zone_close: NDArray = self.X_data[:, -1, 3]
 
-        x_last_zone_close_real: np.ndarray = round_to_nearest_0_05(x_last_zone_close * self.prev_close)
+        x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_close)
 
         # open, high, low, close
 
@@ -138,7 +131,7 @@ class CustomEvaluation:
 
         return
 
-    def truncated_y_pred(self, y_arr: np.ndarray) -> np.ndarray:
+    def truncated_y_pred(self, y_arr: NDArray) -> NDArray:
         first_non_eliminated_element_index: int = int(
             km_4.SKIP_FIRST_PERCENTILE * y_arr.shape[1],
         )
@@ -146,7 +139,7 @@ class CustomEvaluation:
 
         last_skipped_elements: int = int(km_4.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
-        res: np.ndarray = y_arr.copy()
+        res: NDArray = y_arr.copy()
 
         for i in range(first_non_eliminated_element_index):
             res[:, i, :] = y_arr[:, first_non_eliminated_element_index, :]
@@ -154,13 +147,17 @@ class CustomEvaluation:
         for i in range(last_skipped_elements):
             res[:, -1 * i, :] = y_arr[:, last_non_eliminated_element_index, :]
 
-        if SAFETY_FACTOR > 1:
-            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (res[:, :, 1] - res[:, :, 2]) / 2 / SAFETY_FACTOR
-            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (res[:, :, 1] - res[:, :, 2]) / 2 / SAFETY_FACTOR
+        if settings.SAFETY_FACTOR > 1:
+            res[:, :, 1] = (res[:, :, 1] + res[:, :, 2]) / 2 + (
+                res[:, :, 1] - res[:, :, 2]
+            ) / 2 / settings.SAFETY_FACTOR
+            res[:, :, 2] = (res[:, :, 1] + res[:, :, 2]) / 2 - (
+                res[:, :, 1] - res[:, :, 2]
+            ) / 2 / settings.SAFETY_FACTOR
 
         return res
 
-    def correct_pred_values(self, y_arr: np.ndarray) -> np.ndarray:
+    def correct_pred_values(self, y_arr: NDArray) -> NDArray:
         res = y_arr.copy()
         # step 1 - correct /exchange low/high values if needed., for each candle
 
@@ -197,29 +194,29 @@ class CustomEvaluation:
 
     def function_make_win_graph(
         self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        x_close: np.ndarray,
+        y_true: NDArray,
+        y_pred: NDArray,
+        x_close: NDArray,
     ):
-        min_true: np.ndarray = np.min(y_true[:, :, 2], axis=1)
-        max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
+        min_true: NDArray = np.min(y_true[:, :, 2], axis=1)
+        max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
-        min_pred: np.ndarray = np.min(y_pred[:, :, 2], axis=1)
-        max_pred: np.ndarray = np.max(y_pred[:, :, 1], axis=1)
+        min_pred: NDArray = np.min(y_pred[:, :, 2], axis=1)
+        max_pred: NDArray = np.max(y_pred[:, :, 1], axis=1)
 
-        min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 2], axis=1)
-        max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
+        min_pred_index: NDArray = np.argmin(y_pred[:, :, 2], axis=1)
+        max_pred_index: NDArray = np.argmax(y_pred[:, :, 1], axis=1)
 
-        buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: NDArray = np.all([max_pred_index > min_pred_index], axis=0)
 
-        valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
+        valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
 
         # step - using last close price of x data, and change min_pred and max_pred values, because of hypothesis that, the close price will be in the band
-        close_below_band: np.ndarray = np.all([x_close <= min_pred], axis=0)
+        close_below_band: NDArray = np.all([x_close <= min_pred], axis=0)
 
-        close_above_band: np.ndarray = np.all([x_close >= max_pred], axis=0)
+        close_above_band: NDArray = np.all([x_close >= max_pred], axis=0)
 
-        close_in_band: np.ndarray = np.all(
+        close_in_band: NDArray = np.all(
             [
                 x_close >= min_pred,
                 x_close <= max_pred,
@@ -241,13 +238,13 @@ class CustomEvaluation:
                     min_pred[i] = x_close[i] - band_val
                     max_pred[i] = x_close[i]
 
-        pred_average: np.ndarray = (max_pred + min_pred) / 2
+        pred_average: NDArray = (max_pred + min_pred) / 2
 
-        valid_min: np.ndarray = np.all([min_pred > min_true], axis=0)
+        valid_min: NDArray = np.all([min_pred > min_true], axis=0)
 
-        valid_max: np.ndarray = np.all([max_true > max_pred], axis=0)
+        valid_max: NDArray = np.all([max_true > max_pred], axis=0)
 
-        min_inside: np.ndarray = np.all(
+        min_inside: NDArray = np.all(
             [
                 max_true > min_pred,
                 valid_min,
@@ -255,7 +252,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        max_inside: np.ndarray = np.all(
+        max_inside: NDArray = np.all(
             [
                 max_pred > min_true,
                 valid_max,
@@ -263,7 +260,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        wins: np.ndarray = np.all(
+        wins: NDArray = np.all(
             [
                 min_inside,
                 max_inside,
@@ -272,7 +269,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        average_in: np.ndarray = np.all(
+        average_in: NDArray = np.all(
             [
                 max_true > pred_average,
                 pred_average > min_true,
@@ -299,16 +296,16 @@ class CustomEvaluation:
 
         fraction_win: float = np.mean(wins.astype(np.float64))
 
-        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float64)
-        all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
+        all_days_pro_arr: NDArray = (max_pred / min_pred) * wins.astype(np.float64)
+        all_days_pro_arr_non_zero: NDArray = all_days_pro_arr[all_days_pro_arr != 0]
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
+        pred_capture_arr: NDArray = (max_pred / min_pred - 1) * wins.astype(
             np.float64,
         )
 
-        total_capture_possible_arr: np.ndarray = max_true / min_true - 1
+        total_capture_possible_arr: NDArray = max_true / min_true - 1
 
         pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
             total_capture_possible_arr,
@@ -343,16 +340,16 @@ class CustomEvaluation:
         print("\nleverage:\t", pro_250_5_str)
         print("datetime:\t", self.now_datetime)
 
-        # print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
-        # print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
-        # print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)
+        # print("\n\nNUMBER_OF_NEURONS\t\t", settings.NUMBER_OF_NEURONS)
+        # print("settings.NUMBER_OF_LAYERS\t\t", settings.NUMBER_OF_LAYERS)
+        # print("settings.NUMBER_OF_EPOCHS\t\t", settings.NUMBER_OF_EPOCHS)
         # print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT)
 
         print("folder_name\t\t", self.model_file_name)
 
         return
 
-    def function_error_132_graph(self, y_true: np.ndarray, y_pred: np.ndarray):
+    def function_error_132_graph(self, y_true: NDArray, y_pred: NDArray):
         error_a = np.abs(y_pred - y_true) / y_true
 
         new_array = np.empty(shape=(0, 4))
@@ -392,10 +389,10 @@ class CustomEvaluation:
 
         plt.title(
             f" name: {self.now_datetime}\n"
-            + f"NUMBER_OF_NEURONS = {NUMBER_OF_NEURONS}  "
-            + f"NUMBER_OF_LAYERS = {NUMBER_OF_LAYERS}\n"
-            + f"NUMBER_OF_EPOCHS = {NUMBER_OF_EPOCHS} | "
-            + f"INITIAL_DROPOUT = {INITIAL_DROPOUT_PERCENT}",
+            + f"settings.NUMBER_OF_NEURONS = {settings.NUMBER_OF_NEURONS}  "
+            + f"settings.NUMBER_OF_LAYERS = {settings.NUMBER_OF_LAYERS}\n"
+            + f"settings.NUMBER_OF_EPOCHS = {settings.NUMBER_OF_EPOCHS} | "
+            + f"INITIAL_DROPOUT = {settings.INITIAL_DROPOUT_PERCENT}",
             fontsize=20,
         )
 
@@ -404,7 +401,7 @@ class CustomEvaluation:
         plt.ylabel("perc", fontsize=15)
         plt.legend(fontsize=15)
 
-        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={SAFETY_FACTOR} - model_{self.model_num}.png"
+        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - abs - sf={settings.SAFETY_FACTOR} - model_{self.model_num}.png"
         if self.test_size == 0:
             filename = filename[:-4] + "- valid.png"
 
@@ -417,31 +414,31 @@ class CustomEvaluation:
 
     def function_make_win_graph_old(
         self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        x_close: np.ndarray,
+        y_true: NDArray,
+        y_pred: NDArray,
+        x_close: NDArray,
     ):
-        min_true: np.ndarray = np.min(y_true[:, :, 2], axis=1)
-        max_true: np.ndarray = np.max(y_true[:, :, 1], axis=1)
+        min_true: NDArray = np.min(y_true[:, :, 2], axis=1)
+        max_true: NDArray = np.max(y_true[:, :, 1], axis=1)
 
-        min_pred: np.ndarray = np.min(y_pred[:, :, 2], axis=1)
-        max_pred: np.ndarray = np.max(y_pred[:, :, 1], axis=1)
+        min_pred: NDArray = np.min(y_pred[:, :, 2], axis=1)
+        max_pred: NDArray = np.max(y_pred[:, :, 1], axis=1)
 
-        min_pred_index: np.ndarray = np.argmin(y_pred[:, :, 2], axis=1)
-        max_pred_index: np.ndarray = np.argmax(y_pred[:, :, 1], axis=1)
+        min_pred_index: NDArray = np.argmin(y_pred[:, :, 2], axis=1)
+        max_pred_index: NDArray = np.argmax(y_pred[:, :, 1], axis=1)
 
-        buy_order_pred: np.ndarray = np.all([max_pred_index > min_pred_index], axis=0)
+        buy_order_pred: NDArray = np.all([max_pred_index > min_pred_index], axis=0)
 
-        valid_actual: np.ndarray = np.all([max_true > min_true], axis=0)
+        valid_actual: NDArray = np.all([max_true > min_true], axis=0)
 
-        valid_pred: np.ndarray = np.all([max_pred > min_pred], axis=0)
+        valid_pred: NDArray = np.all([max_pred > min_pred], axis=0)
 
         # step - using last close price of x data, and change min_pred and max_pred values, because of hypothesis that, the close price will be in the band
-        close_below_band: np.ndarray = np.all([x_close <= min_pred], axis=0)
+        close_below_band: NDArray = np.all([x_close <= min_pred], axis=0)
 
-        close_above_band: np.ndarray = np.all([x_close >= max_pred], axis=0)
+        close_above_band: NDArray = np.all([x_close >= max_pred], axis=0)
 
-        close_in_band: np.ndarray = np.all(
+        close_in_band: NDArray = np.all(
             [
                 x_close >= min_pred,
                 x_close <= max_pred,
@@ -463,13 +460,13 @@ class CustomEvaluation:
                     min_pred[i] = x_close[i] - band_val
                     max_pred[i] = x_close[i]
 
-        pred_average: np.ndarray = (max_pred + min_pred) / 2
+        pred_average: NDArray = (max_pred + min_pred) / 2
 
-        valid_min: np.ndarray = np.all([min_pred > min_true], axis=0)
+        valid_min: NDArray = np.all([min_pred > min_true], axis=0)
 
-        valid_max: np.ndarray = np.all([max_true > max_pred], axis=0)
+        valid_max: NDArray = np.all([max_true > max_pred], axis=0)
 
-        min_inside: np.ndarray = np.all(
+        min_inside: NDArray = np.all(
             [
                 max_true > min_pred,
                 valid_min,
@@ -477,7 +474,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        max_inside: np.ndarray = np.all(
+        max_inside: NDArray = np.all(
             [
                 max_pred > min_true,
                 valid_max,
@@ -485,7 +482,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        wins: np.ndarray = np.all(
+        wins: NDArray = np.all(
             [
                 min_inside,
                 max_inside,
@@ -494,7 +491,7 @@ class CustomEvaluation:
             axis=0,
         )
 
-        average_in: np.ndarray = np.all(
+        average_in: NDArray = np.all(
             [
                 max_true > pred_average,
                 pred_average > min_true,
@@ -523,16 +520,16 @@ class CustomEvaluation:
 
         fraction_win: float = np.mean(wins.astype(np.float64))
 
-        all_days_pro_arr: np.ndarray = (max_pred / min_pred) * wins.astype(np.float64)
-        all_days_pro_arr_non_zero: np.ndarray = all_days_pro_arr[all_days_pro_arr != 0]
+        all_days_pro_arr: NDArray = (max_pred / min_pred) * wins.astype(np.float64)
+        all_days_pro_arr_non_zero: NDArray = all_days_pro_arr[all_days_pro_arr != 0]
 
         all_days_pro_cummulative_val: float = np.prod(all_days_pro_arr_non_zero)
 
-        pred_capture_arr: np.ndarray = (max_pred / min_pred - 1) * wins.astype(
+        pred_capture_arr: NDArray = (max_pred / min_pred - 1) * wins.astype(
             np.float64,
         )
 
-        total_capture_possible_arr: np.ndarray = max_true / min_true - 1
+        total_capture_possible_arr: NDArray = max_true / min_true - 1
 
         pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(
             total_capture_possible_arr,
@@ -621,16 +618,16 @@ class CustomEvaluation:
             fontsize=20,
         )
 
-        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={SAFETY_FACTOR}.png"
+        filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={settings.SAFETY_FACTOR}.png"
         if self.test_size == 0:
-            filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={SAFETY_FACTOR} - valid.png"
+            filename = f"training/graphs/{self.y_type} - {self.now_datetime} - Splot - sf={settings.SAFETY_FACTOR} - valid.png"
 
         plt.savefig(filename, dpi=300, bbox_inches="tight")
 
-        print("\n\nNUMBER_OF_NEURONS\t\t", NUMBER_OF_NEURONS)
-        print("NUMBER_OF_LAYERS\t\t", NUMBER_OF_LAYERS)
-        print("NUMBER_OF_EPOCHS\t\t", NUMBER_OF_EPOCHS)
-        print("INITIAL_DROPOUT\t\t\t", INITIAL_DROPOUT_PERCENT)
+        print("\n\nNUMBER_OF_NEURONS\t\t", settings.NUMBER_OF_NEURONS)
+        print("settings.NUMBER_OF_LAYERS\t\t", settings.NUMBER_OF_LAYERS)
+        print("settings.NUMBER_OF_EPOCHS\t\t", settings.NUMBER_OF_EPOCHS)
+        print("INITIAL_DROPOUT\t\t\t", settings.INITIAL_DROPOUT_PERCENT)
 
         print("folder_name\t", self.model_file_name)
 

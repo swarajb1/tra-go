@@ -38,6 +38,16 @@ list_of_tickers: list[TickerOne] = [
     TickerOne.BHARTIARTL,
     TickerOne.AXISBANK,
     TickerOne.HINDUNILVR,
+    TickerOne.KOTAKBANK,
+    TickerOne.INFY,
+    TickerOne.BAJFINANCE,
+    TickerOne.ASIANPAINT,
+    TickerOne.M_M,
+    TickerOne.TITAN,
+    TickerOne.HCLTECH,
+    TickerOne.MARUTI,
+    TickerOne.SUNPHARMA,
+    TickerOne.NTPC,
 ]
 
 
@@ -89,14 +99,14 @@ def main_training():
     mcp_save_3 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
         save_best_only=True,
-        monitor="metric_win_pred_capture_percent",
+        monitor="metric_win_pred_capture_total_percent",
         mode="max",
     )
 
     mcp_save_4 = ModelCheckpoint(
         f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
         save_best_only=True,
-        monitor="val_metric_win_pred_capture_percent",
+        monitor="val_metric_win_pred_capture_total_percent",
         mode="max",
     )
 
@@ -114,6 +124,34 @@ def main_training():
         mode="max",
     )
 
+    mcp_save_7 = ModelCheckpoint(
+        f"{checkpoint_path_prefix} - modelCheckPoint-7.keras",
+        save_best_only=True,
+        monitor="metric_try_1",
+        mode="max",
+    )
+
+    mcp_save_8 = ModelCheckpoint(
+        f"{checkpoint_path_prefix} - modelCheckPoint-8.keras",
+        save_best_only=True,
+        monitor="val_metric_try_1",
+        mode="max",
+    )
+
+    mcp_save_9 = ModelCheckpoint(
+        f"{checkpoint_path_prefix} - modelCheckPoint-9.keras",
+        save_best_only=True,
+        monitor="metric_loss_comp_2",
+        mode="min",
+    )
+
+    mcp_save_10 = ModelCheckpoint(
+        f"{checkpoint_path_prefix} - modelCheckPoint-10.keras",
+        save_best_only=True,
+        monitor="val_metric_loss_comp_2",
+        mode="min",
+    )
+
     callbacks = [
         tensorboard_callback,
         terNan,
@@ -123,6 +161,10 @@ def main_training():
         mcp_save_4,
         mcp_save_5,
         mcp_save_6,
+        mcp_save_7,
+        mcp_save_8,
+        mcp_save_9,
+        mcp_save_10,
     ]
 
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
@@ -141,11 +183,6 @@ def main_training():
         )
 
         model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
-
-        print("training data shape\t", X_train.shape)
-        print("training element shape\t", X_train[0].shape)
-
-        print("model output shape\t", model.output_shape)
 
         optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
@@ -177,12 +214,7 @@ def main_training():
             interval=INTERVAL.value,
         )
 
-        print("training x data shape\t", X_train.shape)
-        print("training y data shape\t", Y_train.shape)
-
         model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
-
-        print("model output shape\t", model.output_shape)
 
         optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
@@ -214,13 +246,13 @@ def main_training():
 
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
-        print("training x data shape\t", X_train.shape)
-        print("training y data shape\t", Y_train.shape)
-
         model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
-        print("model input shape\t", model.input_shape)
-        print("model output shape\t", model.output_shape)
+    print("training x data shape\t", X_train.shape)
+    print("training y data shape\t", Y_train.shape)
+
+    print("model input shape\t", model.input_shape)
+    print("model output shape\t", model.output_shape, "\n" * 2)
 
     history = model.fit(
         x=X_train,
@@ -238,7 +270,7 @@ def main_training():
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
     print("-" * 30)
 
-    # number_of_model_checkpoints: int = 6
+    # number_of_model_checkpoints: int = 10
 
     # num_models_to_evaluate: int = number_of_model_checkpoints + 1
 
@@ -262,7 +294,7 @@ def suppress_cpu_usage():
     # Get the current process ID
     pid = os.getpid()
 
-    SUPPRESSION_LEVEL: int = 14
+    SUPPRESSION_LEVEL: int = 15
 
     # The command you want to run
     command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
@@ -279,23 +311,30 @@ def main():
 
     assert_env_vals()
 
-    suppress_cpu_usage()
-
     if len(sys.argv) > 1:
         number_of_models: int = 7
         move_files: bool = False
 
         if len(sys.argv) > 2:
+            if not sys.argv[2].isdigit():
+                raise ValueError("2nd argument should be an integer")
+
             number_of_models = int(sys.argv[2])
 
         if len(sys.argv) > 3:
-            move_files = bool(int(sys.argv[3]))
+            if sys.argv[3] not in ["true", "false"]:
+                raise ValueError("3rd argument should be either 'true' or 'false'")
+
+            move_files = sys.argv[3] == "true"
 
         if sys.argv[1] == "true":
             global TICKER
 
+            suppress_cpu_usage()
+
             for ticker in list_of_tickers:
                 TICKER = ticker
+
                 main_training()
 
         elif sys.argv[1] == "training_new":
