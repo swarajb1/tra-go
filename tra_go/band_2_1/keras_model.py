@@ -32,8 +32,12 @@ class ModelCompileDetails:
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
             km_21_metrics.metric_win_pred_capture_percent,
+            km_21_metrics.metric_win_pred_capture_total_percent,
             km_21_metrics.metric_win_correct_trend_percent,
             km_21_metrics.metric_win_pred_trend_capture_percent,
+            km_21_metrics.metric_try_1,
+            # km_21_metrics.metric_try_2,
+            km_21_metrics.stoploss_incurred,
         ]
 
 
@@ -61,7 +65,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
         model.add(
             Bidirectional(
                 LSTM(
-                    units=settings.NUMBER_OF_NEURONS,
+                    units=settings.NUMBER_OF_NEURONS // (pow(2, layer_num)),
                     return_sequences=True,
                     activation="relu",
                 ),
@@ -78,17 +82,33 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
             ),
         )
 
+    # ---start - Plan - london
     # model.add(TimeDistributed(Dense(units=NUMBER_OF_NEURONS)))
 
     # model.add(GlobalAveragePooling1D())
+    # ---end - Plan - london
 
+    # ---start - Plan - now
     model.add(TimeDistributed(Dense(units=3)))
 
     model.add(GlobalAveragePooling1D())
+    # ---end - Plan - now
 
-    # # model.add(Flatten())
+    # ---start - Plan zero
+    # model.add(
+    #     TimeDistributed(
+    #         Dense(units=settings.NUMBER_OF_NEURONS // (pow(2, settings.NUMBER_OF_LAYERS)), activation="relu")
+    #     )
+    # )
 
-    # # model.add(Dense(units=3))
+    # model.add(Flatten())
+
+    # model.add(Dense(units=3))
+    # ---end - Plan zero
+
+    # ---start - Plan polo
+    # model.add(Dense(units=3))
+    # ---end - Plan polo
 
     model.add(CustomActivationLayer())
 
