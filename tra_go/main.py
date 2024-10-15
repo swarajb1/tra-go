@@ -33,21 +33,21 @@ list_of_tickers: list[TickerOne] = [
     TickerOne.SBIN,
     TickerOne.LT,
     TickerOne.ITC,
-    TickerOne.TCS,
-    TickerOne.HDFCBANK,
-    TickerOne.BHARTIARTL,
-    TickerOne.AXISBANK,
-    TickerOne.HINDUNILVR,
-    TickerOne.KOTAKBANK,
-    TickerOne.INFY,
-    TickerOne.BAJFINANCE,
-    TickerOne.ASIANPAINT,
-    TickerOne.M_M,
-    TickerOne.TITAN,
-    TickerOne.HCLTECH,
-    TickerOne.MARUTI,
-    TickerOne.SUNPHARMA,
-    TickerOne.NTPC,
+    # TickerOne.TCS,
+    # TickerOne.HDFCBANK,
+    # TickerOne.BHARTIARTL,
+    # TickerOne.AXISBANK,
+    # TickerOne.HINDUNILVR,
+    # TickerOne.KOTAKBANK,
+    # TickerOne.INFY,
+    # TickerOne.BAJFINANCE,
+    # TickerOne.ASIANPAINT,
+    # TickerOne.M_M,
+    # TickerOne.TITAN,
+    # TickerOne.HCLTECH,
+    # TickerOne.MARUTI,
+    # TickerOne.SUNPHARMA,
+    # TickerOne.NTPC,
 ]
 
 
@@ -332,7 +332,7 @@ def main():
 
             suppress_cpu_usage()
 
-            for ticker in list_of_tickers:
+            for ticker in list_of_tickers * 100:
                 TICKER = ticker
 
                 main_training()
@@ -359,7 +359,11 @@ def main():
             )
 
         elif sys.argv[1] == "saved_double":
-            evaluate_models(model_location_type=ModelLocationType.SAVED_DOUBLE, number_of_models=number_of_models)
+            evaluate_models(
+                model_location_type=ModelLocationType.SAVED_DOUBLE,
+                number_of_models=number_of_models,
+                move_files=move_files,
+            )
 
         elif sys.argv[1] == "saved_triple":
             evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=number_of_models)
@@ -377,6 +381,9 @@ def main():
                 number_of_models=number_of_models,
                 move_files=True,
             )
+
+        else:
+            raise ValueError("1st argument, model is not correct")
 
     else:
         # main_training()
