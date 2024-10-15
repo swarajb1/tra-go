@@ -82,11 +82,11 @@ def metric_loss_comp_2(y_true, y_pred):
     )
 
     z_pred_valid_error = tf.reduce_mean(
-        (1 - tf.cast(is_valid_pred, dtype=tf.float32)) * tf.abs(max_pred - min_pred),
+        (1 - tf.cast(tf.greater_equal(min_pred, min_true), dtype=tf.float32)) * tf.abs(max_pred - min_pred),
     )
 
     z_max_min_diff_error = tf.reduce_mean(
-        (1 - tf.cast(is_max_min_diff_more_than_00_1, dtype=tf.float32)) * (tf.abs(max_pred - min_pred) - 0.01),
+        (1 - tf.cast(is_max_min_diff_more_than_00_1, dtype=tf.float32)) * (tf.abs(max_pred - min_pred) - 0.03),
     )
 
     z_min_below_error = tf.reduce_mean(
@@ -96,24 +96,26 @@ def metric_loss_comp_2(y_true, y_pred):
     win_amt_true_error = tf.reduce_mean((1 - tf.cast(band_inside, dtype=tf.float32)) * tf.abs(max_true - min_true))
 
     win_amt_pred_error = tf.reduce_mean(
-        tf.abs(max_true - min_true) - (tf.cast(band_inside, dtype=tf.float32) * tf.abs(max_pred - min_pred)),
+        tf.abs(max_true - min_true) - tf.cast(band_inside, dtype=tf.float32) * tf.abs(max_pred - min_pred),
     )
 
     correct_trends = _get_correct_trends(y_true, y_pred)
 
-    trend_error_win = tf.reduce_mean(
+    trend_amt_true_error = tf.reduce_mean(
+        (1 - tf.cast(correct_trends, dtype=tf.float32)) * tf.abs(max_true - min_true),
+    )
+
+    trend_amt_pred_error = tf.reduce_mean(
+        tf.abs(max_true - min_true) - tf.cast(correct_trends, dtype=tf.float32) * tf.abs(max_pred - min_pred),
+    )
+
+    trend_win_true_error = tf.reduce_mean(
         (1 - tf.cast(band_inside & correct_trends, dtype=tf.float32)) * tf.abs(max_true - min_true),
     )
 
-    trend_error_win_pred_error = tf.reduce_mean(
+    trend_win_pred_error = tf.reduce_mean(
         tf.abs(max_true - min_true)
-        - (
-            tf.cast(
-                band_inside & correct_trends,
-                dtype=tf.float32,
-            )
-            * tf.abs(max_pred - min_pred)
-        ),
+        - tf.cast(band_inside & correct_trends, dtype=tf.float32) * tf.abs(max_pred - min_pred),
     )
 
     return (
@@ -121,12 +123,14 @@ def metric_loss_comp_2(y_true, y_pred):
         + z_min_below_error
         + z_pred_valid_error
         + z_max_min_diff_error
-        # + penalty_half_inside(y_true, y_pred)
+        + penalty_half_inside(y_true, y_pred)
         + win_amt_true_error
         + win_amt_pred_error
-        + trend_error_win
-        + trend_error_win_pred_error
-        + stoploss_incurred(y_true, y_pred)
+        + trend_amt_true_error
+        + trend_amt_pred_error
+        + trend_win_true_error
+        + trend_win_pred_error
+        + stoploss_incurred(y_true, y_pred) / 6
     )
 
 
