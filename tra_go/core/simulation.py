@@ -389,14 +389,14 @@ class Simulation:
         if data_type == ProcessedDataType.REAL:
             self.real_mean = mean
 
-            # special condition
-            # if per day mean is greater than 3% then model is skewed in the wrong way
-            if self.real_mean > 3 or np.isnan(self.real_mean):
-                self.is_model_worth_saving = False
-                self.is_model_worth_double_saving = False
-
         elif data_type == ProcessedDataType.EXPECTED_REWARD:
             self.expected_mean = mean
+
+            # special condition
+            # if per day mean is greater than 3% then model is skewed in the wrong way
+            if self.expected_mean > 3 or np.isnan(self.expected_mean):
+                self.is_model_worth_saving = False
+                self.is_model_worth_double_saving = False
 
         median = np.median(sorted_arr)
         np.std(sorted_arr)
