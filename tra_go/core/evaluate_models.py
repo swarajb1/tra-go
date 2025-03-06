@@ -2,11 +2,10 @@ import os
 import time
 
 import training_zero as an
+from core.config import settings
 from data_loader import DataLoader
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
-
-TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
 
 
 def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
@@ -37,7 +36,7 @@ def is_file_after_date(file_path: str) -> bool:
 
 def evaluate_models(
     model_location_type: ModelLocationType,
-    number_of_models: int,
+    number_of_models: int = 6,
     newly_trained_models: bool = False,
     move_files: bool = False,
 ) -> None:
@@ -70,6 +69,7 @@ def evaluate_models(
     max_250_days_win_value: float = 0
     max_win_pred_capture_percent_value: float = 0
     max_250_days_simulation_value: float = 0
+    max_all_simulations_max_250_days: float = 0
 
     for index, file_name in enumerate(list_of_files):
         print("\n" * 25, "*" * 280, "\n" * 4, sep="")
@@ -82,8 +82,6 @@ def evaluate_models(
         model_ticker: TickerOne
 
         model_interval: IntervalType = IntervalType.MIN_1
-
-        model_datetime: str = file_name_1.split(" - ")[1]
 
         x_type_str = file_name_1.split(" - ")[2]
         for band_type in BandType:
@@ -116,7 +114,7 @@ def evaluate_models(
             interval=IntervalType.MIN_1,
             x_type=model_x_type,
             y_type=model_y_type,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
         )
 
         Y_train_data_real, Y_test_data_real = data_loader.get_real_y_data()
@@ -132,7 +130,7 @@ def evaluate_models(
                 (X_test, Y_test, test_prev_close),
             ) = an.train_test_split(
                 data_df=df,
-                test_size=TEST_SIZE,
+                test_size=settings.TEST_SIZE,
                 x_type=model_x_type,
                 y_type=model_y_type,
                 interval=model_interval.value,
@@ -148,7 +146,7 @@ def evaluate_models(
             prev_day_close=train_prev_close,
             x_type=model_x_type,
             y_type=model_y_type,
-            test_size=TEST_SIZE,
+            test_size=settings.TEST_SIZE,
             model_file_name=file_name,
             model_location_type=model_location_type,
         )
@@ -210,16 +208,25 @@ def evaluate_models(
             valid_data_custom_evaluation.simulation_250_days,
         )
 
+        max_all_simulations_max_250_days = max(
+            max_all_simulations_max_250_days,
+            training_data_custom_evaluation.all_simulations_max_250_days,
+            valid_data_custom_evaluation.all_simulations_max_250_days,
+        )
+
         # move files into discarded/saved/saved_double folders
         if move_files and model_location_type in [
             ModelLocationType.TRAINED_NEW,
+            ModelLocationType.SAVED_DOUBLE,
             ModelLocationType.SAVED,
             ModelLocationType.OLD,
             ModelLocationType.DISCARDED,
         ]:
             destination_model_location_type: ModelLocationType = model_location_type
 
-            if is_double_saving or is_triple_saving:
+            if is_triple_saving:
+                destination_model_location_type = ModelLocationType.SAVED_TRIPLE
+            elif is_double_saving:
                 destination_model_location_type = ModelLocationType.SAVED_DOUBLE
             elif is_single_saving:
                 destination_model_location_type = ModelLocationType.SAVED
@@ -236,9 +243,10 @@ def evaluate_models(
 
     print("\n\n", "-" * 280, "\n", sep="")
 
-    print("\nMAX 250 days Win Value achieved:\t", max_250_days_win_value, "%")
-    print("\nMAX Win Pred Capture Percent achieved:\t", max_win_pred_capture_percent_value, "%")
-    print("\nMAX 250 Days Simulation Value:\t\t", max_250_days_simulation_value, "%")
+    print("\nMAX 250 days Win Value achieved:\t\t", max_250_days_win_value, "%")
+    print("\nMAX Win Pred Capture Percent achieved:\t\t", max_win_pred_capture_percent_value, "%")
+    print("\nMAX 250 Days Simulation Value:\t\t\t", max_250_days_simulation_value, "%")
+    print("\nMAX All Possible 250 Days Simulation Value:\t", max_all_simulations_max_250_days, "%")
 
     print(f"\n\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:

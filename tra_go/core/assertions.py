@@ -1,31 +1,32 @@
-import os
-
-SAFETY_FACTOR: float = float(os.getenv("SAFETY_FACTOR"))
-TEST_SIZE: float = float(os.getenv("TEST_SIZE"))
-
-NUMBER_OF_NEURONS: int = int(os.getenv("NUMBER_OF_NEURONS"))
-NUMBER_OF_LAYERS: int = int(os.getenv("NUMBER_OF_LAYERS"))
-INITIAL_DROPOUT_PERCENT: int = int(os.getenv("INITIAL_DROPOUT_PERCENT"))
-
-NUMBER_OF_EPOCHS: int = int(os.getenv("NUMBER_OF_EPOCHS"))
-BATCH_SIZE: int = int(os.getenv("BATCH_SIZE"))
-LEARNING_RATE: float = float(os.getenv("LEARNING_RATE"))
+from core.config import settings
 
 
 def assert_env_vals() -> None:
-    assert SAFETY_FACTOR >= 1, f"Safety Factor should be greater than or equal to 1 == {SAFETY_FACTOR}"
+    """Asserts the values of environment variables.
 
-    assert TEST_SIZE <= 0.5, f"Test Size should be less than or equal to o.5 == {TEST_SIZE}"
+    Raises:
+        AssertionError: If the safety factor is less than 1 or the test size is greater than 0.5.
 
-    print("\nSAFETY_FACTOR:", " " * (50 - len("SAFETY_FACTOR")), f"{SAFETY_FACTOR}")
-    print("TEST_SIZE:", " " * (50 - len("TEST_SIZE")), f"{TEST_SIZE}")
+    Prints the values of all environment variables.
 
-    print("\nNUMBER_OF_NEURONS:", " " * (50 - len("NUMBER_OF_NEURONS")), f"{NUMBER_OF_NEURONS}")
-    print("NUMBER_OF_LAYERS:", " " * (50 - len("NUMBER_OF_LAYERS")), f"{NUMBER_OF_LAYERS}")
-    print("INITIAL_DROPOUT_PERCENT:", " " * (50 - len("INITIAL_DROPOUT_PERCENT")), f"{INITIAL_DROPOUT_PERCENT}")
+    Returns:
+        None
+    """
 
-    print("\nNUMBER_OF_EPOCHS:", " " * (50 - len("NUMBER_OF_EPOCHS")), f"{NUMBER_OF_EPOCHS}")
-    print("BATCH_SIZE:", " " * (50 - len("BATCH_SIZE")), f"{BATCH_SIZE}")
-    print("LEARNING_RATE:", " " * (50 - len("LEARNING_RATE")), f"{LEARNING_RATE}")
+    assert (
+        settings.SAFETY_FACTOR >= 1
+    ), f"Safety Factor should be greater than or equal to 1 == {settings.SAFETY_FACTOR}"
+
+    assert settings.TEST_SIZE <= 0.5, f"Test Size should be less than or equal to 0.5 == {settings.TEST_SIZE}"
+
+    print("\n")
+
+    for item in settings:
+        if item[0] in ["ZERODHA_ID", "NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"]:
+            print("")
+
+        print(f"{item[0]}:", " " * (50 - len(item[0])), f"{item[1]}")
+
+    del item
 
     return

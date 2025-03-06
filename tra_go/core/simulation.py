@@ -1,18 +1,11 @@
-import os
-
 import numpy as np
-from dotenv import load_dotenv
+from core.config import settings
 from numpy.typing import NDArray
 from scipy import stats
 from scipy.stats import kurtosis, skew
 from utils.functions import round_num_str
 
 from database.enums import ProcessedDataType
-
-load_dotenv()
-
-
-RISK_TO_REWARD_RATIO: float = os.getenv("RISK_TO_REWARD_RATIO")
 
 PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
 PERCENT_250_DAYS_WORTH_SAVING: int = 5
@@ -25,16 +18,19 @@ class Simulation:
         sell_price_arr: NDArray[np.float64],
         order_type_buy_arr: NDArray[np.bool_],
         real_price_arr: NDArray[np.float64],
+        print_log_stats_extra: bool = False,
     ):
         self.buy_price_arr = buy_price_arr
         self.sell_price_arr = sell_price_arr
         self.order_type_buy_arr = order_type_buy_arr
         self.real_price_arr = real_price_arr
+        self.print_log_stats_extra = print_log_stats_extra
 
         del buy_price_arr
         del sell_price_arr
         del order_type_buy_arr
         del real_price_arr
+        del print_log_stats_extra
 
         # real_price_arr = o,h,l,c
 
@@ -49,13 +45,29 @@ class Simulation:
         self.expected_mean: float
         self.actual_full_reward_mean: float
 
-        self.simulation_250_days: float = 0
+        self.simulation_250_days: float
+        self.all_simulations_max_250_days: float = float("-inf")
 
         self.simulation()
 
         self.set_real_full_reward_mean()
 
         self.display_stats()
+
+    def create_rrr_list(self) -> list[float]:
+        rrr_list: list[float] = []
+
+        # for i in range(4):
+        #     rrr_list.append(round(i / 3, 2))
+
+        rrr_list.extend([0, 0.33, 0.66, 1, 1.5, 2, 3, 5, 8, 15])
+
+        if settings.RISK_TO_REWARD_RATIO not in rrr_list:
+            rrr_list.append(settings.RISK_TO_REWARD_RATIO)
+
+        rrr_list.sort()
+
+        return rrr_list
 
     def simulation(self) -> None:
         # 3 orders are placed when the simulation starts
@@ -69,18 +81,11 @@ class Simulation:
 
         print("simulation started....")
 
-        self.count_something: int = 0
+        number_of_days: int = self.real_price_arr.shape[0]
 
-        rrr_list: list[float] = [0.5]
-        for i in range(11):
-            rrr_list.append(i * 0.2)
-
-        rrr_list.sort()
+        rrr_list: list[float] = self.create_rrr_list()
 
         for RISK_TO_REWARD_RATIO in rrr_list:
-            # for RISK_TO_REWARD_RATIO in np.arange(0, 1.1, 0.1):
-            number_of_days: int = self.real_price_arr.shape[0]
-
             wins_day_wise_list: NDArray = np.zeros(number_of_days)
             invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
@@ -109,12 +114,18 @@ class Simulation:
 
                 net_day_reward: float = 0
 
+                # special_condition
+                if expected_reward / ((buy_price + sell_price) / 2) * 100 < 0.05 and False:
+                    # reward is less than 0.05% of the invested amount
+                    # so, not worth trading
+                    continue
+
                 # step 1 - find stop loss based on trade type
                 if is_trade_type_buy:
-                    # pred is up
+                    # prediction order type is up
                     stop_loss = buy_price - expected_reward * RISK_TO_REWARD_RATIO
                 else:
-                    # pred is down
+                    # prediction order type is down
                     stop_loss = sell_price + expected_reward * RISK_TO_REWARD_RATIO
 
                 # step 2 - simulating each tick inside the interval
@@ -125,7 +136,7 @@ class Simulation:
                     # if (
                     #     tick_low <= buy_price <= tick_high
                     #     and tick_low <= sell_price <= tick_high
-                    #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                    #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                     # ):
                     #     print("WARNING: buy_price and sell_price both inside the 1 tick", i_tick, tick_low, tick_high)
 
@@ -149,7 +160,7 @@ class Simulation:
                             # if (
                             #     tick_low <= buy_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: buy_price and stop_loss both inside the 1 tick ")
 
@@ -173,7 +184,7 @@ class Simulation:
                             # if (
                             #     tick_low <= sell_price <= tick_high
                             #     and tick_low <= stop_loss <= tick_high
-                            #     and round(RISK_TO_REWARD_RATIO, 1) == 0.5
+                            #     and RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO
                             # ):
                             #     print("WARNING: sell_price and stop_loss both inside the 1 tick ")
 
@@ -237,13 +248,15 @@ class Simulation:
                 " \033[92m++\033[0m " if days_250 > PERCENT_250_DAYS_WORTH_SAVING else "",
             )
 
+            self.all_simulations_max_250_days = max(self.all_simulations_max_250_days, round(days_250, 2))
+
             if days_250 > PERCENT_250_DAYS_WORTH_SAVING:
                 self.is_model_worth_saving = True
 
-                if round(RISK_TO_REWARD_RATIO, 1) <= 0.5:
+                if RISK_TO_REWARD_RATIO <= settings.RISK_TO_REWARD_RATIO:
                     self.is_model_worth_double_saving = True
 
-            if round(RISK_TO_REWARD_RATIO, 1) == 0.5:
+            if RISK_TO_REWARD_RATIO == settings.RISK_TO_REWARD_RATIO:
                 self.real_data_for_analysis = arr_real_percent
                 self.stoploss_data_for_analysis = expected_reward_percent_day_wise_list * 1
                 self.stoploss_rrr_for_analysis = 1
@@ -267,10 +280,17 @@ class Simulation:
                 if count_trade_taken == 0:
                     count_trade_taken = 1
 
+                percent_trades_taken = count_trade_taken / number_of_days * 100
+                percent_expected_trades = count_expected_trades / count_trade_taken * 100
+
+                if percent_trades_taken > 70 and percent_expected_trades > 50:
+                    # special_condition
+                    self.is_model_worth_saving = True
+
                 # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
                 print(
                     "\n\t\t\t Percent Trade Taken\t\t\t",
-                    "{:.2f}".format(count_trade_taken / number_of_days * 100),
+                    "{:.2f}".format(percent_trades_taken),
                     " %",
                 )
                 print(
@@ -302,7 +322,7 @@ class Simulation:
                     "\t\t\t Percent Expected Trades\t\t",
                     "{:.2f}".format(count_expected_trades / number_of_days * 100),
                     " % \t | \t",
-                    "{:.2f}".format(count_expected_trades / count_trade_taken * 100),
+                    "{:.2f}".format(percent_expected_trades),
                     " %",
                 )
                 print(
@@ -335,15 +355,21 @@ class Simulation:
             """
 
     def display_stats(self) -> None:
-        # print("count_something =", self.count_something)
-
         # if not self.is_model_worth_saving:
         #     return
 
-        print("\n\n\n", "-" * 30, "\nReal End of Day Stats, , RRR = 0.5\n")
+        print(
+            "\n\n\n",
+            "-" * 30,
+            f"\nReal End of Day Stats (per day percent), RRR = {settings.RISK_TO_REWARD_RATIO}\n",
+        )
         self.log_statistics(self.real_data_for_analysis, ProcessedDataType.REAL)
 
-        print("\n\n\n", "-" * 30, f"\nStop Loss Data Stats , RRR = {self.stoploss_rrr_for_analysis}\n")
+        print(
+            "\n\n\n",
+            "-" * 30,
+            f"\nStop Loss Data Stats (per day percent), RRR = {self.stoploss_rrr_for_analysis}\n",
+        )
         self.log_statistics(self.stoploss_data_for_analysis, ProcessedDataType.EXPECTED_REWARD)
 
         print(
@@ -355,13 +381,22 @@ class Simulation:
     def log_statistics(self, arr: NDArray, data_type: ProcessedDataType) -> None:
         sorted_arr = np.sort(arr)
 
+        # arr - is per day percent return
+
         # Central Tendency
         mean = np.mean(sorted_arr)
 
         if data_type == ProcessedDataType.REAL:
             self.real_mean = mean
+
         elif data_type == ProcessedDataType.EXPECTED_REWARD:
             self.expected_mean = mean
+
+            # special condition
+            # if per day mean is greater than 3% then model is skewed in the wrong way
+            if self.expected_mean > 3 or np.isnan(self.expected_mean):
+                self.is_model_worth_saving = False
+                self.is_model_worth_double_saving = False
 
         median = np.median(sorted_arr)
         np.std(sorted_arr)
@@ -369,24 +404,27 @@ class Simulation:
         print("Mean: \t\t\t\t", round_num_str(mean, 2))
         print("Median: \t\t\t", round_num_str(median, 2))
 
-        # Dispersion
-        Q3, Q1 = np.percentile(sorted_arr, [75, 25])
-        Q3 - Q1
-        # print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 2))
-        # print("Standard Deviation: \t\t", round_num_str(std_deviation, 2))
         print("Min: \t\t\t\t", round_num_str(np.min(sorted_arr), 2))
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
+
+        if self.print_log_stats_extra:
+            self._log_statistics_extra(self, sorted_arr)
+
+        return
+
+    def _log_statistics_extra(self, sorted_arr: NDArray) -> None:
+        # Dispersion
+
+        # Q3, Q1 = np.percentile(sorted_arr, [75, 25])
+        # IQR = Q3 - Q1
+        # print("Inter-quartile Range (IQR): \t", round_num_str(iq_range, 2))
+        # print("Standard Deviation: \t\t", round_num_str(std_deviation, 2))
         # print("Peak to peak: \t\t\t", round_num_str(np.ptp(sorted_arr), 2))
 
         # coefficient_of_variation = std_deviation / mean * 100
 
         # print("Coefficient of Variation: \t", round_num_str(coefficient_of_variation, 2), "%")
 
-        # self._log_statistics_extra(self, sorted_arr)
-
-        return
-
-    def _log_statistics_extra(self, sorted_arr: NDArray) -> None:
         # Measures of Position
         z_scores = stats.zscore(sorted_arr)
         stats.rankdata(sorted_arr)

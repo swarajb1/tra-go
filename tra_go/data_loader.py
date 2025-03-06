@@ -155,6 +155,9 @@ class DataLoader:
         df_i["close_average"] = (df_i["close"] + df_i["open"] + df_i["high"] + df_i["low"]) / 4
         df_o["close_average"] = (df_o["close"] + df_o["open"] + df_o["high"] + df_o["low"]) / 4
 
+        # df_i["close_average"] = (df_i["high"] + df_i["low"] + df_i["close"]) / 3
+        # df_o["close_average"] = (df_o["high"] + df_o["low"] + df_o["close"]) / 3
+
         assert (
             len(df_i) % NUMBER_OF_POINTS_IN_ZONE_1_ST == 0
         ), "Input Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_1_ST"
@@ -357,11 +360,7 @@ def check_gaps(data: NDArray[np.float64]) -> None:
                 count_gaps_train += 1
 
     print("Count Gaps:\t\t\t", count_gaps_train)
-    print(
-        "Count Gaps Percentage:\t\t",
-        "{:.2f}".format(count_gaps_train / (data.shape[0] * data.shape[1]) * 100),
-        " %\n",
-    )
+    print(f"Count Gaps Percentage:\t\t {count_gaps_train / (data.shape[0] * data.shape[1]) * 100:.2f} %\n")
 
 
 def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType) -> NDArray:
