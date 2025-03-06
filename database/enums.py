@@ -110,3 +110,18 @@ class ProcessedDataType(Enum):
 class TickerDataType(Enum):
     TRAINING = "training"
     REAL_AND_CLEANED = "cleaned"
+
+
+class ApproachType(Enum):
+    MIN_MAX_TREND = "min_max_trend"
+    CLOSING_ONE_POINT = "closing_one_point"
+
+
+class InputNumberOfDataPoints(Enum):
+    I_132 = 132
+    I_150 = 150
+
+
+class OutputNumberOfDataPoints(Enum):
+    O_132 = 132
+    O_150 = 150
