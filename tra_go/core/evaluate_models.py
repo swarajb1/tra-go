@@ -83,8 +83,6 @@ def evaluate_models(
 
         model_interval: IntervalType = IntervalType.MIN_1
 
-        model_datetime: str = file_name_1.split(" - ")[1]
-
         x_type_str = file_name_1.split(" - ")[2]
         for band_type in BandType:
             if band_type.value == x_type_str:
@@ -219,13 +217,16 @@ def evaluate_models(
         # move files into discarded/saved/saved_double folders
         if move_files and model_location_type in [
             ModelLocationType.TRAINED_NEW,
+            ModelLocationType.SAVED_DOUBLE,
             ModelLocationType.SAVED,
             ModelLocationType.OLD,
             ModelLocationType.DISCARDED,
         ]:
             destination_model_location_type: ModelLocationType = model_location_type
 
-            if is_double_saving or is_triple_saving:
+            if is_triple_saving:
+                destination_model_location_type = ModelLocationType.SAVED_TRIPLE
+            elif is_double_saving:
                 destination_model_location_type = ModelLocationType.SAVED_DOUBLE
             elif is_single_saving:
                 destination_model_location_type = ModelLocationType.SAVED
