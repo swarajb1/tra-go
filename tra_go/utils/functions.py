@@ -23,10 +23,13 @@ def with_leverage(val: float) -> float:
     return round((pow(per_day_percent * 5 / 100 + 1, 250) - 1) * 100)
 
 
-def from_per_day_to_year(val: float) -> float:
+def from_per_day_to_year(val: float) -> tuple[float, float]:
     print("\n(250_days, 250_days_5)")
 
-    return (round((pow(val / 100 + 1, 250) - 1) * 100), round((pow(val * 5 / 100 + 1, 250) - 1) * 100))
+    return (
+        round((pow(val / 100 + 1, 250) - 1) * 100),
+        round((pow(val * 5 / 100 + 1, 250) - 1) * 100),
+    )
 
 
 if __name__ == "__main__":
@@ -35,7 +38,7 @@ if __name__ == "__main__":
             print("\n", with_leverage(float(sys.argv[2])))
 
         elif sys.argv[1] == "from_per_day_to_year":
-            print("\n", from_per_day_to_year(float(sys.argv[2])))
+            print("\n", from_per_day_to_year(float(sys.argv[2])), sep="")
 
         else:
             print("\n", "Invalid 1st argument")
