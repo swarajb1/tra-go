@@ -121,12 +121,7 @@ def data_inside_zone(df: pd.DataFrame, interval: str) -> pd.DataFrame:
     # when taking from 951 (150, 150)
     # initial_index_offset: int = 36
 
-    initial_index_offset: int
-
-    if NUMBER_OF_POINTS_IN_ZONE_2_ND == 132:
-        initial_index_offset = 47
-    elif NUMBER_OF_POINTS_IN_ZONE_2_ND == 150:
-        initial_index_offset = 36
+    initial_index_offset: int = get_initial_index_offset(NUMBER_OF_POINTS_IN_ZONE_2_ND)
 
     number_of_days = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
@@ -151,14 +146,14 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     elif io_type == IODataType.OUTPUT_DATA:
         points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_2_ND
 
-    if band_type == BandType.BAND_4:
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 4)
+    band_shapes = {
+        BandType.BAND_4: 4,
+        BandType.BAND_2: 2,
+        BandType.BAND_2_1: 2,
+        BandType.BAND_5: 5,
+    }
 
-    elif band_type in [BandType.BAND_2, BandType.BAND_2_1]:
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 2)
-
-    elif band_type == BandType.BAND_5:
-        res = array.reshape(len(array) // points_in_each_day, points_in_each_day, 5)
+    res = array.reshape(len(array) // points_in_each_day, points_in_each_day, band_shapes[band_type])
 
     return res
 

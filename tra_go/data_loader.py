@@ -9,6 +9,7 @@ from training_zero import (
     NUMBER_OF_POINTS_IN_ZONE_DAY,
     TOTAL_POINTS_IN_ONE_DAY,
 )
+from utils import get_initial_index_offset
 
 from database.enums import BandType, IntervalType, IODataType, TickerDataType, TickerOne
 
@@ -99,12 +100,7 @@ class DataLoader:
         # when taking from 951 (150, 150)
         # initial_index_offset: int = 36
 
-        initial_index_offset: int
-
-        if NUMBER_OF_POINTS_IN_ZONE_2_ND == 132:
-            initial_index_offset = 47
-        elif NUMBER_OF_POINTS_IN_ZONE_2_ND == 150:
-            initial_index_offset = 36
+        initial_index_offset: int = get_initial_index_offset(NUMBER_OF_POINTS_IN_ZONE_2_ND)
 
         number_of_days: int = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
