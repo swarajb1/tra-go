@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tra-go"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["Mac <bisane.swaraj@gmail.com>"]
 readme = "README.md"
@@ -36,6 +36,13 @@ flake8 = "^6.1.0"
 autoflake = "^2.3.1"
 isort = "^5.13.2"
 
+
+[tool.mypy]
+python_version = "^3.9"
+check-untyped-defs = true
+strict_optional = true
+
+
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0,<1.8.0"]
 build-backend = "poetry.core.masonry.api"

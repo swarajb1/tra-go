@@ -1,3 +1,5 @@
+from typing import Any
+
 from core.config import settings
 
 
@@ -21,12 +23,15 @@ def assert_env_vals() -> None:
 
     print("\n")
 
-    for item in settings:
-        if item[0] in ["ZERODHA_ID", "NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"]:
+    # Type annotation: settings.dict().items() returns List[Tuple[str, Any]]
+    items: list[tuple[str, Any]] = list(settings.model_dump().items())
+    items.sort(key=lambda x: x[0])
+
+    for item_name, item_value in items:
+        if item_name in ["ZERODHA_ID", "NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"]:
             print("")
 
-        print(f"{item[0]}:", " " * (50 - len(item[0])), f"{item[1]}")
-
-    del item
+        padding: int = max(1, 50 - len(item_name))
+        print(f"{item_name}:", " " * padding, f"{item_value}")
 
     return

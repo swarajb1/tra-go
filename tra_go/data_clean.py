@@ -5,27 +5,44 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 import pytz
 from sklearn.preprocessing import MinMaxScaler
-
-from scripts.script_2 import nifty50_symbols
 from utils.functions import min_max_scaler
 
+from scripts.script_2 import nifty50_symbols
 
-class DataCleanerZero:
+# Constants
+MINUTES_IN_TRADING_DAY = 375  # 9:15 AM to 3:29 PM
+TRADING_START_HOUR = 9
+TRADING_START_MINUTE = 15
+TRADING_END_HOUR = 15
+TRADING_END_MINUTE = 29
+
+
+class DataHandlerBase:
+    """Base class for data handling operations."""
+
     def __init__(self, symbol: str, interval: str):
         self.symbol = symbol
         self.interval = interval
 
+    def get_csv_file_path(self) -> str:
+        """Must be implemented by child classes."""
+        raise NotImplementedError("Child classes must implement get_csv_file_path")
+
+    def save_data(self, data: pd.DataFrame, file_path: str) -> None:
+        """Save data to a CSV file."""
+        data.to_csv(file_path, index=False)
+
+
+class DataCleanerZero(DataHandlerBase):
+    def __init__(self, symbol: str, interval: str):
+        super().__init__(symbol, interval)
         self.data_raw = self.get_data_all_df()
-
         self.data_regular = self.data_clean_1()
-
         self.data_cleaned = self.data_cleaning()
-
         self.save_cleaned_data()
 
     def get_csv_file_path(self) -> str:
         file_path = f"./data_z/nse/{self.interval}/{self.symbol} - {self.interval}.csv"
-
         return file_path
 
     def get_data_all_df(self) -> pd.DataFrame:
@@ -42,7 +59,15 @@ class DataCleanerZero:
 
     def data_clean_1(self) -> pd.DataFrame:
         # step 1: only regular data
+        df = self._filter_regular_hours_data()
 
+        # step 2: datetimes with second != 0, putting them to be zero, if second=0 does not exist
+        df = self._normalize_seconds(df)
+
+        return df[["datetime", "open", "high", "low", "close", "volume"]]
+
+    def _filter_regular_hours_data(self) -> pd.DataFrame:
+        """Filter data to include only regular trading hours and weekdays."""
         df = self.data_raw.sort_values(by="datetime", ascending=True)
 
         # remove diwali murath trading rows
@@ -54,8 +79,10 @@ class DataCleanerZero:
         df["is_weekday"] = df["datetime"].apply(lambda x: is_weekday_datetime_str(x))
         df = df[df["is_weekday"]].copy(deep=True)
 
-        # step 2: datetimes with second != 0, putting them to be zero, if second=0 does not exist
+        return df
 
+    def _normalize_seconds(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize datetime seconds to zero if they aren't already."""
         df["datetime_obj"] = pd.to_datetime(
             df["datetime"],
             format="%Y-%m-%d %H:%M:%S%z",
@@ -87,10 +114,7 @@ class DataCleanerZero:
         df = df.sort_values(by="datetime", ascending=True)
         df.reset_index(drop=True, inplace=True)
 
-        # df["datetime_obj"] = pd.to_datetime(df["datetime"], format="%Y-%m-%d %H:%M:%S%z")
-        # duplicate_non_zero_second_indexes = df[df["datetime_obj"].dt.second != 0].index.tolist()
-
-        return df[["datetime", "open", "high", "low", "close", "volume"]]
+        return df
 
     def data_cleaning(self) -> pd.DataFrame:
         # start time = 0915
@@ -102,7 +126,7 @@ class DataCleanerZero:
         df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
         all_dates = df["date"].unique()
 
-        all_datetimes_required = []
+        all_datetimes_required: list[str] = []
         timezone = pytz.timezone("Asia/Kolkata")
 
         for date in all_dates:
@@ -111,14 +135,15 @@ class DataCleanerZero:
                 year=that_date.year,
                 month=that_date.month,
                 day=that_date.day,
-                hour=9,
-                minute=15,
+                hour=TRADING_START_HOUR,
+                minute=TRADING_START_MINUTE,
                 second=0,
             )
             first_datetime = timezone.localize(date_obj)
 
             all_datetimes_required.extend(
-                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z") for i in range(375)
+                (first_datetime + timedelta(minutes=i)).strftime("%Y-%m-%d %H:%M:%S%z")
+                for i in range(MINUTES_IN_TRADING_DAY)
             )
 
         all_datetimes_in_data = []
@@ -204,8 +229,11 @@ class DataCleanerZero:
         if right_index not in missing_indexes and right_index <= max_index:
             return right_index
 
+        # Default case - should never reach here if missing_indexes is not the entire dataset
+        return max(0, index - 1)  # Return previous index or 0 if at the beginning
+
     def save_cleaned_data(self) -> None:
-        print(self.symbol, "\t= ", len(self.data_cleaned) / 375)
+        print(self.symbol, "\t= ", len(self.data_cleaned) / MINUTES_IN_TRADING_DAY)
 
         file_path: str = os.path.join(
             "./data_cleaned",
@@ -213,16 +241,17 @@ class DataCleanerZero:
             f"{self.symbol} - {self.interval}.csv",
         )
 
-        self.data_cleaned.to_csv(file_path, index=False)
+        self.save_data(self.data_cleaned, file_path)
 
     def is_in_regular_hours(self, check_datetime) -> bool:
-        time_open = time(9, 15, 0)
-        time_close = time(15, 29, 0)
+        time_open = time(TRADING_START_HOUR, TRADING_START_MINUTE, 0)
+        time_close = time(TRADING_END_HOUR, TRADING_END_MINUTE, 0)
 
         time_check = datetime.strptime(check_datetime, "%Y-%m-%d %H:%M:%S%z").time()
 
         if time_open <= time_check and time_check <= time_close:
             return True
+
         return False
 
 
@@ -238,7 +267,7 @@ def is_weekday_datetime_str(datetime_str: str):
     return date.weekday() < 5
 
 
-class DataScalerZero:
+class DataScalerZero(DataHandlerBase):
     """A class for scaling and saving data. This is the data that is used for
     model training.
 
@@ -254,20 +283,14 @@ class DataScalerZero:
     """
 
     def __init__(self, symbol: str, interval: str):
-        self.symbol = symbol
-        self.interval = interval
-
+        super().__init__(symbol, interval)
         self.data_cleaned = pd.read_csv(self.get_csv_file_path())
-
         self.data_scaled = self.data_scaling()
-
         self.volume_scaler = MinMaxScaler()
-
         self.save_scaled_data()
 
     def get_csv_file_path(self) -> str:
         file_path = f"./data_cleaned/{self.interval}/{self.symbol} - {self.interval}.csv"
-
         return file_path
 
     def data_scaling(self) -> pd.DataFrame:
@@ -281,7 +304,7 @@ class DataScalerZero:
         # for 1st day
         # real close if the open of that day itself, as there is no previous day
 
-        first_day_last_index: int = 375
+        first_day_last_index: int = MINUTES_IN_TRADING_DAY
 
         df.iloc[:first_day_last_index, df.columns.get_loc("real_close")] = df.iloc[
             0,
@@ -296,9 +319,9 @@ class DataScalerZero:
             df.iloc[:first_day_last_index, df.columns.get_loc("volume")].values,
         )
 
-        for day in range(1, len(df) // 375):
-            start_index: int = day * 375
-            end_index: int = start_index + 375
+        for day in range(1, len(df) // MINUTES_IN_TRADING_DAY):
+            start_index: int = day * MINUTES_IN_TRADING_DAY
+            end_index: int = start_index + MINUTES_IN_TRADING_DAY
 
             prev_close: float = df.iloc[start_index - 1, df.columns.get_loc("close")]
 

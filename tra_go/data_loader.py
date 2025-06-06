@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from training_zero import (
-    NUMBER_OF_POINTS_IN_ZONE_1_ST,
-    NUMBER_OF_POINTS_IN_ZONE_2_ND,
+    NUMBER_OF_POINTS_IN_ZONE_1,
+    NUMBER_OF_POINTS_IN_ZONE_2,
     NUMBER_OF_POINTS_IN_ZONE_DAY,
     TOTAL_POINTS_IN_ONE_DAY,
 )
-from utils import get_initial_index_offset
+from utils.others import get_initial_index_offset
 
 from database.enums import BandType, IntervalType, IODataType, TickerDataType, TickerOne
 
@@ -100,13 +100,13 @@ class DataLoader:
         # when taking from 951 (150, 150)
         # initial_index_offset: int = 36
 
-        initial_index_offset: int = get_initial_index_offset(NUMBER_OF_POINTS_IN_ZONE_2_ND)
+        initial_index_offset: int = get_initial_index_offset(NUMBER_OF_POINTS_IN_ZONE_2)
 
         number_of_days: int = len(df) // TOTAL_POINTS_IN_ONE_DAY
 
         assert (
             len(df) % TOTAL_POINTS_IN_ONE_DAY == 0
-        ), f"Full {TickerDataType.key} Data length is not divisible by TOTAL_POINTS_IN_ONE_DAY"
+        ), f"Full data length for {self.ticker.value} ({ticker_data_type.value}) is not divisible by TOTAL_POINTS_IN_ONE_DAY ({TOTAL_POINTS_IN_ONE_DAY})"
 
         for day in range(number_of_days):
             start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
@@ -121,7 +121,11 @@ class DataLoader:
         # return res_df[columns]
         return res_df
 
-    def data_split_x_y(self, df: pd.DataFrame, ticker_data_type: TickerDataType | None) -> pd.DataFrame:
+    def data_split_x_y(
+        self,
+        df: pd.DataFrame,
+        ticker_data_type: TickerDataType | None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Splits the data into input, output dataframe."""
 
         # assumptions:
@@ -140,7 +144,7 @@ class DataLoader:
             day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
             day_end_index: int = day_start_index + NUMBER_OF_POINTS_IN_ZONE_DAY - 1
 
-            first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1_ST)
+            first_2_nd_zone_index: int = int(day_start_index + NUMBER_OF_POINTS_IN_ZONE_1)
 
             df_i = pd.concat([df_i, df.iloc[day_start_index:first_2_nd_zone_index]])
             df_o = pd.concat([df_o, df.iloc[first_2_nd_zone_index : day_end_index + 1]])
@@ -155,12 +159,12 @@ class DataLoader:
         # df_o["close_average"] = (df_o["high"] + df_o["low"] + df_o["close"]) / 3
 
         assert (
-            len(df_i) % NUMBER_OF_POINTS_IN_ZONE_1_ST == 0
-        ), "Input Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_1_ST"
+            len(df_i) % NUMBER_OF_POINTS_IN_ZONE_1 == 0
+        ), "Input Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_1"
 
         assert (
-            len(df_o) % NUMBER_OF_POINTS_IN_ZONE_2_ND == 0
-        ), "Output Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_2_ND"
+            len(df_o) % NUMBER_OF_POINTS_IN_ZONE_2 == 0
+        ), "Output Dataframe length is not divisible by NUMBER_OF_POINTS_IN_ZONE_2"
 
         columns_x: list[str]
         columns_y: list[str]
@@ -311,34 +315,65 @@ class DataLoader:
 
         return (self.train_prev_close, self.test_prev_close)
 
-    def df_data_into_3_feature_array(self, arr: NDArray) -> NDArray:
-        res = np.zeros((arr.shape[0], 3))
+    def df_data_into_3_feature_array(self, arr: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Transform data array into a 3-feature representation: min, max, and trend indicator.
+
+        The output array has shape (n_days, 3) where the features are:
+        - Column 0: Minimum value for each day
+        - Column 1: Maximum value for each day
+        - Column 2: Buy trend indicator (1 if max occurs after min, 0 otherwise)
+
+        Args:
+            arr: Input array with shape (n_days, points_per_day, n_features)
+
+        Returns:
+            Array with shape (n_days, 3) containing the transformed features
+
+        Raises:
+            ValueError: If y_type is not compatible with this transformation
+            AssertionError: If input array dimensions don't match expected shape
+        """
+        if self.y_type not in [BandType.BAND_2_1, BandType.BAND_1_1]:
+            raise ValueError(f"Band type {self.y_type} not supported for 3-feature transformation")
 
         min_values: NDArray
         max_values: NDArray
         is_buy_trend: NDArray
 
+        # Initialize result array
+        res = np.zeros((arr.shape[0], 3), dtype=np.float64)
+
         if self.y_type == BandType.BAND_2_1:
-            assert arr.shape[2] == 2, "Array.shape[2] is not equal to 2, the data is not coming in the form of BAND_2"
+            # For BAND_2_1, we expect 2 features (low, high)
+            assert arr.shape[2] == 2, f"Expected 2 features for BAND_2_1, got {arr.shape[2]}"
 
+            # Extract min from lows (feature 0)
             min_values = np.min(arr[:, :, 0], axis=1)
-            max_values = np.max(arr[:, :, 1], axis=1)
+            min_indices = np.argmin(arr[:, :, 0], axis=1)
 
-            # buy trend when max comes after min
-            is_buy_trend = np.argmax(arr[:, :, 1], axis=1) > np.argmin(arr[:, :, 0], axis=1)
+            # Extract max from highs (feature 1)
+            max_values = np.max(arr[:, :, 1], axis=1)
+            max_indices = np.argmax(arr[:, :, 1], axis=1)
 
         elif self.y_type == BandType.BAND_1_1:
-            assert arr.shape[2] == 1, "Array.shape[1] is not equal to 1, the data is not coming in the form of BAND_1"
+            # For BAND_1_1, we expect 1 feature (close_average)
+            assert arr.shape[2] == 1, f"Expected 1 feature for BAND_1_1, got {arr.shape[2]}"
 
+            # Extract min and max from the same feature
             min_values = np.min(arr[:, :, 0], axis=1)
+            min_indices = np.argmin(arr[:, :, 0], axis=1)
+
             max_values = np.max(arr[:, :, 0], axis=1)
+            max_indices = np.argmax(arr[:, :, 0], axis=1)
 
-            # buy trend when max comes after min
-            is_buy_trend = np.argmax(arr[:, :, 0], axis=1) > np.argmin(arr[:, :, 0], axis=1)
+        # Buy trend indicator: 1 if max occurs after min, 0 otherwise
+        is_buy_trend = (max_indices > min_indices).astype(int)
 
+        # Construct result array
         res[:, 0] = min_values
         res[:, 1] = max_values
-        res[:, 2] = is_buy_trend.astype(int)
+        res[:, 2] = is_buy_trend
 
         return res
 
@@ -365,9 +400,9 @@ def by_date_df_array(df: pd.DataFrame, band_type: BandType, io_type: IODataType)
     points_in_each_day: int
 
     if io_type == IODataType.INPUT_DATA:
-        points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_1_ST
+        points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_1
     elif io_type == IODataType.OUTPUT_DATA:
-        points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_2_ND
+        points_in_each_day = NUMBER_OF_POINTS_IN_ZONE_2
 
     assert len(array) % points_in_each_day == 0, "Array length is not divisible by points_in_each_day"
 
