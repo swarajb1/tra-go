@@ -13,6 +13,7 @@ import training_zero as an
 from core.assertions import assert_env_vals
 from core.config import settings
 from core.evaluate_models import evaluate_models
+from core.logger import log_model_training_complete, log_model_training_start, logger
 from data_loader import DataLoader
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard, TerminateOnNaN
 from numpy.typing import NDArray
@@ -52,6 +53,11 @@ list_of_tickers: list[TickerOne] = [
 
 
 def main_training():
+    """Main training function with proper error handling and logging."""
+    time_start = time.time()
+
+    logger.info(f"Starting training for ticker: {TICKER.name}, interval: {INTERVAL.value}")
+
     df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL.value)
 
     model: Model
@@ -67,6 +73,8 @@ def main_training():
     terNan: Callback = TerminateOnNaN()
 
     now_datetime: str = datetime.now().strftime("%Y-%m-%d %H-%M")
+
+    log_model_training_start(TICKER.name, Y_TYPE.value, now_datetime)
 
     log_dir: str = os.path.join(
         "training",
@@ -264,6 +272,8 @@ def main_training():
     )
 
     model.save(f"{checkpoint_path_prefix}.keras")
+
+    log_model_training_complete(TICKER.name, Y_TYPE.value, time.time() - time_start)
 
     print("\nmodel : training done. \n")
 
