@@ -43,6 +43,35 @@ script_1:
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) script_1.py
 
 
+create_data_folders:  ## Create data and training folders
+	@mkdir -p data_z
+	@echo "Created folder: data_z"
+
+	@mkdir -p data_cleaned
+	@echo "Created folder: data_cleaned"
+
+	@mkdir -p data_training
+	@echo "Created folder: data_training"
+
+	@mkdir -p training
+	@echo "Created folder: training"
+
+	@mkdir -p training/graphs
+	@echo "Created folder: training/graphs"
+	@mkdir -p training/models
+	@echo "Created folder: training/models"
+	@mkdir -p training/models_saved
+	@echo "Created folder: training/models_saved"
+	@mkdir -p training/models_saved_double
+	@echo "Created folder: training/models_saved_double"
+	@mkdir -p training/models_saved_triple
+	@echo "Created folder: training/models_saved_triple"
+	@mkdir -p training/models_z_old
+	@echo "Created folder: training/models_z_old"
+	@mkdir -p training/models_zz_discarded
+	@echo "Created folder: training/models_zz_discarded"
+
+
 generate_dot_env:  ## Create .env from template if it does not exist.
 	@if [[ ! -e .env ]]; then \
 		cp .env.template .env; \
