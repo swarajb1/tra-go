@@ -12,7 +12,7 @@ __pycache__
 
 # secret keys
 api_key.txt
-.env
+*.env
 
 # training files
 training/
