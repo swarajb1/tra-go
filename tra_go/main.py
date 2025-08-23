@@ -58,7 +58,16 @@ def main_training():
 
     logger.info(f"Starting training for ticker: {TICKER.name}, interval: {INTERVAL.value}")
 
-    df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL.value)
+    try:
+        df = an.get_data_all_df(ticker=TICKER, interval=INTERVAL.value)
+
+        if df is None or df.empty:
+            raise ValueError(f"No data loaded for ticker {TICKER.name} with interval {INTERVAL.value}")
+
+        logger.info(f"Data loaded successfully with shape: {df.shape}")
+    except Exception as e:
+        logger.error(f"Error occurred while loading data: {e}")
+        return
 
     model: Model
 
@@ -262,16 +271,22 @@ def main_training():
     print("model input shape\t", model.input_shape)
     print("model output shape\t", model.output_shape, "\n" * 2)
 
-    history = model.fit(
-        x=X_train,
-        y=Y_train,
-        epochs=settings.NUMBER_OF_EPOCHS,
-        batch_size=settings.BATCH_SIZE,
-        validation_data=(X_test, Y_test),
-        callbacks=callbacks,
-    )
+    try:
+        history = model.fit(
+            x=X_train,
+            y=Y_train,
+            epochs=settings.NUMBER_OF_EPOCHS,
+            batch_size=settings.BATCH_SIZE,
+            validation_data=(X_test, Y_test),
+            callbacks=callbacks,
+        )
 
-    model.save(f"{checkpoint_path_prefix}.keras")
+        model.save(f"{checkpoint_path_prefix}.keras")
+        logger.info(f"Model saved successfully to {checkpoint_path_prefix}.keras")
+
+    except Exception as e:
+        logger.error(f"Model training failed: {str(e)}")
+        raise
 
     log_model_training_complete(TICKER.name, Y_TYPE.value, time.time() - time_start)
 
@@ -290,11 +305,12 @@ def main_training():
     #     newly_trained_models=True,
     # )
 
-    battery = psutil.sensors_battery()
-
-    is_plugged = battery.power_plugged
-
-    print("is battery on charging: ", is_plugged)
+    try:
+        battery = psutil.sensors_battery()
+        is_plugged = battery.power_plugged
+        print("is battery on charging: ", is_plugged)
+    except Exception as e:
+        logger.warning(f"Could not check battery status: {str(e)}")
 
 
 def suppress_cpu_usage():
