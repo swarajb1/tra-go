@@ -1,6 +1,7 @@
 """
 Centralized logging configuration for the tra_go project.
 """
+
 import logging
 import sys
 from pathlib import Path
