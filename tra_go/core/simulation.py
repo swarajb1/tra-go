@@ -60,7 +60,7 @@ class Simulation:
         # for i in range(4):
         #     rrr_list.append(round(i / 3, 2))
 
-        rrr_list.extend([0, 0.33, 0.66, 1, 1.5, 2, 3, 5, 8, 15])
+        rrr_list.extend([0, 0.33, 0.66, 1, 2, 3, 5, 8, 15])
 
         if settings.RISK_TO_REWARD_RATIO not in rrr_list:
             rrr_list.append(settings.RISK_TO_REWARD_RATIO)
@@ -225,7 +225,8 @@ class Simulation:
                 expected_reward_percent_day_wise_list[i_day] = expected_reward / invested_day_wise_list[i_day] * 100
 
             new_invested_day_wise_list = np.copy(invested_day_wise_list)
-            new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
+            # Ensure all zero values are set to 1 to avoid division by zero
+            new_invested_day_wise_list = np.where(new_invested_day_wise_list == 0, 1, new_invested_day_wise_list)
 
             arr = np.array(wins_day_wise_list)
             arr_real_percent = (arr / new_invested_day_wise_list) * 100
@@ -408,7 +409,7 @@ class Simulation:
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
 
         if self.print_log_stats_extra:
-            self._log_statistics_extra(self, sorted_arr)
+            self._log_statistics_extra(sorted_arr)
 
         return
 
@@ -464,7 +465,7 @@ class Simulation:
 
         invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
-        real_order_type_buy: NDArray = np.zeros(number_of_days)
+        real_order_type_buy: NDArray = np.zeros(number_of_days, dtype=bool)
 
         real_full_reward_percent_day_wise_list: NDArray = np.zeros(number_of_days)
 
