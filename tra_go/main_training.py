@@ -1,4 +1,5 @@
 import concurrent.futures
+import gc
 import os
 import subprocess
 import time
@@ -92,6 +93,9 @@ def main_training(ticker=None):
             raise ValueError(f"No data loaded for ticker {TICKER.name} with interval {INTERVAL.value}")
 
         logger.info(f"Data loaded successfully with shape: {df.shape}")
+
+        # Force garbage collection after data loading
+        gc.collect()
     except Exception as e:
         logger.error(f"Error occurred while loading data: {e}")
         return
@@ -246,6 +250,9 @@ def main_training(ticker=None):
             ],
         )
 
+        # Force garbage collection after model compilation
+        gc.collect()
+
     elif Y_TYPE == BandType.BAND_2:
         (
             (X_train, Y_train, train_prev_close),
@@ -279,6 +286,9 @@ def main_training(ticker=None):
             ],
         )
 
+        # Force garbage collection after model compilation
+        gc.collect()
+
     elif Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]:
         data_loader = DataLoader(
             ticker=TICKER,
@@ -291,6 +301,9 @@ def main_training(ticker=None):
         (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
         model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
+
+        # Force garbage collection after model creation
+        gc.collect()
 
     print("training x data shape\t", X_train.shape)
     print("training y data shape\t", Y_train.shape)
@@ -311,6 +324,9 @@ def main_training(ticker=None):
         model.save(f"{checkpoint_path_prefix}.keras")
         logger.info(f"Model saved successfully to {checkpoint_path_prefix}.keras")
 
+        # Force garbage collection after model saving
+        gc.collect()
+
     except Exception as e:
         logger.error(f"Model training failed: {str(e)}")
         raise
@@ -328,6 +344,9 @@ def main_training(ticker=None):
         print("is battery on charging: ", is_plugged)
     except Exception as e:
         logger.warning(f"Could not check battery status: {str(e)}")
+
+    # Final garbage collection before function completion
+    gc.collect()
 
 
 def parallel_train_tickers():
@@ -353,9 +372,15 @@ def parallel_train_tickers():
                 future.result()
                 completed_successfully += 1
                 logger.info(f"Training completed successfully for ticker: {tickers_to_process[i].name}")
+
+                # Force garbage collection after each process completion
+                gc.collect()
             except Exception as e:
                 failed_processes.append((tickers_to_process[i].name, str(e)))
                 logger.error(f"Training failed for ticker {tickers_to_process[i].name}: {str(e)}")
+
+                # Force garbage collection even after failures to free memory
+                gc.collect()
 
         # Log summary
         logger.info(
