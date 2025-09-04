@@ -15,12 +15,18 @@ import training_zero as an
 from core.config import settings
 from core.logger import log_model_training_complete, log_model_training_start, logger
 from data_loader import DataLoader
+from data_loader_tf import create_optimized_data_loader
 from decorators.time import time_taken
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard, TerminateOnNaN
 from keras.models import Model
 from numpy.typing import NDArray
+from tf_data_utils import configure_tf_data_performance, log_tf_data_performance_tips
 
 from database.enums import BandType, IntervalType, TickerOne
+
+# Configuration: Set to True to use optimized tf.data pipelines, False for traditional data loading
+# This can also be controlled via settings.USE_OPTIMIZED_DATA_LOADER in config
+USE_OPTIMIZED_LOADER: bool = True  # Change this to easily toggle data loader type
 
 X_TYPE: BandType = BandType.BAND_1_CLOSE
 Y_TYPE: BandType = BandType.BAND_1_1
@@ -34,12 +40,12 @@ list_of_tickers: list[TickerOne] = [
     TickerOne.RELIANCE,
     TickerOne.SBIN,
     TickerOne.LT,
-    # TickerOne.ITC,
-    # TickerOne.TCS,
-    # TickerOne.HDFCBANK,
-    # TickerOne.BHARTIARTL,
-    # TickerOne.AXISBANK,
-    # TickerOne.HINDUNILVR,
+    TickerOne.ITC,
+    TickerOne.TCS,
+    TickerOne.HDFCBANK,
+    TickerOne.BHARTIARTL,
+    TickerOne.AXISBANK,
+    TickerOne.HINDUNILVR,
     # TickerOne.KOTAKBANK,
     # TickerOne.INFY,
     # TickerOne.BAJFINANCE,
@@ -76,6 +82,19 @@ def main_training(ticker=None):
     """Main training function with proper error handling and logging."""
 
     time_start = time.time()
+
+    # Configure TensorFlow for optimal performance with tf.data pipelines (if enabled)
+    # Use local setting if available, otherwise fall back to global setting
+    use_optimized_loader = (
+        USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
+    )
+
+    if use_optimized_loader:
+        configure_tf_data_performance()
+        log_tf_data_performance_tips()
+        logger.info("Optimized data loader is ENABLED (tf.data pipelines)")
+    else:
+        logger.info("Optimized data loader is DISABLED (traditional numpy arrays)")
 
     # suppress_cpu_usage()
 
@@ -290,15 +309,58 @@ def main_training(ticker=None):
         gc.collect()
 
     elif Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]:
-        data_loader = DataLoader(
-            ticker=TICKER,
-            interval=INTERVAL,
-            x_type=X_TYPE,
-            y_type=Y_TYPE,
-            test_size=settings.TEST_SIZE,
+        # Check if optimized data loader should be used (local setting overrides global setting)
+        use_optimized_loader = (
+            USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
         )
 
-        (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
+        if use_optimized_loader:
+            logger.info("Using optimized TensorFlow DataLoader with tf.data pipelines")
+
+            # Use the new TensorFlow DataLoader for better performance
+            data_loader = create_optimized_data_loader(
+                ticker=TICKER,
+                interval=INTERVAL,
+                x_type=X_TYPE,
+                y_type=Y_TYPE,
+                test_size=settings.TEST_SIZE,
+                batch_size=settings.BATCH_SIZE,
+                shuffle_buffer_size=1000,
+                prefetch_buffer_size=tf.data.AUTOTUNE,
+                enable_shuffle=True,
+            )
+
+            # Get optimized tf.data datasets
+            train_dataset, test_dataset = data_loader.get_tf_datasets()
+
+            # Also get numpy arrays for model creation (required for determining input/output shapes)
+            (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
+
+            # Log dataset information
+            dataset_info = data_loader.get_dataset_info()
+            logger.info("TensorFlow DataLoader configuration:")
+            for key, value in dataset_info.items():
+                logger.info(f"  {key}: {value}")
+
+            # Benchmark data loading performance
+            try:
+                perf_metrics = data_loader.benchmark_performance(num_batches=5)
+                logger.info("Data loading performance metrics recorded")
+            except Exception as e:
+                logger.warning(f"Performance benchmarking failed: {e}")
+        else:
+            logger.info("Using traditional DataLoader (optimized loader disabled)")
+
+            # Use the traditional DataLoader
+            data_loader = DataLoader(
+                ticker=TICKER,
+                interval=INTERVAL,
+                x_type=X_TYPE,
+                y_type=Y_TYPE,
+                test_size=settings.TEST_SIZE,
+            )
+
+            (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
         model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
@@ -312,14 +374,29 @@ def main_training(ticker=None):
     print("model output shape\t", model.output_shape, "\n" * 2)
 
     try:
-        history = model.fit(
-            x=X_train,
-            y=Y_train,
-            epochs=settings.NUMBER_OF_EPOCHS,
-            batch_size=settings.BATCH_SIZE,
-            validation_data=(X_test, Y_test),
-            callbacks=callbacks,
+        # Use tf.data datasets if optimized loader is enabled and available, otherwise use numpy arrays
+        use_optimized_loader = (
+            USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
         )
+
+        if use_optimized_loader and Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1] and "train_dataset" in locals():
+            logger.info("Training with optimized tf.data pipelines")
+            history = model.fit(
+                train_dataset,
+                epochs=settings.NUMBER_OF_EPOCHS,
+                validation_data=test_dataset,
+                callbacks=callbacks,
+            )
+        else:
+            logger.info("Training with numpy arrays (legacy mode)")
+            history = model.fit(
+                x=X_train,
+                y=Y_train,
+                epochs=settings.NUMBER_OF_EPOCHS,
+                batch_size=settings.BATCH_SIZE,
+                validation_data=(X_test, Y_test),
+                callbacks=callbacks,
+            )
 
         model.save(f"{checkpoint_path_prefix}.keras")
         logger.info(f"Model saved successfully to {checkpoint_path_prefix}.keras")
@@ -401,7 +478,7 @@ def main_training_4_cores(ticker=None):
     Args:
         ticker: Optional ticker to train. If None, uses the global TICKER.
     """
-    NUMBER_OF_CORES = 4
+    NUMBER_OF_CORES = 8
 
     # Configure TensorFlow to use 4 CPU cores
     tf.config.threading.set_intra_op_parallelism_threads(NUMBER_OF_CORES)

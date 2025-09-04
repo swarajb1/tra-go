@@ -12,8 +12,6 @@ from training_zero import (
 
 from database.enums import BandType, IntervalType, IODataType, TickerDataType, TickerOne
 
-PROJECT_FOLDER_NAME: str = "tra-go"
-
 
 class DataLoader:
     def __init__(

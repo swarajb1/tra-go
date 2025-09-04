@@ -3,12 +3,7 @@ import sys
 
 from core.assertions import assert_env_vals
 from core.evaluate_models import evaluate_models
-from main_training import (
-    list_of_tickers,
-    main_training,
-    main_training_4_cores,
-    parallel_train_tickers,
-)
+from main_training import list_of_tickers, main_training_4_cores, parallel_train_tickers
 
 from database.enums import ModelLocationType
 
@@ -34,13 +29,14 @@ def main():
 
             move_files = sys.argv[3] == "true"
 
-        if sys.argv[1] == "true":
+        if sys.argv[1] == "train":
             # suppress_cpu_usage()
 
-            for ticker in list_of_tickers * 1:
-                main_training(ticker)
+            for ticker in list_of_tickers * 2:
+                # main_training(ticker)
+                main_training_4_cores(ticker)
 
-        elif sys.argv[1] == "true_parallel":
+        elif sys.argv[1] == "train_parallel":
             parallel_train_tickers()
 
         elif sys.argv[1] == "training_new":
@@ -50,7 +46,7 @@ def main():
                 newly_trained_models=True,
             )
 
-        elif sys.argv[1] == "training":
+        elif sys.argv[1] == "eval_training":
             evaluate_models(
                 model_location_type=ModelLocationType.TRAINED_NEW,
                 number_of_models=number_of_models,
