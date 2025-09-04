@@ -51,6 +51,10 @@ class GlobalConfig(BaseSettings):
 
     # Application settings
     DEBUG: bool = Field(default=False, description="Debug mode flag")
+    USE_OPTIMIZED_DATA_LOADER: bool = Field(
+        default=True,
+        description="Use optimized tf.data pipeline for data loading",
+    )
 
     @computed_field
     @property

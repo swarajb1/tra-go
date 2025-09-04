@@ -2,7 +2,7 @@
 name = "tra-go"
 version = "0.2.0"
 description = ""
-authors = ["Mac <bisane.swaraj@gmail.com>"]
+authors = ["Swaraj Bisane <bisane.swaraj@gmail.com>"]
 readme = "README.md"
 packages = [{include = "tra_go"}]
 
@@ -25,9 +25,6 @@ cffi = "^1.16.0"
 pydantic = "^2.8.2"
 pydantic-settings = "^2.4.0"
 starlette = "^0.38.2"
-
-# tensorflow = "2.15.0"
-
 
 # TensorFlow dependencies - platform specific
 tensorflow = { version = "2.15.0", markers = "sys_platform != 'darwin'" }

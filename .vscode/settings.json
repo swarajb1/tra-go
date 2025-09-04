@@ -21,6 +21,7 @@
     },
 
     "python.analysis.extraPaths": ["./tra_go"],
+    "editor.formatOnSave": true,
 
     "cSpell.words": [
         "ADANIPORTS",
