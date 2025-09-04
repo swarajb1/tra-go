@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+.PHONY: create-venv install run clean clean_logs get_clean_data new-yf-data script_1 create_data_folders generate_dot_env
+
 PYTHON=$(shell which python3)
 ifeq ($(PYTHON),)
 	PYTHON=$(shell which python)
@@ -14,6 +16,10 @@ endif
 PYTHON = ./.venv/bin/python
 
 WORKDIR=tra_go
+
+
+create-venv:  ## Create Python virtual environment
+	python3 -m venv .venv
 
 
 install:  ## Install poetry to run on local
@@ -34,6 +40,8 @@ clean:
 clean_logs:
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) support/clean_logs.py
 
+get_clean_data:
+	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/data_clean.py
 
 new-yf-data:
 	PYTHONPATH=$(WORKDIR)/ $(PYTHON) tra_go/download_data_yf.py
