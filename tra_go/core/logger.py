@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from core.config import settings
+from decorators.time import format_time
 
 
 def setup_logger(
@@ -88,9 +89,11 @@ def log_model_training_start(ticker: str, model_type: str, datetime: str) -> Non
     logger.info(f"Starting model training | Ticker: {ticker} | Type: {model_type} | Time: {datetime}")
 
 
-def log_model_training_complete(ticker: str, model_type: str, duration: float) -> None:
+def log_model_training_complete(ticker: str, model_type: str, duration_seconds: float) -> None:
     """Log the completion of model training."""
-    logger.info(f"Completed model training | Ticker: {ticker} | Type: {model_type} | Duration: {duration:.2f}s")
+    duration = format_time(duration_seconds)
+
+    logger.info(f"Completed model training | Ticker: {ticker} | Type: {model_type} | Duration: {duration}")
 
 
 def log_data_loading(ticker: str, interval: str, shape: tuple) -> None:
