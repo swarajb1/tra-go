@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from typing import Final
 
 import band_2.keras_model_band_2 as km_2
 import band_2_1.keras_model as km_21_model
@@ -83,13 +84,11 @@ def main_training(ticker=None):
 
     time_start = time.time()
 
-    # Configure TensorFlow for optimal performance with tf.data pipelines (if enabled)
-    # Use local setting if available, otherwise fall back to global setting
-    use_optimized_loader = (
-        USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
-    )
+    now_datetime: Final[str] = datetime.now().strftime("%Y-%m-%d %H-%M")
 
-    if use_optimized_loader:
+    # Configure TensorFlow for optimal performance with tf.data pipelines (if enabled)
+
+    if settings.USE_OPTIMIZED_DATA_LOADER:
         configure_tf_data_performance()
         log_tf_data_performance_tips()
         logger.info("Optimized data loader is ENABLED (tf.data pipelines)")
@@ -130,8 +129,6 @@ def main_training(ticker=None):
     test_prev_close: NDArray
 
     terNan: Callback = TerminateOnNaN()
-
-    now_datetime: str = datetime.now().strftime("%Y-%m-%d %H-%M")
 
     log_model_training_start(TICKER.name, Y_TYPE.value, now_datetime)
 
@@ -309,12 +306,7 @@ def main_training(ticker=None):
         gc.collect()
 
     elif Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]:
-        # Check if optimized data loader should be used (local setting overrides global setting)
-        use_optimized_loader = (
-            USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
-        )
-
-        if use_optimized_loader:
+        if settings.USE_OPTIMIZED_DATA_LOADER:
             logger.info("Using optimized TensorFlow DataLoader with tf.data pipelines")
 
             # Use the new TensorFlow DataLoader for better performance
@@ -374,12 +366,11 @@ def main_training(ticker=None):
     print("model output shape\t", model.output_shape, "\n" * 2)
 
     try:
-        # Use tf.data datasets if optimized loader is enabled and available, otherwise use numpy arrays
-        use_optimized_loader = (
-            USE_OPTIMIZED_LOADER if "USE_OPTIMIZED_LOADER" in globals() else settings.USE_OPTIMIZED_DATA_LOADER
-        )
-
-        if use_optimized_loader and Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1] and "train_dataset" in locals():
+        if (
+            settings.USE_OPTIMIZED_DATA_LOADER
+            and Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]
+            and "train_dataset" in locals()
+        ):
             logger.info("Training with optimized tf.data pipelines")
             history = model.fit(
                 train_dataset,
