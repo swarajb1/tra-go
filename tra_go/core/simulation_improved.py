@@ -34,11 +34,11 @@ class TradeType(Enum):
 class TradeResult(NamedTuple):
     """Result of a single trade simulation."""
 
-    trade_taken: bool
-    trade_completed: bool
-    stop_loss_hit: bool
-    completed_at_closing: bool
-    is_expected_trade: bool
+    is_trade_taken: bool
+    is_trade_completed: bool
+    did_stop_loss_hit: bool
+    did_trade_complete_at_closing: bool
+    was_trade_as_expected: bool
     net_reward: float
     closing_reward: float
 
@@ -136,9 +136,9 @@ class Simulation:
         stop_loss = self._calculate_stop_loss(buy_price, sell_price, is_buy_trade, rrr)
 
         # Track trade states
-        trade_taken = False
-        trade_completed = False
-        stop_loss_hit = False
+        is_trade_taken = False
+        is_trade_completed = False
+        did_stop_loss_hit = False
         net_reward = 0.0
 
         # Simulate each tick
@@ -147,35 +147,35 @@ class Simulation:
             tick_high = self.real_price_arr[day_idx, tick_idx, 1]
 
             if is_buy_trade:
-                trade_taken, trade_completed, stop_loss_hit, net_reward = self._process_buy_trade(
+                is_trade_taken, is_trade_completed, did_stop_loss_hit, net_reward = self._process_buy_trade(
                     buy_price,
                     sell_price,
                     stop_loss,
                     tick_low,
                     tick_high,
-                    trade_taken,
-                    trade_completed,
+                    is_trade_taken,
+                    is_trade_completed,
                 )
             else:
-                trade_taken, trade_completed, stop_loss_hit, net_reward = self._process_sell_trade(
+                is_trade_taken, is_trade_completed, did_stop_loss_hit, net_reward = self._process_sell_trade(
                     buy_price,
                     sell_price,
                     stop_loss,
                     tick_low,
                     tick_high,
-                    trade_taken,
-                    trade_completed,
+                    is_trade_taken,
+                    is_trade_completed,
                 )
 
-            if trade_completed:
+            if is_trade_completed:
                 break
 
         # Handle trades still open at closing
         closing_reward = 0.0
-        completed_at_closing = False
+        did_trade_complete_at_closing = False
 
-        if trade_taken and not trade_completed:
-            completed_at_closing = True
+        if is_trade_taken and not is_trade_completed:
+            did_trade_complete_at_closing = True
             last_tick_mid = (self.real_price_arr[day_idx, -1, 2] + self.real_price_arr[day_idx, -1, 1]) / 2
 
             if is_buy_trade:
@@ -186,14 +186,14 @@ class Simulation:
             closing_reward = net_reward
 
         # Determine if this was an expected trade
-        is_expected_trade = trade_completed and not stop_loss_hit
+        was_trade_as_expected = is_trade_completed and not did_stop_loss_hit
 
         return TradeResult(
-            trade_taken=trade_taken,
-            trade_completed=trade_completed or completed_at_closing,
-            stop_loss_hit=stop_loss_hit,
-            completed_at_closing=completed_at_closing,
-            is_expected_trade=is_expected_trade,
+            is_trade_taken=is_trade_taken,
+            is_trade_completed=is_trade_completed or did_trade_complete_at_closing,
+            did_stop_loss_hit=did_stop_loss_hit,
+            did_trade_complete_at_closing=did_trade_complete_at_closing,
+            was_trade_as_expected=was_trade_as_expected,
             net_reward=net_reward,
             closing_reward=closing_reward,
         )
@@ -205,28 +205,28 @@ class Simulation:
         stop_loss: float,
         tick_low: float,
         tick_high: float,
-        trade_taken: bool,
-        trade_completed: bool,
+        is_trade_taken: bool,
+        is_trade_completed: bool,
     ) -> tuple[bool, bool, bool, float]:
         """Process a buy trade for a single tick."""
         net_reward = 0.0
-        stop_loss_hit = False
+        did_stop_loss_hit = False
 
         # Check if we can enter the trade
-        if not trade_taken and tick_low <= buy_price <= tick_high:
-            trade_taken = True
+        if not is_trade_taken and tick_low <= buy_price <= tick_high:
+            is_trade_taken = True
 
         # Check if we can exit the trade
-        if trade_taken and not trade_completed:
+        if is_trade_taken and not is_trade_completed:
             if tick_low <= sell_price <= tick_high:
-                trade_completed = True
+                is_trade_completed = True
                 net_reward = sell_price - buy_price
             elif tick_low <= stop_loss <= tick_high:
-                trade_completed = True
-                stop_loss_hit = True
+                is_trade_completed = True
+                did_stop_loss_hit = True
                 net_reward = stop_loss - buy_price
 
-        return trade_taken, trade_completed, stop_loss_hit, net_reward
+        return is_trade_taken, is_trade_completed, did_stop_loss_hit, net_reward
 
     def _process_sell_trade(
         self,
@@ -235,28 +235,28 @@ class Simulation:
         stop_loss: float,
         tick_low: float,
         tick_high: float,
-        trade_taken: bool,
-        trade_completed: bool,
+        is_trade_taken: bool,
+        is_trade_completed: bool,
     ) -> tuple[bool, bool, bool, float]:
         """Process a sell trade for a single tick."""
         net_reward = 0.0
-        stop_loss_hit = False
+        did_stop_loss_hit = False
 
         # Check if we can enter the trade
-        if not trade_taken and tick_low <= sell_price <= tick_high:
-            trade_taken = True
+        if not is_trade_taken and tick_low <= sell_price <= tick_high:
+            is_trade_taken = True
 
         # Check if we can exit the trade
-        if trade_taken and not trade_completed:
+        if is_trade_taken and not is_trade_completed:
             if tick_low <= buy_price <= tick_high:
-                trade_completed = True
+                is_trade_completed = True
                 net_reward = sell_price - buy_price
             elif tick_low <= stop_loss <= tick_high:
-                trade_completed = True
-                stop_loss_hit = True
+                is_trade_completed = True
+                did_stop_loss_hit = True
                 net_reward = sell_price - stop_loss
 
-        return trade_taken, trade_completed, stop_loss_hit, net_reward
+        return is_trade_taken, is_trade_completed, did_stop_loss_hit, net_reward
 
     def _run_simulation(self) -> None:
         """Run the complete simulation across all RRR values."""
@@ -281,7 +281,7 @@ class Simulation:
             "trades_taken": 0,
             "trades_completed": 0,
             "stop_losses_hit": 0,
-            "completed_at_closing": 0,
+            "did_trade_complete_at_closing": 0,
             "expected_trades": 0,
             "win_trades": 0,
             "closing_rewards": [],
@@ -294,7 +294,7 @@ class Simulation:
             # Update arrays
             wins_day_wise[day_idx] = result.net_reward
 
-            if result.trade_taken:
+            if result.is_trade_taken:
                 invested_day_wise[day_idx] = (
                     self.buy_price_arr[day_idx] if self.order_type_buy_arr[day_idx] else self.sell_price_arr[day_idx]
                 )
@@ -302,16 +302,16 @@ class Simulation:
                 expected_reward_day_wise[day_idx] = expected_reward / invested_day_wise[day_idx] * 100
 
             # Update statistics
-            if result.trade_taken:
+            if result.is_trade_taken:
                 trade_stats["trades_taken"] += 1
-            if result.trade_completed:
+            if result.is_trade_completed:
                 trade_stats["trades_completed"] += 1
-            if result.stop_loss_hit:
+            if result.did_stop_loss_hit:
                 trade_stats["stop_losses_hit"] += 1
-            if result.completed_at_closing:
-                trade_stats["completed_at_closing"] += 1
+            if result.did_trade_complete_at_closing:
+                trade_stats["did_trade_complete_at_closing"] += 1
                 trade_stats["closing_rewards"].append(result.closing_reward)
-            if result.is_expected_trade:
+            if result.was_trade_as_expected:
                 trade_stats["expected_trades"] += 1
             if result.net_reward > 0:
                 trade_stats["win_trades"] += 1
@@ -412,7 +412,7 @@ class Simulation:
         pct_trades_taken = stats["trades_taken"] / number_of_days * 100
         pct_trades_completed = stats["trades_completed"] / safe_trades_taken * 100
         pct_stop_losses = stats["stop_losses_hit"] / safe_trades_taken * 100
-        pct_closing = stats["completed_at_closing"] / safe_trades_taken * 100
+        pct_closing = stats["did_trade_complete_at_closing"] / safe_trades_taken * 100
         pct_expected = stats["expected_trades"] / safe_trades_taken * 100
         pct_wins = stats["win_trades"] / safe_trades_taken * 100
 
@@ -454,7 +454,7 @@ class Simulation:
             f"{pct_stop_losses:.2f} %",
         )
         print(
-            f"\t\t\t Percent Completed At Closing\t\t{(stats['completed_at_closing'] / number_of_days * 100):.2f} % \t | \t"
+            f"\t\t\t Percent Completed At Closing\t\t{(stats['did_trade_complete_at_closing'] / number_of_days * 100):.2f} % \t | \t"
             f"{pct_closing:.2f} %",
         )
         print(f"\t\t\t Closing Trades Per Day contribution\t{closing_arr_percent_avg_win_per_day:.2f}")
