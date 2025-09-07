@@ -56,7 +56,7 @@ class CustomActivationLayer(Layer):
         return tf.concat([first_two_features, third_feature], axis=-1)
 
 
-def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
+def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:
     model = tf.keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -68,6 +68,81 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
                     units=settings.NUMBER_OF_NEURONS // (pow(2, layer_num)),
                     return_sequences=True,
                     activation="relu",
+                ),
+            ),
+        )
+        #  dropout value decreases in exponential fashion.
+        model.add(
+            Dropout(
+                pow(
+                    1 + settings.INITIAL_DROPOUT_PERCENT / 100,
+                    1 / (layer_num + 1),
+                )
+                - 1,
+            ),
+        )
+
+    # ---start - Plan - london
+    # model.add(TimeDistributed(Dense(units=NUMBER_OF_NEURONS)))
+
+    # model.add(GlobalAveragePooling1D())
+    # ---end - Plan - london
+
+    # ---start - Plan - now
+    model.add(TimeDistributed(Dense(units=3)))
+
+    model.add(GlobalAveragePooling1D())
+    # ---end - Plan - now
+
+    # ---start - Plan zero
+    # model.add(
+    #     TimeDistributed(
+    #         Dense(units=settings.NUMBER_OF_NEURONS // (pow(2, settings.NUMBER_OF_LAYERS)), activation="relu")
+    #     )
+    # )
+
+    # model.add(Flatten())
+
+    # model.add(Dense(units=3))
+    # ---end - Plan zero
+
+    # ---start - Plan polo
+    # model.add(Dense(units=3))
+    # ---end - Plan polo
+
+    model.add(CustomActivationLayer())
+
+    compile_details = ModelCompileDetails()
+
+    model.compile(
+        optimizer=compile_details.optimizer,
+        loss=compile_details.loss,
+        metrics=compile_details.metrics,
+    )
+
+    model.summary()
+
+    print("\n" * 2)
+
+    return model
+
+
+def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
+    model = tf.keras.models.Sequential()
+
+    model.add(Input(shape=(X_train[0].shape)))
+
+    for layer_num in range(settings.NUMBER_OF_LAYERS):
+        model.add(
+            Bidirectional(
+                LSTM(
+                    units=settings.NUMBER_OF_NEURONS // (pow(2, layer_num)),
+                    return_sequences=True,
+                    activation="tanh",
+                    recurrent_activation="sigmoid",
+                    use_bias=True,
+                    recurrent_dropout=0.0,
+                    unroll=False,
                 ),
             ),
         )
