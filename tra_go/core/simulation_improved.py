@@ -21,9 +21,13 @@ from database.enums import ProcessedDataType
 class SimulationConfig:
     PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
     PERCENT_250_DAYS_WORTH_SAVING: int = 5
-    MIN_REWARD_THRESHOLD_PERCENT: float = 0.05
+    MIN_REWARD_THRESHOLD_PERCENT: float = 0.00  # 0.05 percent threshold for minimal reward
     SPECIAL_TRADE_THRESHOLD: float = 70.0  # % trades taken
     SPECIAL_EXPECTED_THRESHOLD: float = 50.0  # % expected trades
+
+    # Table formatting constants
+    TABLE_INDENT = "\t\t"
+    COLUMN_SPACING = 5
 
 
 class TradeType(Enum):
@@ -92,6 +96,21 @@ class Simulation:
         self._set_real_full_reward_mean()
         self._display_stats()
 
+    def _format_table_row(self, columns: list[str], widths: list[int]) -> str:
+        """Format a table row with proper spacing and alignment."""
+        spacing = " " * SimulationConfig.COLUMN_SPACING
+        formatted_cols = [f"{col:<{width}}" for col, width in zip(columns, widths)]
+        return SimulationConfig.TABLE_INDENT + spacing.join(formatted_cols)
+
+    def _print_table_header(self, headers: list[str], widths: list[int]) -> None:
+        """Print a formatted table header with separator line."""
+        header_row = self._format_table_row(headers, widths)
+        total_width = sum(widths) + (len(widths) - 1) * SimulationConfig.COLUMN_SPACING
+        separator = SimulationConfig.TABLE_INDENT + "-" * total_width
+
+        print(header_row)
+        print(separator)
+
     def _create_rrr_list(self) -> list[float]:
         """Create list of risk-to-reward ratios to test."""
         rrr_list = [0, 0.33, 0.66, 1, 2, 3, 5, 8, 15]
@@ -131,7 +150,15 @@ class Simulation:
         if expected_reward / invested_amount * 100 < SimulationConfig.MIN_REWARD_THRESHOLD_PERCENT:
             # reward is less than 0.05% of the invested amount
             # so, not worth trading
-            return TradeResult(False, False, False, False, False, 0.0, 0.0)
+            return TradeResult(
+                is_trade_taken=False,
+                is_trade_completed=False,
+                did_stop_loss_hit=False,
+                did_trade_complete_at_closing=False,
+                was_trade_as_expected=False,
+                net_reward=0.0,
+                closing_reward=0.0,
+            )
 
         stop_loss = self._calculate_stop_loss(buy_price, sell_price, is_buy_trade, rrr)
 
@@ -156,6 +183,7 @@ class Simulation:
                     is_trade_taken,
                     is_trade_completed,
                 )
+
             else:
                 is_trade_taken, is_trade_completed, did_stop_loss_hit, net_reward = self._process_sell_trade(
                     buy_price,
@@ -185,12 +213,12 @@ class Simulation:
 
             closing_reward = net_reward
 
-        # Determine if this was an expected trade
-        was_trade_as_expected = is_trade_completed and not did_stop_loss_hit
+        # An expected trade is one that was completed, did not hit stop loss, and did not close at the end of the day.
+        was_trade_as_expected = is_trade_completed and not did_stop_loss_hit and not did_trade_complete_at_closing
 
         return TradeResult(
             is_trade_taken=is_trade_taken,
-            is_trade_completed=is_trade_completed or did_trade_complete_at_closing,
+            is_trade_completed=is_trade_completed,
             did_stop_loss_hit=did_stop_loss_hit,
             did_trade_complete_at_closing=did_trade_complete_at_closing,
             was_trade_as_expected=was_trade_as_expected,
@@ -261,6 +289,12 @@ class Simulation:
     def _run_simulation(self) -> None:
         """Run the complete simulation across all RRR values."""
         print("Simulation started...")
+
+        # Define table structure
+        headers = ["Risk To Reward Ratio", "Value", "250 Days Performance", "Status"]
+        widths = [25, 8, 20, 10]
+
+        self._print_table_header(headers, widths)
 
         number_of_days = self.real_price_arr.shape[0]
         rrr_list = self._create_rrr_list()
@@ -334,22 +368,28 @@ class Simulation:
         days_250_performance = (pow(1 + avg_return, 250) - 1) * 100
 
         # Format output
-        percent_str = f"{days_250_performance:.2f}%"
+        percent_str = f"{days_250_performance:.2f} %"
         display_str = (
             percent_str if days_250_performance > SimulationConfig.PERCENT_250_DAYS_MIN_THRESHOLD else "   --"
         )
 
-        # Log performance
-        print(f"\t\tRisk To Reward Ratio: {rrr:.2f}\t250 Days (avg): {display_str}", end="")
+        # Log performance in table format
+        status_indicator = "✓" if days_250_performance > SimulationConfig.PERCENT_250_DAYS_WORTH_SAVING else ""
+
+        columns = ["Risk To Reward Ratio:", f"{rrr:.2f}", f"{display_str}", status_indicator]
+        widths = [25, 8, 20, 10]
+
+        row = self._format_table_row(columns, widths)
+        if days_250_performance > SimulationConfig.PERCENT_250_DAYS_WORTH_SAVING:
+            row += " \033[92m++\033[0m"
+
+        print(row)
 
         if days_250_performance > SimulationConfig.PERCENT_250_DAYS_WORTH_SAVING:
-            print(" \033[92m++\033[0m")
             self.is_model_worth_saving = True
 
             if rrr <= settings.RISK_TO_REWARD_RATIO:
                 self.is_model_worth_double_saving = True
-        else:
-            print()
 
         # Track maximum performance
         self.all_simulations_max_250_days = max(self.all_simulations_max_250_days, float(days_250_performance))
@@ -430,6 +470,56 @@ class Simulation:
 
         closing_arr_percent_avg_win_per_day = np.mean((completed_at_closing_reward / safe_invested) * 100)
 
+        # Log all statistics in elegant table format
+        trade_table_data = [
+            ("Trade Taken", f"{pct_trades_taken:.2f}", ""),
+            (
+                "Trade Taken And Out",
+                f"{(stats['trades_completed'] / number_of_days * 100):.2f}",
+                f"{pct_trades_completed:.2f}",
+            ),
+            ("Stop Loss Hit", f"{(stats['stop_losses_hit'] / number_of_days * 100):.2f}", f"{pct_stop_losses:.2f}"),
+            (
+                "Completed At Closing",
+                f"{(stats['did_trade_complete_at_closing'] / number_of_days * 100):.2f}",
+                f"{pct_closing:.2f}",
+            ),
+            ("Expected Trades", f"{(stats['expected_trades'] / number_of_days * 100):.2f}", f"{pct_expected:.2f}"),
+            ("Win Trades", f"{(stats['win_trades'] / number_of_days * 100):.2f}", f"{pct_wins:.2f}"),
+        ]
+
+        # Table configuration
+        headers = ["Metric", "Per Day %", "Per Trade %"]
+        widths = [35, 15, 15]
+        indent = " " * 30
+
+        # Print table
+        print(f"\n{indent}{'=' * (sum(widths) + (len(widths) - 1) * SimulationConfig.COLUMN_SPACING)}")
+        header_row = indent + (" " * SimulationConfig.COLUMN_SPACING).join(
+            [f"{h:<{w}}" for h, w in zip(headers, widths)],
+        )
+        print(header_row)
+        print(f"{indent}{'=' * (sum(widths) + (len(widths) - 1) * SimulationConfig.COLUMN_SPACING)}")
+
+        for metric, per_day, per_trade in trade_table_data:
+            row_data = [metric, per_day, per_trade]
+            data_row = indent + (" " * SimulationConfig.COLUMN_SPACING).join(
+                [f"{d:<{w}}" for d, w in zip(row_data, widths)],
+            )
+            print(data_row)
+
+        # Add closing trades contribution
+        print(f"{indent}{'-' * (sum(widths) + (len(widths) - 1) * SimulationConfig.COLUMN_SPACING)}")
+        closing_row = indent + (" " * SimulationConfig.COLUMN_SPACING).join(
+            [
+                f"{'Closing Trades Contribution':<{widths[0]}}",
+                f"{closing_arr_percent_avg_win_per_day:<{widths[1]}.2f}",
+                f"{'':<{widths[2]}}",
+            ],
+        )
+        print(closing_row)
+        print(f"{indent}{'=' * (sum(widths) + (len(widths) - 1) * SimulationConfig.COLUMN_SPACING)}\n")
+
         # Special condition for high-performance models
         if (
             pct_trades_taken > SimulationConfig.SPECIAL_TRADE_THRESHOLD
@@ -442,30 +532,6 @@ class Simulation:
                 trades_taken=pct_trades_taken,
                 expected=pct_expected,
             )
-
-        # Log all statistics with exact formatting from original
-        print(f"\n\t\t\t Percent Trade Taken\t\t\t{pct_trades_taken:.2f} %")
-        print(
-            f"\t\t\t Percent Trade Taken And Out\t\t{(stats['trades_completed'] / number_of_days * 100):.2f} % \t | \t"
-            f"{pct_trades_completed:.2f} %",
-        )
-        print(
-            f"\t\t\t Percent Stop Loss Hit\t\t\t{(stats['stop_losses_hit'] / number_of_days * 100):.2f} % \t | \t"
-            f"{pct_stop_losses:.2f} %",
-        )
-        print(
-            f"\t\t\t Percent Completed At Closing\t\t{(stats['did_trade_complete_at_closing'] / number_of_days * 100):.2f} % \t | \t"
-            f"{pct_closing:.2f} %",
-        )
-        print(f"\t\t\t Closing Trades Per Day contribution\t{closing_arr_percent_avg_win_per_day:.2f}")
-        print(
-            f"\t\t\t Percent Expected Trades\t\t{(stats['expected_trades'] / number_of_days * 100):.2f} % \t | \t"
-            f"{pct_expected:.2f} %",
-        )
-        print(
-            f"\n\t\t\t Percent Win Trades\t\t\t{(stats['win_trades'] / number_of_days * 100):.2f} % \t | \t"
-            f"{pct_wins:.2f} %\n",
-        )
 
     def _set_real_full_reward_mean(self) -> None:
         """Calculate the mean of maximum possible rewards."""
