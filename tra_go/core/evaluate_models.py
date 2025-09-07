@@ -243,10 +243,10 @@ def evaluate_models(
 
     print("\n\n", "-" * 280, "\n", sep="")
 
-    print("\nMAX 250 days Win Value achieved:\t\t", max_250_days_win_value, "%")
-    print("\nMAX Win Pred Capture Percent achieved:\t\t", max_win_pred_capture_percent_value, "%")
-    print("\nMAX 250 Days Simulation Value:\t\t\t", max_250_days_simulation_value, "%")
-    print("\nMAX All Possible 250 Days Simulation Value:\t", max_all_simulations_max_250_days, "%")
+    print("\nMAX 250 days Win Value achieved:\t\t", f"{max_250_days_win_value:.2f}", "%")
+    print("\nMAX Win Pred Capture Percent achieved:\t\t", f"{max_win_pred_capture_percent_value:.2f}", "%")
+    print("\nMAX 250 Days Simulation Value:\t\t\t", f"{max_250_days_simulation_value:.2f}", "%")
+    print("\nMAX All Possible 250 Days Simulation Value:\t", f"{max_all_simulations_max_250_days:.2f}", "%")
 
     print(f"\n\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:
@@ -265,6 +265,3 @@ def evaluate_models(
         print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[92m+++++++++++++++\033[0m ")
 
     print("\n\n")
-
-    # add code to move files into one/double/triple saving folders
-    # on prompt if written 'MOVE'

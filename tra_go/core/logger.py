@@ -121,8 +121,8 @@ def log_warning(message: str, **kwargs) -> None:
 
 def log_performance_metric(metric_name: str, value: float, **kwargs) -> None:
     """Log performance metrics in a structured way."""
-    context = " | ".join([f"{k}: {v}" for k, v in kwargs.items()])
-    metric_msg = f"Performance Metric | {metric_name}: {value:.4f}"
+    context = " | ".join([f"{k}: {v:.2f}" for k, v in kwargs.items()])
+    metric_msg = f"Performance Metric | {metric_name}: {value:.2f}"
     if context:
         metric_msg += f" | {context}"
     logger.info(metric_msg)
