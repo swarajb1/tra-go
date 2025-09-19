@@ -3,6 +3,7 @@ repos:
       rev: v3.20.0
       hooks:
           - id: pyupgrade
+            args: ["--py39-plus"]
     - repo: https://github.com/sondrelg/pep585-upgrade
       rev: v1.0
       hooks:
@@ -49,8 +50,6 @@ repos:
           - id: check-yaml
           - id: debug-statements
           - id: end-of-file-fixer
-          - id: fix-encoding-pragma
-            args: ["--remove"]
           - id: mixed-line-ending
             args: ["--fix=lf"]
           - id: name-tests-test
