@@ -18,14 +18,16 @@ TRA-GO is a machine learning trading system that trains neural networks to predi
 
 - **Bands** represent different prediction strategies (e.g., `BAND_1_CLOSE`, `BAND_2_1`, `BAND_4`)
 - Each band has its own model architecture in `tra_go/band_*/` directories
-- Input/Output data points are configurable (132/150 points) via `database/enums.py`
+- Input/Output data points are configurable (150/150 points) via `training_zero.py` constants
 - Models predict price ranges (min/max) rather than single values
+- **Zone-based time processing**: `TOTAL_POINTS_IN_ONE_DAY = 375` with configurable zone splits
 
 ### Configuration System
 
 - **Pydantic-based settings** in `core/config.py` with environment-specific configs
 - **Required env vars**: `ZERODHA_ID`, `PASSWORD`, `API_KEY`, `ACCESS_TOKEN`, `RISK_TO_REWARD_RATIO`
 - **Model params**: `NUMBER_OF_EPOCHS`, `BATCH_SIZE`, `LEARNING_RATE`, `NUMBER_OF_NEURONS`
+- **Data loader toggle**: `USE_OPTIMIZED_DATA_LOADER` switches between tf.data and pandas
 - Use `.env.template` as reference for required environment variables
 
 ## Development Workflows
@@ -35,6 +37,9 @@ TRA-GO is a machine learning trading system that trains neural networks to predi
 ```bash
 # Single ticker training (default: 4 CPU cores)
 make run model=train
+
+# Parallel training across multiple tickers
+make run model=train_parallel
 
 # Evaluate newly trained models
 make run model=training_new
@@ -49,6 +54,9 @@ make run model=saved num=6 move=false
 # Evaluate with file movement (promotes good models)
 make run model=saved_double num=10 move=true
 
+# Evaluate triple-tier models
+make run model=saved_triple num=5
+
 # Clean up discarded models
 make run model=discarded
 ```
@@ -56,7 +64,7 @@ make run model=discarded
 ### Data Management
 
 ```bash
-# Download new market data
+# Download new market data from Yahoo Finance
 make new-yf-data
 
 # Clean and process data
@@ -64,6 +72,9 @@ make get_clean_data
 
 # Clean training logs
 make clean_logs
+
+# Setup project structure
+make create_data_folders
 ```
 
 ## Critical Code Patterns
@@ -74,19 +85,44 @@ make clean_logs
 - **Optimized data loading**: Toggle `USE_OPTIMIZED_LOADER` for tf.data vs traditional pandas loading
 - **Custom callbacks**: TensorBoard logging, model checkpointing, NaN termination
 - **Memory management**: Explicit garbage collection between model training sessions
+- **Multi-core support**: Default 4-core parallel training with `main_training_4_cores()`
 
 ### Simulation Engine
 
-- `simulation_improved.py` implements tick-by-tick trading simulation
+- `simulation_improved.py` implements sophisticated tick-by-tick trading simulation with comprehensive backtesting
 - **Risk-reward ratios**: Tests multiple RRR values (0, 0.33, 0.66, 1, 2, 3, 5, 8, 15)
 - **Performance thresholds**: Models saved if 250-day performance > 5% OR special conditions met
 - **Trade execution**: Handles both BUY/SELL orders with stop-loss and closing scenarios
+- **Statistical analysis**: Includes kurtosis, skew, and advanced performance metrics
+
+#### Simulation Architecture
+
+- **Tick-by-tick execution**: Processes OHLC data at minute-level granularity
+- **Trade lifecycle management**: Entry conditions, stop-loss triggers, profit targets, and end-of-day closings
+- **Real-time decision making**: Evaluates price movements within each trading tick to determine optimal entry/exit
+- **Multi-RRR testing**: Automatically tests various risk-reward ratios to find optimal trading parameters
+
+#### Trade Logic Patterns
+
+- **Entry conditions**: Trades triggered when predicted buy/sell prices fall within tick's OHLC range
+- **Exit strategies**: Three exit scenarios - profit target hit, stop-loss triggered, or end-of-day closing
+- **Order types**: Supports both BUY (long) and SELL (short) positions with appropriate stop-loss calculations
+- **Minimal reward filtering**: Skips trades with expected returns < 0.05% of invested amount
+
+#### Performance Evaluation
+
+- **250-day compound returns**: Primary metric for model worthiness (>5% threshold)
+- **Trade statistics**: Tracks completion rates, stop-loss hits, expected vs actual trades
+- **Capture percentage**: Measures how much of theoretical maximum profit is captured
+- **Special conditions**: High-frequency models (>70% trades taken, >50% expected) get priority saving
+- **Statistical robustness**: Uses scipy for kurtosis, skew analysis of return distributions
 
 ### Data Loading Patterns
 
 - **Zone-based processing**: Market hours divided into time zones with configurable offsets
 - **OHLC format**: [Open, High, Low, Close, Volume] + real_close for training data
 - **Path conventions**: `data_training/`, `data_cleaned/`, `training/models*/`
+- **Ticker management**: Predefined list in `main_training.py` with NSE stock symbols
 
 ### Custom Metrics
 
