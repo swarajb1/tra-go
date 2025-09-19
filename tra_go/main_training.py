@@ -8,7 +8,6 @@ from typing import Final
 
 import band_2.keras_model_band_2 as km_2
 import band_2_1.keras_model as km_21_model
-import band_4.keras_model_band_4 as km_4
 import keras_model as km
 import psutil
 import tensorflow as tf
@@ -233,43 +232,7 @@ def main_training(ticker=None):
 
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
 
-    if Y_TYPE == BandType.BAND_4:
-        (X_train, Y_train, train_prev_close), (
-            X_test,
-            Y_test,
-            test_prev_close,
-        ) = an.train_test_split(
-            data_df=df,
-            test_size=settings.TEST_SIZE,
-            x_type=X_TYPE,
-            y_type=Y_TYPE,
-            interval=INTERVAL.value,
-        )
-
-        model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
-
-        optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
-
-        loss = km_4.metric_new_idea
-
-        model.compile(
-            optimizer=optimizer,
-            loss=loss,
-            metrics=[
-                km.metric_rmse_percent,
-                km.metric_abs_percent,
-                km_4.metric_loss_comp_2,
-                km_4.metric_win_percent,
-                km_4.metric_win_pred_capture_percent,
-                km_4.metric_pred_capture_percent,
-                km_4.metric_win_checkpoint,
-            ],
-        )
-
-        # Force garbage collection after model compilation
-        gc.collect()
-
-    elif Y_TYPE == BandType.BAND_2:
+    if Y_TYPE == BandType.BAND_2:
         (
             (X_train, Y_train, train_prev_close),
             (X_test, Y_test, test_prev_close),

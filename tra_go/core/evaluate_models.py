@@ -12,9 +12,6 @@ def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
     if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1, BandType.BAND_1_1]:
         raise ValueError(f"Invalid y_type: {y_type}")
 
-    if y_type == BandType.BAND_4:
-        from band_4.training_yf_band_4 import CustomEvaluation
-
     elif y_type == BandType.BAND_2:
         from band_2.training_yf_band_2 import CustomEvaluation
 
