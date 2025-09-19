@@ -80,10 +80,16 @@ class CustomEvaluation(CoreEvaluation):
         self.x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_day_close)
 
         # (low, high) = (0, 1)
+        # Preserve raw predictions and operate on a copy for "real" (scaled/rounded)
+        self.y_pred_real = np.copy(self.y_pred)
 
-        self.y_pred_real = self.y_pred
+        # Scale and round the numeric band edges to price units
         self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_day_close)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_day_close)
+
+        # The third output is a trend/probability from the model (sigmoid). Convert
+        # it to a hard 0/1 decision here for evaluation (threshold at 0.5).
+        self.y_pred_real[:, 2] = (self.y_pred[:, 2] >= 0.5).astype(int)
 
         self.correct_pred_values()
 
@@ -94,7 +100,9 @@ class CustomEvaluation(CoreEvaluation):
         min_pred: NDArray = self.y_pred_real[:, 0]
         max_pred: NDArray = self.y_pred_real[:, 1]
 
-        buy_order_pred: NDArray[np.bool_] = self.y_pred_real[:, 2].astype(bool)
+        # Convert the third column to a boolean mask. Use numpy to ensure dtype is bool
+        # This is robust whether the third column contains 0/1 ints or boolean-like values.
+        buy_order_pred = np.asarray(self.y_pred_real[:, 2], dtype=bool)
 
         self.generate_win_graph(
             max_pred=max_pred,

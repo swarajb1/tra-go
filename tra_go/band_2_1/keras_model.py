@@ -42,18 +42,38 @@ class ModelCompileDetails:
 
 
 class CustomActivationLayer(Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, hard_threshold: bool = False, **kwargs):
+        """Custom activation that leaves first two features linear and applies a sigmoid
+        to the third feature.
+
+        Args:
+            hard_threshold: If True, the third feature will be rounded to 0/1 when
+                the layer is called with training=False (i.e. at inference). When
+                False (default) the layer outputs a continuous sigmoid value which
+                is differentiable for training.
+        """
+        self.hard_threshold = hard_threshold
         super().__init__(**kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         # Apply linear activation to the first two features
         first_two_features = inputs[:, :2]
 
-        # Apply sigmoid activation and then round to the third feature
-        third_feature = tf.round(tf.sigmoid(inputs[:, 2:3]))
+        # Apply sigmoid activation to the third feature. Do NOT round during
+        # training so gradients can flow. If hard_threshold is enabled, round only
+        # at inference time (when training is False).
+        third_feature = tf.sigmoid(inputs[:, 2:3])
+
+        if self.hard_threshold and training is False:
+            third_feature = tf.round(third_feature)
 
         # Concatenate the features back together
         return tf.concat([first_two_features, third_feature], axis=-1)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"hard_threshold": self.hard_threshold})
+        return config
 
 
 def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:

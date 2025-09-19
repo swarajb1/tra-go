@@ -167,3 +167,8 @@ make create_data_folders  # Initialize required directory structure
 ```
 
 Environment setup requires careful attention to TensorFlow platform-specific dependencies (macOS vs Linux) as defined in `pyproject.toml`.
+
+## General Instructions for Copilot
+
+- Any docs file created should be in the `docs/` directory.
+- Don't use MCP Server. Create a temporary file in tmp/ directory and share the code block here. And execute that file in terminal.
