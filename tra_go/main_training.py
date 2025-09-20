@@ -17,16 +17,20 @@ from core.logger import log_model_training_complete, log_model_training_start, l
 from data_loader import DataLoader
 from data_loader_tf import create_optimized_data_loader
 from decorators.time import time_taken
-from keras.callbacks import Callback, ModelCheckpoint, TensorBoard, TerminateOnNaN
-from keras.models import Model
 from numpy.typing import NDArray
+from tensorflow.keras.callbacks import (
+    Callback,
+    ModelCheckpoint,
+    TensorBoard,
+    TerminateOnNaN,
+)
+from tensorflow.keras.models import Model
 from tf_data_utils import configure_tf_data_performance, log_tf_data_performance_tips
 
 from database.enums import BandType, IntervalType, TickerOne
 
 # Configuration: Set to True to use optimized tf.data pipelines, False for traditional data loading
 # This can also be controlled via settings.USE_OPTIMIZED_DATA_LOADER in config
-USE_OPTIMIZED_LOADER: bool = True  # Change this to easily toggle data loader type
 
 X_TYPE: BandType = BandType.BAND_1_CLOSE
 Y_TYPE: BandType = BandType.BAND_1_1
@@ -432,13 +436,9 @@ def main_training_4_cores(ticker=None):
     Args:
         ticker: Optional ticker to train. If None, uses the global TICKER.
     """
-    NUMBER_OF_CORES = 8
-
-    # Configure TensorFlow to use 4 CPU cores
-    tf.config.threading.set_intra_op_parallelism_threads(NUMBER_OF_CORES)
-    tf.config.threading.set_inter_op_parallelism_threads(NUMBER_OF_CORES)
-
-    logger.info(f"Configured TensorFlow to use {NUMBER_OF_CORES} CPU cores for training")
+    logger.info(
+        f"TensorFlow threading configured via environment variables for {settings.TF_INTRA_OP_PARALLELISM_THREADS} CPU cores",
+    )
 
     # Run the main training function
     return main_training(ticker=ticker)

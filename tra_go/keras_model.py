@@ -1,11 +1,18 @@
-import keras
-import keras.backend as K
+import tensorflow as tf
 from core.config import settings
-from keras.layers import LSTM, Bidirectional, Dense, Dropout, Input, TimeDistributed
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import (
+    LSTM,
+    Bidirectional,
+    Dense,
+    Dropout,
+    Input,
+    TimeDistributed,
+)
 
 
 def get_untrained_model(X_train, Y_train):
-    model = keras.models.Sequential()
+    model = tf.keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
 
@@ -34,7 +41,7 @@ def get_untrained_model(X_train, Y_train):
 
 
 def get_optimiser(learning_rate: float):
-    return keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    return tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
 
 
 def metric_rmse(y_true, y_pred):

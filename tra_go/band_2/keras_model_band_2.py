@@ -1,6 +1,6 @@
 import tensorflow as tf
-from keras import backend as K
 from keras_model import metric_abs, metric_rmse
+from tensorflow.keras import backend as K
 
 SKIP_FIRST_PERCENTILE: float = 0.15
 SKIP_LAST_PERCENTILE: float = 0.15

@@ -4,10 +4,9 @@ from pathlib import Path
 
 import numpy as np
 from core.win_graph import WinGraph
-from keras.models import load_model
-from keras.utils import custom_object_scope
 from numpy.typing import NDArray
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.utils import custom_object_scope
 
 from database.enums import BandType, ModelLocationType, TickerOne
 
@@ -75,7 +74,7 @@ class CoreEvaluation:
         self.model_file_path: Path = Path(self.model_location_type.value) / self.model_file_name
 
         if not Path.exists(self.model_file_path):
-            raise (f"WARNING: file not found at: \n{self.model_file_path}\n")
+            raise FileNotFoundError(f"Model file not found: {self.model_file_path}")
 
         return
 

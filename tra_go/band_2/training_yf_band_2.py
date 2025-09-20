@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from core.config import settings
 from core.simulation import Simulation
-from keras.models import load_model
-from keras.utils import custom_object_scope
 from numpy.typing import NDArray
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
@@ -375,18 +375,18 @@ class CustomEvaluation:
             total_capture_possible_arr,
         )
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
         cdgr: float = pow(all_days_pro_cumulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         # y_min = min(np.min(min_pred), np.min(min_true))
         # y_max = max(np.max(max_pred), np.max(max_true))
@@ -597,18 +597,18 @@ class CustomEvaluation:
             total_capture_possible_arr,
         )
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
         cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         self.win_250_days = round(pro_250 * 100, 2)
 
