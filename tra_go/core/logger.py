@@ -107,7 +107,7 @@ def log_error(operation: str, error: Exception, **kwargs) -> None:
     error_msg = f"Error in {operation}: {str(error)}"
     if context:
         error_msg += f" | Context: {context}"
-    logger.error(error_msg, exc_info=True)
+    logger.error(error_msg, exc_info=True, stack_info=True)
 
 
 def log_warning(message: str, **kwargs) -> None:

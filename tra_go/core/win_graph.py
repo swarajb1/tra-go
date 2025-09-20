@@ -129,25 +129,25 @@ class WinGraph:
         else:
             pred_capture_ratio = np.sum(pred_capture_arr) / total_capture_possible_sum
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
         self.win_pred_capture_percent = float(pred_capture_percent_str)
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
-        cdgr: float
+        cagr: float
 
         if len(wins) == 0:
-            cdgr = 0.0
+            cagr = 0.0
         else:
-            cdgr = pow(all_days_pro_cumulative_value, 1 / len(wins)) - 1
+            cagr = pow(all_days_pro_cumulative_value, 1 / len(wins)) - 1
 
-        pro_250: float = pow(cdgr + 1, 250) - 1
-        pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        pro_250: float = pow(cagr + 1, 250) - 1
+        pro_250_5: float = pow(cagr * 5 + 1, 250) - 1
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         self.win_250_days = round(pro_250 * 100, 2)
 
@@ -192,7 +192,7 @@ class WinGraph:
         print("Win Days Perc:\t\t\t", win_percent_str, " %")
         print("Pred Capture:\t\t\t", pred_capture_percent_str, " %")
 
-        print("Per Day:\t\t\t", round(cdgr * 100, 3), " %")
+        print("Per Day:\t\t\t", round(cagr * 100, 3), " %")
         print("250 days:\t\t\t", pro_250_str)
 
         print("\n")

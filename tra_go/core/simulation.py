@@ -236,12 +236,12 @@ class Simulation:
             days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
 
             percent_prefix: str = " " if round(days_250, 2) < 10 else ""
-            percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
+            percent_val: str = percent_prefix + f"{days_250:.2f}" + " %"
 
             print(
                 "\t\t",
                 "Risk To Reward Ratio:",
-                "{:.2f}".format(RISK_TO_REWARD_RATIO),
+                f"{RISK_TO_REWARD_RATIO:.2f}",
                 "\t",
                 "250 Days s: ",
                 percent_val if days_250 > PERCENT_250_DAYS_MIN_THRESHOLD else "\t   --",
@@ -291,46 +291,46 @@ class Simulation:
                 # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
                 print(
                     "\n\t\t\t Percent Trade Taken\t\t\t",
-                    "{:.2f}".format(percent_trades_taken),
+                    f"{percent_trades_taken:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Trade Taken And Out\t\t",
-                    "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
+                    f"{count_trade_taken_and_out / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_trade_taken_and_out / count_trade_taken * 100),
+                    f"{count_trade_taken_and_out / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Stop Loss Hit\t\t\t",
-                    "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
+                    f"{count_stop_loss_hit / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_stop_loss_hit / count_trade_taken * 100),
+                    f"{count_stop_loss_hit / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Completed At Closing\t\t",
-                    "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
+                    f"{count_completed_at_closing / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_completed_at_closing / count_trade_taken * 100),
+                    f"{count_completed_at_closing / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Closing Trades Per Day contribution\t",
-                    "{:.2f}".format(closing_arr_percent_avg_win_per_day),
+                    f"{closing_arr_percent_avg_win_per_day:.2f}",
                 )
                 print(
                     "\t\t\t Percent Expected Trades\t\t",
-                    "{:.2f}".format(count_expected_trades / number_of_days * 100),
+                    f"{count_expected_trades / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(percent_expected_trades),
+                    f"{percent_expected_trades:.2f}",
                     " %",
                 )
                 print(
                     "\n\t\t\t Percent Win Trades\t\t\t",
-                    "{:.2f}".format(number_of_win_trades / number_of_days * 100),
+                    f"{number_of_win_trades / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(number_of_win_trades / count_trade_taken * 100),
+                    f"{number_of_win_trades / count_trade_taken * 100:.2f}",
                     " %\n",
                 )
 
@@ -375,7 +375,7 @@ class Simulation:
 
         print(
             "\n\nCapture Return Percent:\t\t",
-            "{:.2f}".format(self.real_mean / self.actual_full_reward_mean * 100),
+            f"{self.real_mean / self.actual_full_reward_mean * 100:.2f}",
             " %",
         )
 

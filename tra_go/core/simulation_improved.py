@@ -21,7 +21,7 @@ from database.enums import ProcessedDataType
 class SimulationConfig:
     PERCENT_250_DAYS_MIN_THRESHOLD: int = -100
     PERCENT_250_DAYS_WORTH_SAVING: int = 5
-    MIN_REWARD_THRESHOLD_PERCENT: float = 0.00  # 0.05 percent threshold for minimal reward
+    MIN_REWARD_THRESHOLD_PERCENT: float = 0.05  # 0.05 percent threshold for minimal reward
     SPECIAL_TRADE_THRESHOLD: float = 70.0  # % trades taken
     SPECIAL_EXPECTED_THRESHOLD: float = 50.0  # % expected trades
 
@@ -456,19 +456,15 @@ class Simulation:
         pct_expected = stats["expected_trades"] / safe_trades_taken * 100
         pct_wins = stats["win_trades"] / safe_trades_taken * 100
 
-        # Calculate closing trades contribution (missing from improved version)
+        # Calculate closing trades contribution
         safe_invested = np.where(metrics.invested_day_wise == 0, 1, metrics.invested_day_wise)
         closing_rewards_array = np.array(stats["closing_rewards"]) if stats["closing_rewards"] else np.array([])
 
-        # Create a proper array for closing contribution calculation
-        completed_at_closing_reward = np.zeros(number_of_days, dtype=np.float32)
-        closing_idx = 0
-        for day_idx in range(number_of_days):
-            if closing_idx < len(closing_rewards_array):
-                completed_at_closing_reward[day_idx] = closing_rewards_array[closing_idx]
-                closing_idx += 1
-
-        closing_arr_percent_avg_win_per_day = np.mean((completed_at_closing_reward / safe_invested) * 100)
+        # More efficient calculation of closing contribution
+        if len(closing_rewards_array) > 0:
+            closing_arr_percent_avg_win_per_day = np.mean(closing_rewards_array) / np.mean(safe_invested) * 100
+        else:
+            closing_arr_percent_avg_win_per_day = 0.0
 
         # Log all statistics in elegant table format
         trade_table_data = [
@@ -550,10 +546,10 @@ class Simulation:
 
             full_reward = max_price - min_price
 
-            # buy trend is max comes after then min (original logic)
-            real_order_type_buy[day_idx] = np.argmax(self.real_price_arr[day_idx, :, 1]) > np.argmax(
-                self.real_price_arr[day_idx, :, 0],
-            )
+            # Determine trend direction based on timing: buy trend if high comes after low
+            min_idx = np.argmin(day_lows)
+            max_idx = np.argmax(day_highs)
+            real_order_type_buy[day_idx] = max_idx > min_idx
 
             invested_amount = (
                 self.buy_price_arr[day_idx] if real_order_type_buy[day_idx] else self.sell_price_arr[day_idx]

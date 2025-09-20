@@ -91,7 +91,7 @@ def get_data_df(ticker, interval, which_half: str) -> pd.DataFrame:
     df["high"] = df["High"].apply(lambda x: round(number=x, ndigits=2))
     df["low"] = df["Low"].apply(lambda x: round(number=x, ndigits=2))
 
-    new_2 = df[df["to_add"] is True].copy(deep=True)
+    new_2 = df[df["to_add"]].copy(deep=True)
     new_2.rename(columns={"Datetime": "datetime"}, inplace=True)
 
     return new_2[
