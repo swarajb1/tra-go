@@ -38,9 +38,6 @@ TRA-GO is a machine learning trading system that trains neural networks to predi
 # Single ticker training (default: 4 CPU cores)
 make run model=train
 
-# Parallel training across multiple tickers
-make run model=train_parallel
-
 # Evaluate newly trained models
 make run model=training_new
 ```

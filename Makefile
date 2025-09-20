@@ -78,9 +78,6 @@ run: ## Run the program with specified parameters
 train: ## Train models on all tickers
 	@$(MAKE) run MODEL=train
 
-train-parallel: ## Train models in parallel across multiple tickers
-	@$(MAKE) run MODEL=train_parallel
-
 # Evaluation targets
 eval-new: ## Evaluate newly trained models
 	@$(MAKE) run MODEL=training_new

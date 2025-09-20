@@ -4,7 +4,7 @@ import sys
 
 from core.assertions import assert_env_vals
 from core.evaluate_models import evaluate_models
-from main_training import list_of_tickers, main_training_4_cores, parallel_train_tickers
+from main_training import list_of_tickers, main_training_4_cores
 
 from database.enums import ModelLocationType
 
@@ -19,7 +19,6 @@ def parse_arguments() -> argparse.Namespace:
         nargs="?",
         choices=[
             "train",
-            "train_parallel",
             "training_new",
             "eval_trained",
             "saved",
@@ -72,9 +71,6 @@ def dispatch_command(args: argparse.Namespace) -> None:
     if command == "train":
         for ticker in list_of_tickers * 2:
             main_training_4_cores(ticker)
-
-    elif command == "train_parallel":
-        parallel_train_tickers()
 
     elif command == "training_new":
         evaluate_models(

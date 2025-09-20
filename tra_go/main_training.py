@@ -1,4 +1,3 @@
-import concurrent.futures
 import gc
 import os
 import subprocess
@@ -382,47 +381,6 @@ def main_training(ticker=None):
 
     # Final garbage collection before function completion
     gc.collect()
-
-
-def parallel_train_tickers():
-    """Train tickers in parallel using 4 CPU cores instead of the default single core."""
-    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-        futures = []
-        tickers_to_process = list_of_tickers.copy()
-
-        logger.info(f"Starting parallel training with 4 cores for {len(tickers_to_process)} tickers")
-
-        # Submit all processes at once for true parallel execution
-        for i, ticker in enumerate(tickers_to_process):
-            future = executor.submit(main_training, ticker)
-            futures.append(future)
-            logger.info(f"Submitted training process {i+1}/{len(tickers_to_process)} for ticker: {ticker.name}")
-
-        # Wait for all processes to complete and handle any exceptions
-        completed_successfully = 0
-        failed_processes = []
-
-        for i, future in enumerate(futures):
-            try:
-                future.result()
-                completed_successfully += 1
-                logger.info(f"Training completed successfully for ticker: {tickers_to_process[i].name}")
-
-                # Force garbage collection after each process completion
-                gc.collect()
-            except Exception as e:
-                failed_processes.append((tickers_to_process[i].name, str(e)))
-                logger.error(f"Training failed for ticker {tickers_to_process[i].name}: {str(e)}")
-
-                # Force garbage collection even after failures to free memory
-                gc.collect()
-
-        # Log summary
-        logger.info(
-            f"Parallel training completed. Successful: {completed_successfully}, Failed: {len(failed_processes)}",
-        )
-        if failed_processes:
-            logger.warning(f"Failed tickers: {[ticker_name for ticker_name, _ in failed_processes]}")
 
 
 def main_training_4_cores(ticker=None):
