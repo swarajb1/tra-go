@@ -56,6 +56,17 @@ class GlobalConfig(BaseSettings):
         description="Use optimized tf.data pipeline for data loading",
     )
 
+    TF_INTRA_OP_PARALLELISM_THREADS: int = Field(
+        default=8,
+        gt=0,
+        description="Number of intra-op parallelism threads for TensorFlow",
+    )
+    TF_INTER_OP_PARALLELISM_THREADS: int = Field(
+        default=8,
+        gt=0,
+        description="Number of inter-op parallelism threads for TensorFlow",
+    )
+
     @computed_field
     @property
     def LOGGING_LEVEL(self) -> int:
