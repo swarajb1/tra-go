@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 # Variables
 PYTHON_VENV := ./.venv/bin/python
-POETRY := poetry
+POETRY := $(PYTHON_VENV) -m poetry
 WORKDIR := tra_go
 LOGDIR := training/logs
 PROJECT_NAME := tra-go
@@ -18,7 +18,7 @@ RESET := \033[0m
 # .PHONY targets
 .PHONY: help create-venv install run clean clean-all clean-logs clean-cache clean-temp \
         get-clean-data new-yf-data tensorboard script-1 create-data-folders \
-        generate-dot-env setup dev-setup lint format test check status \
+        generate-dot-env setup dev-setup lint format test check status check-venv verify-venv \
         train train-parallel eval-new eval-saved eval-saved-double eval-saved-triple \
         eval-old eval-discarded show-models
 
@@ -65,7 +65,7 @@ install: generate-dot-env ## Install dependencies with Poetry
 	fi
 	$(PYTHON_VENV) -m pip install --upgrade pip
 	$(PYTHON_VENV) -m pip install poetry
-	$(PYTHON_VENV) -m poetry install
+	$(PYTHON_VENV) -m poetry install --no-root
 	@printf "$(GREEN)✓ Dependencies installed successfully!$(RESET)\n"
 
 # Main execution targets
@@ -83,7 +83,10 @@ train-parallel: ## Train models in parallel across multiple tickers
 
 # Evaluation targets
 eval-new: ## Evaluate newly trained models
-	@$(MAKE) run MODEL=training_new NUM=$(NUM) MOVE=$(MOVE)
+	@$(MAKE) run MODEL=training_new
+
+eval-trained: ## Evaluate trained models
+	@$(MAKE) run MODEL=eval_trained NUM=$(NUM) MOVE=$(MOVE)
 
 eval-saved: ## Evaluate saved models
 	@$(MAKE) run MODEL=saved NUM=$(NUM) MOVE=$(MOVE)
@@ -119,22 +122,22 @@ tensorboard: ## Launch TensorBoard to view training logs
 		printf "$(YELLOW)Run some training first or create the directory$(RESET)\n"; \
 		exit 1; \
 	fi
-	tensorboard --logdir=$(LOGDIR)
+	$(PYTHON_VENV) -m tensorboard.main --logdir=$(LOGDIR)
 
 show-models: ## Show model directory structure and counts
-	@printf "$(BLUE)╔═══════════════════════════════════════════════════════════════╗$(RESET)\n"
-	@printf "$(BLUE)║                     Model Directory Overview                  ║$(RESET)\n"
-	@printf "$(BLUE)╚═══════════════════════════════════════════════════════════════╝$(RESET)\n"
+	@printf "$(BLUE)╔══════════════════════════════════════════════════════════════════════╗$(RESET)\n"
+	@printf "$(BLUE)║                       Model Directory Overview                       ║$(RESET)\n"
+	@printf "$(BLUE)╚══════════════════════════════════════════════════════════════════════╝$(RESET)\n"
 	@for dir in training/models training/models_saved training/models_saved_double training/models_saved_triple training/models_z_old training/models_zz_discarded; do \
 		if [ -d "$$dir" ]; then \
 			count=$$(find "$$dir" -name "*.h5" -o -name "*.keras" 2>/dev/null | wc -l | tr -d ' '); \
 			if [ "$$count" -gt 0 ]; then \
-				printf "  $(GREEN)✓$(RESET) $(YELLOW)%-35s$(RESET) $(WHITE)%s models$(RESET)\n" "$$dir" "$$count"; \
+				printf "  $(GREEN)✓$(RESET) $(YELLOW)%-40s$(RESET) $(WHITE)%s models$(RESET)\n" "$$dir" "$$count"; \
 			else \
-				printf "  $(YELLOW)○$(RESET) $(WHITE)%-35s$(RESET) $(WHITE)%s models$(RESET)\n" "$$dir" "$$count"; \
+				printf "  $(YELLOW)○$(RESET) $(WHITE)%-40s$(RESET) $(WHITE)%s models$(RESET)\n" "$$dir" "$$count"; \
 			fi \
 		else \
-			printf "  $(RED)✗$(RESET) $(RED)%-35s$(RESET) $(RED)not found$(RESET)\n" "$$dir"; \
+			printf "  $(RED)✗$(RESET) $(RED)%-40s$(RESET) $(RED)not found$(RESET)\n" "$$dir"; \
 		fi \
 	done
 	@printf "\n"
@@ -240,3 +243,26 @@ test: ## Run tests
 	@printf "$(GREEN)✓ Tests completed!$(RESET)\n"
 
 check: lint test ## Run all code quality checks
+
+check-venv: ## Verify virtual environment setup and command consistency
+	@printf "$(BLUE)╔═══════════════════════════════════════════════════════════════╗$(RESET)\n"
+	@printf "$(BLUE)║               Virtual Environment Verification                ║$(RESET)\n"
+	@printf "$(BLUE)╚═══════════════════════════════════════════════════════════════╝$(RESET)\n"
+	@printf "  $(WHITE)%-35s$(RESET) " "Virtual environment:"; [ -d .venv ] && printf "$(GREEN)✓ Exists$(RESET)\n" || printf "$(RED)✗ Missing$(RESET)\n"
+	@printf "  $(WHITE)%-35s$(RESET) " "Python executable:"; [ -f $(PYTHON_VENV) ] && printf "$(GREEN)✓ Available$(RESET)\n" || printf "$(RED)✗ Missing$(RESET)\n"
+	@if [ -f $(PYTHON_VENV) ]; then \
+		python_version=$$($(PYTHON_VENV) --version 2>/dev/null); \
+		printf "  $(WHITE)%-35s$(RESET) $(GREEN)%s$(RESET)\n" "Python version:" "$$python_version"; \
+	fi
+	@printf "  $(WHITE)%-35s$(RESET) " "Poetry in venv:"; $(PYTHON_VENV) -c "import poetry" 2>/dev/null && printf "$(GREEN)✓ Available$(RESET)\n" || printf "$(RED)✗ Missing$(RESET)\n"
+	@printf "  $(WHITE)%-35s$(RESET) " "TensorBoard in venv:"; $(PYTHON_VENV) -c "import tensorboard" 2>/dev/null && printf "$(GREEN)✓ Available$(RESET)\n" || printf "$(RED)✗ Missing$(RESET)\n"
+	@printf "\n"
+	@printf "$(YELLOW)Command verification:$(RESET)\n"
+	@printf "  $(WHITE)✓ All Python commands use:$(RESET) $(PYTHON_VENV)\n"
+	@printf "  $(WHITE)✓ All Poetry commands use:$(RESET) $(PYTHON_VENV) -m poetry\n"
+	@printf "  $(WHITE)✓ TensorBoard uses virtual environment\n"
+	@printf "\n$(GREEN)✓ Virtual environment verification completed!$(RESET)\n"
+
+verify-venv: ## Run detailed virtual environment verification script
+	@printf "$(BLUE)Running detailed virtual environment verification...$(RESET)\n"
+	bash ./others/verify_venv.sh
