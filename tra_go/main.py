@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -8,94 +9,122 @@ from main_training import list_of_tickers, main_training_4_cores, parallel_train
 from database.enums import ModelLocationType
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments, supporting both positional (Makefile) and named args."""
+    parser = argparse.ArgumentParser(description="TRA-GO AI Trading System CLI")
+
+    # Positional arguments (for Makefile compatibility)
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=[
+            "train",
+            "train_parallel",
+            "training_new",
+            "eval_trained",
+            "saved",
+            "saved_double",
+            "saved_triple",
+            "old",
+            "discarded",
+        ],
+        help="The command to execute (e.g., train, saved)",
+    )
+    parser.add_argument("num_models", nargs="?", type=int, default=6, help="Number of models to evaluate (default: 6)")
+    parser.add_argument(
+        "move_files",
+        nargs="?",
+        choices=["true", "false"],
+        default="false",
+        help="Whether to move files during evaluation (default: false)",
+    )
+
+    # Named arguments (for direct CLI usage)
+    parser.add_argument("--num_models", type=int, help="Number of models to evaluate (overrides positional)")
+    parser.add_argument("--move_files", action="store_true", help="Whether to move files during evaluation")
+
+    args = parser.parse_args()
+
+    # Override positional with named if provided
+    if args.num_models is not None:
+        args.num_models = args.num_models
+    if args.move_files:
+        args.move_files = "true"
+
+    return args
+
+
+def dispatch_command(args: argparse.Namespace) -> None:
+    """Dispatch the parsed command to the appropriate function."""
+    command = args.command
+    num_models = args.num_models
+    move_files = args.move_files == "true"
+
+    if not command:
+        # Default behavior when no command is provided
+        evaluate_models(
+            model_location_type=ModelLocationType.TRAINED_NEW,
+            number_of_models=1,
+            move_files=False,
+        )
+        return
+
+    if command == "train":
+        for ticker in list_of_tickers * 2:
+            main_training_4_cores(ticker)
+
+    elif command == "train_parallel":
+        parallel_train_tickers()
+
+    elif command == "training_new":
+        evaluate_models(
+            model_location_type=ModelLocationType.TRAINED_NEW,
+            number_of_models=6,
+            newly_trained_models=True,
+        )
+
+    elif command in ["eval_trained", "saved", "saved_double", "old"]:
+        model_type_map = {
+            "eval_trained": ModelLocationType.TRAINED_NEW,
+            "saved": ModelLocationType.SAVED,
+            "saved_double": ModelLocationType.SAVED_DOUBLE,
+            "old": ModelLocationType.OLD,
+        }
+        evaluate_models(
+            model_location_type=model_type_map[command],
+            number_of_models=num_models,
+            move_files=move_files,
+        )
+
+    elif command == "saved_triple":
+        evaluate_models(
+            model_location_type=ModelLocationType.SAVED_TRIPLE,
+            number_of_models=num_models,
+        )
+
+    elif command == "discarded":
+        evaluate_models(
+            model_location_type=ModelLocationType.DISCARDED,
+            number_of_models=num_models,
+            move_files=True,
+        )
+
+
 def main():
-    os.system("clear")
+    """Main entry point for the TRA-GO application."""
+    os.system("clear")  # Optional: Consider removing or making conditional for non-interactive runs
 
     assert_env_vals()
 
-    if len(sys.argv) > 1:
-        number_of_models: int = 6
-        move_files: bool = False
-
-        if len(sys.argv) > 2:
-            if not sys.argv[2].isdigit():
-                raise ValueError("2nd argument should be an integer")
-
-            number_of_models = int(sys.argv[2])
-
-        if len(sys.argv) > 3:
-            if sys.argv[3] not in ["true", "false"]:
-                raise ValueError("3rd argument should be either 'true' or 'false'")
-
-            move_files = sys.argv[3] == "true"
-
-        if sys.argv[1] == "train":
-            # suppress_cpu_usage()
-
-            for ticker in list_of_tickers * 2:
-                # main_training(ticker)
-                main_training_4_cores(ticker)
-
-        elif sys.argv[1] == "train_parallel":
-            parallel_train_tickers()
-
-        elif sys.argv[1] == "training_new":
-            evaluate_models(
-                model_location_type=ModelLocationType.TRAINED_NEW,
-                number_of_models=6,
-                newly_trained_models=True,
-            )
-
-        elif sys.argv[1] == "eval_training":
-            evaluate_models(
-                model_location_type=ModelLocationType.TRAINED_NEW,
-                number_of_models=number_of_models,
-                move_files=move_files,
-            )
-
-        elif sys.argv[1] == "saved":
-            evaluate_models(
-                model_location_type=ModelLocationType.SAVED,
-                number_of_models=number_of_models,
-                move_files=move_files,
-            )
-
-        elif sys.argv[1] == "saved_double":
-            evaluate_models(
-                model_location_type=ModelLocationType.SAVED_DOUBLE,
-                number_of_models=number_of_models,
-                move_files=move_files,
-            )
-
-        elif sys.argv[1] == "saved_triple":
-            evaluate_models(model_location_type=ModelLocationType.SAVED_TRIPLE, number_of_models=number_of_models)
-
-        elif sys.argv[1] == "old":
-            evaluate_models(
-                model_location_type=ModelLocationType.OLD,
-                number_of_models=number_of_models,
-                move_files=move_files,
-            )
-
-        elif sys.argv[1] == "discarded":
-            evaluate_models(
-                model_location_type=ModelLocationType.DISCARDED,
-                number_of_models=number_of_models,
-                move_files=True,
-            )
-
-        else:
-            raise ValueError("1st argument, model is not correct")
-
-    else:
-        # main_training()
-        main_training_4_cores()
-
-        # evaluate_models(
-        #     model_location_type=ModelLocationType.SAVED,
-        #     number_of_models=6,
-        #     move_files=False,
-        # )
+    try:
+        args = parse_arguments()
+        dispatch_command(args)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
