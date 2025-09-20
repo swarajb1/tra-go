@@ -236,14 +236,14 @@ class TensorFlowDataLoader(DataLoader):
         info = self.get_dataset_info()
 
         performance = {
-            "train_time_per_batch": train_time / num_batches,
-            "test_time_per_batch": test_time / num_batches,
-            "total_train_batches": info["train_steps_per_epoch"],
-            "total_test_batches": info["test_steps_per_epoch"],
-            "estimated_epoch_time": (train_time / num_batches) * info["train_steps_per_epoch"],
-            "batch_size": self.batch_size,
-            "samples_per_second_train": (self.batch_size * num_batches) / train_time,
-            "samples_per_second_test": (self.batch_size * num_batches) / test_time,
+            "train_time_per_batch": round(train_time / num_batches, 4),
+            "test_time_per_batch": round(test_time / num_batches, 4),
+            "total_train_batches": int(info["train_steps_per_epoch"]),
+            "total_test_batches": int(info["test_steps_per_epoch"]),
+            "estimated_epoch_time": round((train_time / num_batches) * info["train_steps_per_epoch"], 4),
+            "batch_size": int(self.batch_size),
+            "samples_per_second_train": int((self.batch_size * num_batches) / train_time),
+            "samples_per_second_test": int((self.batch_size * num_batches) / test_time),
         }
 
         logger.info("Performance benchmark results:")

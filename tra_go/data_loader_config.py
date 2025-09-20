@@ -6,27 +6,6 @@ optimized tf.data pipelines vs traditional numpy-based data loading.
 """
 
 from core.config import settings
-from core.logger import logger
-
-
-def set_optimized_data_loader(enabled: bool) -> None:
-    """
-    Set whether to use optimized tf.data pipelines for data loading.
-
-    Args:
-        enabled: True to enable optimized data loader, False to use traditional loader
-    """
-    # Note: This is a runtime change and won't persist across restarts
-    # To make persistent changes, modify the .env file or config
-    settings.USE_OPTIMIZED_DATA_LOADER = enabled
-
-    status = "ENABLED" if enabled else "DISABLED"
-    logger.info(f"Optimized data loader {status}")
-
-    if enabled:
-        logger.info("Benefits: Better performance, memory efficiency, prefetching, shuffling")
-    else:
-        logger.info("Using traditional numpy-based data loading")
 
 
 def get_optimized_data_loader_status() -> bool:
@@ -37,18 +16,6 @@ def get_optimized_data_loader_status() -> bool:
         True if optimized loader is enabled, False otherwise
     """
     return settings.USE_OPTIMIZED_DATA_LOADER
-
-
-def toggle_optimized_data_loader() -> bool:
-    """
-    Toggle the optimized data loader setting.
-
-    Returns:
-        The new status after toggling
-    """
-    new_status = not settings.USE_OPTIMIZED_DATA_LOADER
-    set_optimized_data_loader(new_status)
-    return new_status
 
 
 def print_data_loader_info() -> None:

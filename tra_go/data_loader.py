@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -61,23 +61,21 @@ class DataLoader:
         return columns
 
     def _get_full_data_df(self, ticker_data_type: TickerDataType) -> pd.DataFrame:
-        # file_path: str = f"./data_cleaned/{self.interval.value}/{self.ticker.value} - {self.interval.value}.csv"
-        file_path: str
+        """Load full dataframe for a ticker using project-root relative paths.
+
+        Resolves paths relative to the repository root (parent of the `tra_go` package)
+        so code runs correctly regardless of current working directory.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
 
         if ticker_data_type == TickerDataType.TRAINING:
-            file_path = os.path.join(
-                os.getcwd(),
-                f"data_{ticker_data_type.value}",
-                f"{self.ticker.value} - {self.interval.value}.csv",
-            )
-
+            file_path = repo_root / "data_training" / f"{self.ticker.value} - {self.interval.value}.csv"
         elif ticker_data_type == TickerDataType.REAL_AND_CLEANED:
-            file_path = os.path.join(
-                os.getcwd(),
-                f"data_{ticker_data_type.value}",
-                self.interval.value,
-                f"{self.ticker.value} - {self.interval.value}.csv",
+            file_path = (
+                repo_root / "data_cleaned" / self.interval.value / f"{self.ticker.value} - {self.interval.value}.csv"
             )
+        else:
+            raise ValueError(f"Unsupported ticker_data_type: {ticker_data_type}")
 
         df = pd.read_csv(file_path)
 
@@ -108,7 +106,7 @@ class DataLoader:
 
         assert (
             len(df) % TOTAL_POINTS_IN_ONE_DAY == 0
-        ), f"Full {TickerDataType.key} Data length is not divisible by TOTAL_POINTS_IN_ONE_DAY"
+        ), f"Full {ticker_data_type.value} data length must be divisible by TOTAL_POINTS_IN_ONE_DAY"
 
         for day in range(number_of_days):
             start_index: int = day * TOTAL_POINTS_IN_ONE_DAY + initial_index_offset
@@ -123,7 +121,11 @@ class DataLoader:
         # return res_df[columns]
         return res_df
 
-    def data_split_x_y(self, df: pd.DataFrame, ticker_data_type: TickerDataType | None) -> pd.DataFrame:
+    def data_split_x_y(
+        self,
+        df: pd.DataFrame,
+        ticker_data_type: TickerDataType | None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Splits the data into input, output dataframe."""
 
         # assumptions:
@@ -274,7 +276,9 @@ class DataLoader:
         for day in range(number_of_days):
             day_start_index: int = int(day * NUMBER_OF_POINTS_IN_ZONE_DAY)
 
-            prev_close.append(df.iloc[day_start_index, df.columns.get_loc("real_close")])
+            prev_close_val = df.iloc[day_start_index, df.columns.get_loc("real_close")]
+            # Ensure a plain Python float regardless of pandas/numpy scalar types
+            prev_close.append(float(np.asarray(prev_close_val, dtype=np.float64)))
 
         number_of_days_train: int = int(number_of_days * (1 - self.test_size))
 

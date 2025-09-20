@@ -171,4 +171,4 @@ Environment setup requires careful attention to TensorFlow platform-specific dep
 ## General Instructions for Copilot
 
 - Any docs file created should be in the `docs/` directory.
-- Don't use MCP Server. Create a python file in `tra_go/tmp/` directory of the project and share the code block there. And execute that file in terminal using `.venv/bin/python` command. Delete the file after use.
+- Don't use MCP Server. Create a python file in `temp/` directory of the project and share the code block there. And execute that file in terminal using `.venv/bin/python` command. Delete/clear the file after use.

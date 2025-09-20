@@ -16,7 +16,7 @@ WHITE := \033[37m
 RESET := \033[0m
 
 # .PHONY targets
-.PHONY: help create-venv install run clean clean-all clean-logs clean-cache \
+.PHONY: help create-venv install run clean clean-all clean-logs clean-cache clean-temp \
         get-clean-data new-yf-data tensorboard script-1 create-data-folders \
         generate-dot-env setup dev-setup lint format test check status \
         train train-parallel eval-new eval-saved eval-saved-double eval-saved-triple \
@@ -178,9 +178,14 @@ clean-cache: ## Remove Python cache files
 	find . -name "*.pyo" -delete 2>/dev/null || true
 	@printf "$(GREEN)✓ Cache files removed!$(RESET)\n"
 
+clean-temp: ## Remove temporary files from temp/ directories
+	@printf "$(BLUE)Removing temporary files...$(RESET)\n"
+	rm -rf temp/* 2>/dev/null || true
+	@printf "$(GREEN)✓ Temporary files removed!$(RESET)\n"
+
 clean: clean-cache ## Basic cleanup (cache files only)
 
-clean-all: clean-cache clean-logs ## Complete cleanup (cache + logs)
+clean-all: clean-cache clean-logs clean-temp ## Complete cleanup (cache + logs + temp)
 	@printf "$(GREEN)✓ Complete cleanup finished!$(RESET)\n"
 
 # Project structure targets
