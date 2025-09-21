@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from typing import Final
 
-import band_2.keras_model_band_2 as km_2
+import band_2.keras_model as km_2
 import band_2_1.keras_model as km_21_model
 import psutil
 import tensorflow as tf

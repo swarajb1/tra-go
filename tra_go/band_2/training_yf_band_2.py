@@ -1,6 +1,6 @@
 import os
 
-import band_2.keras_model_band_2 as km_2
+import band_2.keras_model as km_2
 import matplotlib.pyplot as plt
 import numpy as np
 import training.common as training_common
