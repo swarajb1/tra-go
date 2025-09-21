@@ -125,7 +125,7 @@ class AttentionWithWeights(Layer):
         return config
 
 
-def get_untrained_model_improved(
+def get_untrained_model(
     X_train: NDArray,
     Y_train: NDArray,
     include_attention: bool = True,
@@ -166,7 +166,7 @@ def get_untrained_model_improved(
                 activation="tanh",
                 recurrent_activation="sigmoid",
                 use_bias=True,
-                recurrent_dropout=0.2,
+                recurrent_dropout=settings.RECURRENT_DROPOUT,
                 unroll=False,
                 name=f"bidirectional_rnn_{layer_num}",
             ),
@@ -289,4 +289,4 @@ def get_multi_modal_model(X_train: NDArray, Y_train: NDArray, news_embedding_dim
     # ... (add final layers)
 
     # For now, return single-modal model
-    return get_untrained_model_improved(X_train, Y_train)
+    return get_untrained_model(X_train, Y_train)

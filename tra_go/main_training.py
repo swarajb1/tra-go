@@ -42,8 +42,8 @@ INTERVAL: IntervalType = IntervalType.MIN_1
 list_of_tickers: list[TickerOne] = [
     TickerOne.ICICIBANK,
     # TickerOne.RELIANCE,
-    # TickerOne.SBIN,
-    # TickerOne.LT,
+    TickerOne.SBIN,
+    TickerOne.LT,
     # TickerOne.ITC,
     # TickerOne.TCS,
     # TickerOne.HDFCBANK,

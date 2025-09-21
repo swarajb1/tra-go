@@ -4,6 +4,8 @@ import numpy as np
 from core.simulation_improved import Simulation
 from numpy.typing import NDArray
 
+SPECIAL_THRESHOLD = 0.8
+
 
 class WinGraph:
     def __init__(
@@ -151,8 +153,6 @@ class WinGraph:
 
         self.win_250_days = round(pro_250 * 100, 2)
 
-        SPECIAL_THRESHOLD = 0.75
-
         # special_condition
         if (
             fraction_win > SPECIAL_THRESHOLD
@@ -164,7 +164,7 @@ class WinGraph:
 
             print(f"\nall fractions are greater than {SPECIAL_THRESHOLD}")
 
-            # TODO: do a special simulation again, if all fractions are greater than 0.75,
+            # TODO: do a special simulation again, if all fractions are greater than 0.8,
             # where price 1 is that pred val, as most of times max/max are very close, and another will be price at 2m from the 2nd zone start, the trend will from set. based on 22 prices.
 
             # price_pred = (self.max_pred + self.min_pred) / 2
