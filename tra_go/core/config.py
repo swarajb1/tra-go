@@ -43,7 +43,8 @@ class GlobalConfig(BaseSettings):
     # Neural network architecture
     NUMBER_OF_NEURONS: int = Field(default=128, gt=0, description="Number of neurons per layer")
     NUMBER_OF_LAYERS: int = Field(default=3, gt=0, description="Number of hidden layers")
-    INITIAL_DROPOUT_PERCENT: float = Field(default=0, ge=0, le=100, description="Initial dropout percentage")
+    INITIAL_DROPOUT: float = Field(default=0, ge=0, le=1, description="Initial dropout")
+    RECURRENT_DROPOUT: float = Field(default=0, ge=0, le=1, description="Recurrent dropout")
 
     # Trading parameters
     RISK_TO_REWARD_RATIO: float = Field(description="Risk to reward ratio for trades")

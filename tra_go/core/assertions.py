@@ -31,9 +31,7 @@ def assert_env_vals() -> None:
     assert settings.NUMBER_OF_LAYERS > 0, f"Number of layers should be positive, got {settings.NUMBER_OF_LAYERS}"
 
     # Dropout validation
-    assert (
-        0 <= settings.INITIAL_DROPOUT_PERCENT <= 100
-    ), f"Dropout should be between 0 and 100, got {settings.INITIAL_DROPOUT_PERCENT}"
+    assert 0 <= settings.INITIAL_DROPOUT <= 1, f"Dropout should be between 0 and 1, got {settings.INITIAL_DROPOUT}"
 
 
 def print_settings() -> None:

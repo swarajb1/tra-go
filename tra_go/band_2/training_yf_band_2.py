@@ -234,7 +234,7 @@ class CustomEvaluation:
             + f"settings.NUMBER_OF_NEURONS = {settings.NUMBER_OF_NEURONS}  "
             + f"settings.NUMBER_OF_LAYERS = {settings.NUMBER_OF_LAYERS}\n"
             + f"settings.NUMBER_OF_EPOCHS = {settings.NUMBER_OF_EPOCHS} | "
-            + f"INITIAL_DROPOUT = {settings.INITIAL_DROPOUT_PERCENT}",
+            + f"INITIAL_DROPOUT = {settings.INITIAL_DROPOUT}",
             fontsize=20,
         )
 
@@ -472,7 +472,7 @@ class CustomEvaluation:
         print("\n\nNUMBER_OF_NEURONS\t\t", settings.NUMBER_OF_NEURONS)
         print("settings.NUMBER_OF_LAYERS\t\t", settings.NUMBER_OF_LAYERS)
         print("settings.NUMBER_OF_EPOCHS\t\t", settings.NUMBER_OF_EPOCHS)
-        print("INITIAL_DROPOUT\t\t\t", settings.INITIAL_DROPOUT_PERCENT)
+        print("INITIAL_DROPOUT\t\t\t", settings.INITIAL_DROPOUT)
 
         print("folder_name\t", self.model_file_name)
 

@@ -1,7 +1,3 @@
-"""
-Improved trading simulation module with better structure and performance.
-"""
-
 from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple

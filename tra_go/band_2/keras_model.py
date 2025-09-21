@@ -32,7 +32,7 @@ def get_untrained_model(X_train, Y_train):
             ),
         )
         #  dropout value decreases in exponential fashion.
-        model.add(Dropout(pow(1 + settings.INITIAL_DROPOUT_PERCENT / 100, 1 / (i + 1)) - 1))
+        model.add(Dropout(pow(1 + settings.INITIAL_DROPOUT, 1 / (i + 1)) - 1))
 
     model.add(TimeDistributed(Dense(units=Y_train[0].shape[1])))
 

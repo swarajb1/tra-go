@@ -1,3 +1,18 @@
+"""
+TRA-GO Band 2.1 Keras Model Implementation
+
+This module defines the neural network architecture for Band 2.1 of the TRA-GO trading system.
+It implements a bidirectional LSTM-based model for predicting stock price movements with
+custom activation layers and comprehensive evaluation metrics.
+
+The model architecture includes:
+- Multiple bidirectional LSTM layers with decreasing neuron counts
+- TimeDistributed dense layers for sequence processing
+- Global average pooling for feature aggregation
+- Custom activation layer for specialized output processing
+- Extensive custom metrics for trading performance evaluation
+"""
+
 import band_2_1.model_metrics as km_21_metrics
 import tensorflow as tf
 import training.common as training_common
@@ -17,6 +32,20 @@ from tensorflow.keras.models import Model
 
 
 class ModelCompileDetails:
+    """
+    Configuration class for model compilation settings.
+
+    This class encapsulates all the compilation parameters for the Band 2.1 Keras model,
+    including optimizer, loss function, and evaluation metrics. It provides a centralized
+    way to manage model training configuration.
+
+    Attributes:
+        learning_rate (float): Learning rate for the optimizer (default: 0.001)
+        optimizer: TensorFlow optimizer instance configured with the learning rate
+        loss: Custom loss function from band_2_1 model metrics
+        metrics (list): List of custom evaluation metrics for trading performance
+    """
+
     def __init__(self):
         self.learning_rate: float = 0.001
         self.optimizer = training_common.get_optimiser(self.learning_rate)
@@ -77,6 +106,24 @@ class CustomActivationLayer(Layer):
 
 
 def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:
+    """
+    Create an older version of the untrained Band 2.1 Keras model.
+
+    This function builds a sequential neural network model with bidirectional LSTM layers,
+    dropout regularization, and a custom activation layer. The architecture uses ReLU
+    activation for LSTM layers and includes time-distributed dense layers for sequence
+    processing.
+
+    Args:
+        X_train (NDArray): Training input data used to determine input shape
+        Y_train (NDArray): Training target data (not used in model creation, kept for API consistency)
+
+    Returns:
+        Model: Uncompiled Keras Sequential model ready for training
+
+    Note:
+        This is a legacy model architecture. Use get_untrained_model() for the current implementation.
+    """
     model = tf.keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -95,7 +142,7 @@ def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:
         model.add(
             Dropout(
                 pow(
-                    1 + settings.INITIAL_DROPOUT_PERCENT / 100,
+                    1 + settings.INITIAL_DROPOUT,
                     1 / (layer_num + 1),
                 )
                 - 1,
@@ -148,6 +195,33 @@ def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:
 
 
 def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
+    """
+    Create the current untrained Band 2.1 Keras model for stock price prediction.
+
+    This function builds a sequential neural network model optimized for trading predictions.
+    The architecture features:
+    - Multiple bidirectional LSTM layers with tanh activation and recurrent dropout
+    - Exponentially decreasing dropout rates for regularization
+    - TimeDistributed dense layers for sequence processing
+    - Global average pooling for feature aggregation
+    - Custom activation layer for specialized output processing
+
+    The model is designed to predict stock price movements with comprehensive evaluation
+    metrics including RMSE, trend accuracy, win percentage, and trading-specific metrics.
+
+    Args:
+        X_train (NDArray): Training input data used to determine input shape.
+            Expected shape: (batch_size, sequence_length, features)
+        Y_train (NDArray): Training target data (not used in model creation, kept for API consistency)
+
+    Returns:
+        Model: Compiled Keras Sequential model ready for training with custom optimizer,
+               loss function, and comprehensive evaluation metrics
+
+    Note:
+        The model uses settings from core.config for hyperparameters like NUMBER_OF_LAYERS,
+        NUMBER_OF_NEURONS, and INITIAL_DROPOUT_PERCENT.
+    """
     model = tf.keras.models.Sequential()
 
     model.add(Input(shape=(X_train[0].shape)))
@@ -161,7 +235,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
                     activation="tanh",
                     recurrent_activation="sigmoid",
                     use_bias=True,
-                    recurrent_dropout=0.0,
+                    recurrent_dropout=settings.RECURRENT_DROPOUT,
                     unroll=False,
                 ),
             ),
@@ -170,7 +244,7 @@ def get_untrained_model(X_train: NDArray, Y_train: NDArray) -> Model:
         model.add(
             Dropout(
                 pow(
-                    1 + settings.INITIAL_DROPOUT_PERCENT / 100,
+                    1 + settings.INITIAL_DROPOUT,
                     1 / (layer_num + 1),
                 )
                 - 1,
