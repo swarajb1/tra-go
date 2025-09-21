@@ -7,9 +7,9 @@ from typing import Final
 
 import band_2.keras_model_band_2 as km_2
 import band_2_1.keras_model as km_21_model
-import keras_model as km
 import psutil
 import tensorflow as tf
+import training.common as training_common
 import training_zero as an
 from core.config import settings
 from core.logger import log_model_training_complete, log_model_training_start, logger
@@ -40,15 +40,15 @@ INTERVAL: IntervalType = IntervalType.MIN_1
 
 list_of_tickers: list[TickerOne] = [
     TickerOne.ICICIBANK,
-    TickerOne.RELIANCE,
-    TickerOne.SBIN,
-    TickerOne.LT,
-    TickerOne.ITC,
-    TickerOne.TCS,
-    TickerOne.HDFCBANK,
-    TickerOne.BHARTIARTL,
-    TickerOne.AXISBANK,
-    TickerOne.HINDUNILVR,
+    # TickerOne.RELIANCE,
+    # TickerOne.SBIN,
+    # TickerOne.LT,
+    # TickerOne.ITC,
+    # TickerOne.TCS,
+    # TickerOne.HDFCBANK,
+    # TickerOne.BHARTIARTL,
+    # TickerOne.AXISBANK,
+    # TickerOne.HINDUNILVR,
     # TickerOne.KOTAKBANK,
     # TickerOne.INFY,
     # TickerOne.BAJFINANCE,
@@ -247,9 +247,9 @@ def main_training(ticker=None):
             interval=INTERVAL.value,
         )
 
-        model = km.get_untrained_model(X_train=X_train, Y_train=Y_train)
+        model = km_2.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
-        optimizer = km.get_optimiser(learning_rate=settings.LEARNING_RATE)
+        optimizer = training_common.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
         loss = km_2.metric_new_idea
 
@@ -257,8 +257,8 @@ def main_training(ticker=None):
             optimizer=optimizer,
             loss=loss,
             metrics=[
-                km.metric_rmse_percent,
-                km.metric_abs_percent,
+                training_common.metric_rmse_percent,
+                training_common.metric_abs_percent,
                 km_2.metric_loss_comp_2,
                 km_2.metric_win_percent,
                 km_2.metric_win_pred_capture_percent,

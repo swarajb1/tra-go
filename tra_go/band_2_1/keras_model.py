@@ -1,6 +1,6 @@
 import band_2_1.model_metrics as km_21_metrics
-import keras_model_tf as km_tf
 import tensorflow as tf
+import training.common as training_common
 from core.config import settings
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (
@@ -19,7 +19,7 @@ from tensorflow.keras.models import Model
 class ModelCompileDetails:
     def __init__(self):
         self.learning_rate: float = 0.001
-        self.optimizer = km_tf.get_optimiser(self.learning_rate)
+        self.optimizer = training_common.get_optimiser(self.learning_rate)
 
         self.loss = km_21_metrics.loss_function
 

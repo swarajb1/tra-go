@@ -1,9 +1,9 @@
 import os
 
 import band_2.keras_model_band_2 as km_2
-import keras_model as km
 import matplotlib.pyplot as plt
 import numpy as np
+import training.common as training_common
 from core.config import settings
 from core.simulation import Simulation
 from numpy.typing import NDArray
@@ -76,8 +76,8 @@ class CustomEvaluation:
         with custom_object_scope(
             {
                 "metric_new_idea": km_2.metric_new_idea,
-                "metric_rmse_percent": km.metric_rmse_percent,
-                "metric_abs_percent": km.metric_abs_percent,
+                "metric_rmse_percent": training_common.metric_rmse_percent,
+                "metric_abs_percent": training_common.metric_abs_percent,
                 "metric_loss_comp_2": km_2.metric_loss_comp_2,
                 "metric_win_percent": km_2.metric_win_percent,
                 "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
