@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Final
 
 import band_2.keras_model as km_2
+import band_2.model_metrics as km_2_metrics
 import band_2_1.keras_model as km_21_model
 import psutil
 import tensorflow as tf
@@ -251,7 +252,7 @@ def main_training(ticker=None):
 
         optimizer = training_common.get_optimiser(learning_rate=settings.LEARNING_RATE)
 
-        loss = km_2.metric_new_idea
+        loss = km_2_metrics.metric_new_idea
 
         model.compile(
             optimizer=optimizer,
@@ -259,12 +260,12 @@ def main_training(ticker=None):
             metrics=[
                 training_common.metric_rmse_percent,
                 training_common.metric_abs_percent,
-                km_2.metric_loss_comp_2,
-                km_2.metric_win_percent,
-                km_2.metric_win_pred_capture_percent,
-                km_2.metric_win_correct_trend_percent,
-                km_2.metric_pred_capture_percent,
-                km_2.metric_pred_trend_capture_percent,
+                km_2_metrics.metric_loss_comp_2,
+                km_2_metrics.metric_win_percent,
+                km_2_metrics.metric_win_pred_capture_percent,
+                km_2_metrics.metric_win_correct_trend_percent,
+                km_2_metrics.metric_pred_capture_percent,
+                km_2_metrics.metric_pred_trend_capture_percent,
             ],
         )
 

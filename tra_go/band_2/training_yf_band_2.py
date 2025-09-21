@@ -1,6 +1,6 @@
 import os
 
-import band_2.keras_model as km_2
+import band_2.model_metrics as km_2_metrics
 import matplotlib.pyplot as plt
 import numpy as np
 import training.common as training_common
@@ -75,19 +75,19 @@ class CustomEvaluation:
 
         with custom_object_scope(
             {
-                "metric_new_idea": km_2.metric_new_idea,
+                "metric_new_idea": km_2_metrics.metric_new_idea,
                 "metric_rmse_percent": training_common.metric_rmse_percent,
                 "metric_abs_percent": training_common.metric_abs_percent,
-                "metric_loss_comp_2": km_2.metric_loss_comp_2,
-                "metric_win_percent": km_2.metric_win_percent,
-                "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
-                "metric_pred_capture_percent": km_2.metric_pred_capture_percent,
-                "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
-                "metric_pred_capture": km_2.metric_pred_capture,
-                "metric_win_checkpoint": km_2.metric_win_checkpoint,
-                "metric_win_checkpoint_open": km_2.metric_win_correct_trend_percent,
-                "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
-                "metric_win_correct_trend_percent": km_2.metric_pred_trend_capture_percent,
+                "metric_loss_comp_2": km_2_metrics.metric_loss_comp_2,
+                "metric_win_percent": km_2_metrics.metric_win_percent,
+                "metric_win_pred_capture_percent": km_2_metrics.metric_win_pred_capture_percent,
+                "metric_pred_capture_percent": km_2_metrics.metric_pred_capture_percent,
+                "metric_correct_win_trend_percent": km_2_metrics.metric_win_correct_trend_percent,
+                "metric_pred_capture": km_2_metrics.metric_pred_capture,
+                "metric_win_checkpoint": km_2_metrics.metric_win_checkpoint,
+                "metric_win_checkpoint_open": km_2_metrics.metric_win_correct_trend_percent,
+                "metric_pred_trend_capture_percent": km_2_metrics.metric_pred_trend_capture_percent,
+                "metric_win_correct_trend_percent": km_2_metrics.metric_pred_trend_capture_percent,
             },
         ):
             model = load_model(file_path)
@@ -139,10 +139,12 @@ class CustomEvaluation:
         return
 
     def truncated_y_pred(self, y_arr: NDArray) -> NDArray:
-        first_non_eliminated_element_index: int = int(km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
-        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        first_non_eliminated_element_index: int = int(km_2_metrics.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
+        last_non_eliminated_element_index: int = (
+            y_arr.shape[1] - int(km_2_metrics.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        )
 
-        last_skipped_elements: int = int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1])
+        last_skipped_elements: int = int(km_2_metrics.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
         res: NDArray = y_arr.copy()
 
