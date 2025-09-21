@@ -20,7 +20,9 @@ from decorators.time import time_taken
 from numpy.typing import NDArray
 from tensorflow.keras.callbacks import (
     Callback,
+    EarlyStopping,
     ModelCheckpoint,
+    ReduceLROnPlateau,
     TensorBoard,
     TerminateOnNaN,
 )
@@ -79,6 +81,118 @@ def suppress_cpu_usage():
     subprocess.Popen(
         ["osascript", "-e", f'tell app "Terminal" to do script "{command}"'],
     )
+
+
+def create_training_callbacks(checkpoint_prefix: str, log_dir: str) -> list[Callback]:
+    """
+    Create a modular list of training callbacks including model checkpoints,
+    early stopping, and learning rate decay.
+
+    Args:
+        checkpoint_prefix: Base path for model checkpoints
+        log_dir: Directory for TensorBoard logs
+
+    Returns:
+        List of configured callbacks
+    """
+    callbacks = []
+
+    # TensorBoard logging
+    tensorboard_cb = TensorBoard(log_dir=log_dir, histogram_freq=1)
+    callbacks.append(tensorboard_cb)
+
+    # Terminate on NaN
+    ter_nan = TerminateOnNaN()
+    callbacks.append(ter_nan)
+
+    # Model checkpoints for various metrics
+    model_checkpoints = [
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-1.keras",
+            save_best_only=True,
+            monitor="loss",
+            mode="min",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-2.keras",
+            save_best_only=True,
+            monitor="val_loss",
+            mode="min",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-3.keras",
+            save_best_only=True,
+            monitor="metric_win_pred_capture_total_percent",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-4.keras",
+            save_best_only=True,
+            monitor="val_metric_win_pred_capture_total_percent",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-5.keras",
+            save_best_only=True,
+            monitor="metric_win_pred_trend_capture_percent",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-6.keras",
+            save_best_only=True,
+            monitor="val_metric_win_pred_trend_capture_percent",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-7.keras",
+            save_best_only=True,
+            monitor="metric_try_1",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-8.keras",
+            save_best_only=True,
+            monitor="val_metric_try_1",
+            mode="max",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-9.keras",
+            save_best_only=True,
+            monitor="metric_loss_comp_2",
+            mode="min",
+        ),
+        ModelCheckpoint(
+            f"{checkpoint_prefix} - modelCheckPoint-10.keras",
+            save_best_only=True,
+            monitor="val_metric_loss_comp_2",
+            mode="min",
+        ),
+    ]
+    callbacks.extend(model_checkpoints)
+
+    # Training enhancements - Early Stopping
+    if settings.EARLY_STOPPING_ENABLED:
+        early_stopping = EarlyStopping(
+            monitor="val_loss",
+            patience=settings.EARLY_STOPPING_PATIENCE,
+            restore_best_weights=settings.EARLY_STOPPING_RESTORE_BEST_WEIGHTS,
+            min_delta=settings.EARLY_STOPPING_MIN_DELTA,
+            verbose=1,
+        )
+        callbacks.append(early_stopping)
+
+    # Training enhancements - Learning Rate Decay
+    if settings.LR_DECAY_ENABLED:
+        lr_decay = ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=settings.LR_DECAY_FACTOR,
+            patience=settings.LR_DECAY_PATIENCE,
+            min_lr=settings.LR_DECAY_MIN_LR,
+            verbose=1,
+        )
+        callbacks.append(lr_decay)
+
+    return callbacks
 
 
 @time_taken
@@ -141,98 +255,13 @@ def main_training(ticker=None):
         f"{now_datetime} - {Y_TYPE.value.lower()}",
     )
 
-    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
-
     checkpoint_path_prefix: str = os.path.join(
         "training",
         "models",
         f"model - {now_datetime} - {X_TYPE.value.lower()} - {Y_TYPE.value.lower()} - {TICKER.name}",
     )
 
-    mcp_save_1 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-1.keras",
-        save_best_only=True,
-        monitor="loss",
-        mode="min",
-    )
-
-    mcp_save_2 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-2.keras",
-        save_best_only=True,
-        monitor="val_loss",
-        mode="min",
-    )
-
-    mcp_save_3 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-3.keras",
-        save_best_only=True,
-        monitor="metric_win_pred_capture_total_percent",
-        mode="max",
-    )
-
-    mcp_save_4 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-4.keras",
-        save_best_only=True,
-        monitor="val_metric_win_pred_capture_total_percent",
-        mode="max",
-    )
-
-    mcp_save_5 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-5.keras",
-        save_best_only=True,
-        monitor="metric_win_pred_trend_capture_percent",
-        mode="max",
-    )
-
-    mcp_save_6 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-6.keras",
-        save_best_only=True,
-        monitor="val_metric_win_pred_trend_capture_percent",
-        mode="max",
-    )
-
-    mcp_save_7 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-7.keras",
-        save_best_only=True,
-        monitor="metric_try_1",
-        mode="max",
-    )
-
-    mcp_save_8 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-8.keras",
-        save_best_only=True,
-        monitor="val_metric_try_1",
-        mode="max",
-    )
-
-    mcp_save_9 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-9.keras",
-        save_best_only=True,
-        monitor="metric_loss_comp_2",
-        mode="min",
-    )
-
-    mcp_save_10 = ModelCheckpoint(
-        f"{checkpoint_path_prefix} - modelCheckPoint-10.keras",
-        save_best_only=True,
-        monitor="val_metric_loss_comp_2",
-        mode="min",
-    )
-
-    callbacks = [
-        tensorboard_callback,
-        terNan,
-        mcp_save_1,
-        mcp_save_2,
-        mcp_save_3,
-        mcp_save_4,
-        mcp_save_5,
-        mcp_save_6,
-        mcp_save_7,
-        mcp_save_8,
-        mcp_save_9,
-        mcp_save_10,
-    ]
+    callbacks = create_training_callbacks(checkpoint_path_prefix, log_dir)
 
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
 

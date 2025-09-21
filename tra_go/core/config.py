@@ -70,6 +70,20 @@ class GlobalConfig(BaseSettings):
         description="Number of inter-op parallelism threads for TensorFlow",
     )
 
+    # Training enhancement settings
+    EARLY_STOPPING_ENABLED: bool = Field(default=True, description="Enable early stopping during training")
+    EARLY_STOPPING_PATIENCE: int = Field(default=10, gt=0, description="Patience for early stopping")
+    EARLY_STOPPING_MIN_DELTA: float = Field(default=0.001, ge=0, description="Minimum delta for early stopping")
+    EARLY_STOPPING_RESTORE_BEST_WEIGHTS: bool = Field(
+        default=True,
+        description="Restore best weights on early stopping",
+    )
+
+    LR_DECAY_ENABLED: bool = Field(default=True, description="Enable learning rate decay on plateau")
+    LR_DECAY_FACTOR: float = Field(default=0.5, gt=0, le=1, description="Factor by which to reduce learning rate")
+    LR_DECAY_PATIENCE: int = Field(default=5, gt=0, description="Patience for learning rate decay")
+    LR_DECAY_MIN_LR: float = Field(default=1e-6, gt=0, description="Minimum learning rate for decay")
+
     @computed_field
     @property
     def LOGGING_LEVEL(self) -> int:
