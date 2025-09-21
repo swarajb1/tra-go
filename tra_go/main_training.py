@@ -8,9 +8,9 @@ from typing import Final
 import band_2.keras_model as km_2
 import band_2.model_metrics as km_2_metrics
 import band_2_1.keras_model as km_21_model
+import model_training.common as training_common
 import psutil
 import tensorflow as tf
-import training.common as training_common
 import training_zero as an
 from core.config import settings
 from core.logger import log_model_training_complete, log_model_training_start, logger

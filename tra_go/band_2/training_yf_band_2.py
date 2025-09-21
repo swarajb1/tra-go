@@ -2,8 +2,8 @@ import os
 
 import band_2.model_metrics as km_2_metrics
 import matplotlib.pyplot as plt
+import model_training.common as training_common
 import numpy as np
-import training.common as training_common
 from core.config import settings
 from core.simulation import Simulation
 from numpy.typing import NDArray

@@ -14,8 +14,8 @@ The model architecture includes:
 """
 
 import band_2_1.model_metrics as km_21_metrics
+import model_training.common as training_common
 import tensorflow as tf
-import training.common as training_common
 from core.config import settings
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (

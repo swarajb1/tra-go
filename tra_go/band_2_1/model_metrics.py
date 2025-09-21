@@ -3,7 +3,7 @@ import tensorflow as tf
 # Small epsilon for safe divisions in percent metrics
 EPS = tf.constant(1e-7, dtype=tf.float32)
 from core.config import settings
-from training.common import metric_abs
+from model_training.common import metric_abs
 
 
 def loss_function(y_true, y_pred):

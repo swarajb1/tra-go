@@ -1,6 +1,6 @@
 import tensorflow as tf
+from model_training.common import metric_abs, metric_rmse
 from tensorflow.keras import backend as K
-from training.common import metric_abs, metric_rmse
 
 # RISK_TO_REWARD_RATIO: float = 0.2
 SKIP_FIRST_PERCENTILE: float = 0.15

@@ -1,5 +1,6 @@
 import tensorflow as tf
 from core.config import settings
+from model_training.common import metric_abs, metric_rmse
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import (
     LSTM,
@@ -9,7 +10,6 @@ from tensorflow.keras.layers import (
     Input,
     TimeDistributed,
 )
-from training.common import metric_abs, metric_rmse
 
 # RISK_TO_REWARD_RATIO: float = 0.2
 SKIP_FIRST_PERCENTILE: float = 0.15
