@@ -9,10 +9,6 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 
-# RISK_TO_REWARD_RATIO: float = 0.2
-SKIP_FIRST_PERCENTILE: float = 0.15
-SKIP_LAST_PERCENTILE: float = 0.15
-
 
 def get_untrained_model(X_train, Y_train):
     model = tf.keras.models.Sequential()

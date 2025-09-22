@@ -7,26 +7,7 @@ from model_training.common import metric_abs
 
 
 def loss_function(y_true, y_pred):
-    return (
-        # metric_abs(y_true[:, :2], y_pred[:, :2])
-        # +
-        # metric_abs(y_true[:, 2:], y_pred[:, 2:]) / 20
-        # +
-        # metric_average_in(y_true, y_pred)
-        # +
-        metric_loss_comp_2(y_true, y_pred)
-    )
-
-
-def metric_average_in(y_true, y_pred):
-    average_true = (y_true[:, 0] + y_true[:, 1]) / 2
-    average_pred = (y_pred[:, 0] + y_pred[:, 1]) / 2
-
-    return (
-        metric_abs(average_true, average_pred)
-        # + metric_abs(y_true[:, 0], y_pred[:, 0])
-        # + metric_abs(y_true[:, 1], y_pred[:, 1])
-    )
+    return metric_abs(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
 
 
 def _get_min_max_values(y_true, y_pred):
@@ -146,7 +127,7 @@ def metric_loss_comp_2(y_true, y_pred):
 def penalty_half_inside(y_true, y_pred):
     min_true, max_true, min_pred, max_pred = _get_min_max_values(y_true, y_pred)
 
-    # Use thresholded boolean trend for consistent behavior with other metrics
+    # Use threshold boolean trend for consistent behavior with other metrics
     pred_trend = tf.greater_equal(y_pred[:, 2], 0.5)  # bool
 
     is_max_pred_less_than_max_true = tf.less_equal(max_pred, max_true)
@@ -337,15 +318,3 @@ def metric_try_2(y_true, y_pred):
 
     total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
     return pred_trend_capture / (total_capture_possible + EPS) * 100
-
-
-def metric_abs_percent(y_true, y_pred):
-    error = y_true - y_pred
-    denom = tf.reduce_mean(tf.abs(y_true[:, :2])) + EPS
-    return tf.reduce_mean(tf.abs(error[:, :2])) / denom * 100
-
-
-def metric_rmse_percent(y_true, y_pred):
-    error = y_true - y_pred
-    denom = tf.reduce_mean(tf.abs(y_true[:, :2])) + EPS
-    return tf.sqrt(tf.reduce_mean(tf.square(error[:, :2]))) / denom * 100
