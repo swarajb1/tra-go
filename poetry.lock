@@ -3727,7 +3727,7 @@ description = "TensorFlow acceleration for Mac GPUs."
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "sys_platform == \"darwin\""
+markers = "sys_platform == \"darwin\" and platform_machine == \"arm64\""
 files = [
     {file = "tensorflow_metal-1.2.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:bc735e36c97874e41f77ec2e7421ff745d2ec36ee641141c8091e4cc2dbcc819"},
     {file = "tensorflow_metal-1.2.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:5fa7cee627031c14f45bd97ff0ef422cd6c3866199ff99cf29b94db6674ceb42"},
@@ -4259,4 +4259,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.12"
-content-hash = "bcd2fc72413e3df73d0b40d174e6f779f812d47a1fdb7488fd803e504b2f2307"
+content-hash = "adab7b48c6935117f27aa81cf7537063cf48e1e64f332891415e925232bf7f56"
