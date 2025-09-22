@@ -53,10 +53,8 @@ class ModelCompileDetails:
         self.loss = km_21_metrics.loss_function
 
         self.metrics = [
-            # km_tf.metric_rmse_percent,
-            # km_tf.metric_abs_percent,
-            training_common.metric_rmse_percent,
-            training_common.metric_abs_percent,
+            km_21_metrics.metric_rmse_percent,
+            km_21_metrics.metric_abs_percent,
             km_21_metrics.metric_correct_trends_full,
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
@@ -65,7 +63,6 @@ class ModelCompileDetails:
             km_21_metrics.metric_win_correct_trend_percent,
             km_21_metrics.metric_win_pred_trend_capture_percent,
             km_21_metrics.metric_try_1,
-            # km_21_metrics.metric_try_2,
             km_21_metrics.stoploss_incurred,
         ]
 
@@ -103,6 +100,38 @@ class CustomActivationLayer(Layer):
         config = super().get_config()
         config.update({"hard_threshold": self.hard_threshold})
         return config
+
+
+def get_custom_scope():
+    """
+    Get the custom scope dictionary containing all metrics and custom objects
+    required for model loading and evaluation.
+
+    This function centralizes the definition of custom objects needed when loading
+    Keras models with custom metrics and layers. It includes all the custom metrics
+    from band_2_1.model_metrics and the CustomActivationLayer.
+
+    Returns:
+        dict: Dictionary mapping custom object names to their implementations,
+              suitable for use with tf.keras.models.load_model(custom_objects=...)
+    """
+    return {
+        "loss_function": km_21_metrics.loss_function,
+        "metric_rmse_percent": km_21_metrics.metric_rmse_percent,
+        "metric_abs_percent": km_21_metrics.metric_abs_percent,
+        "metric_loss_comp_2": km_21_metrics.metric_loss_comp_2,
+        "metric_win_percent": km_21_metrics.metric_win_percent,
+        "metric_pred_capture_per_win_percent": km_21_metrics.metric_pred_capture_per_win_percent,
+        "metric_win_pred_capture_percent": km_21_metrics.metric_win_pred_capture_percent,
+        "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
+        "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
+        "metric_win_pred_capture_total_percent": km_21_metrics.metric_win_pred_capture_total_percent,
+        "metric_try_1": km_21_metrics.metric_try_1,
+        "metric_try_2": km_21_metrics.metric_try_2,
+        "stoploss_incurred": km_21_metrics.stoploss_incurred,
+        "CustomActivationLayer": CustomActivationLayer,
+        "metric_correct_trends_full": km_21_metrics.metric_correct_trends_full,
+    }
 
 
 def get_untrained_model_old(X_train: NDArray, Y_train: NDArray) -> Model:

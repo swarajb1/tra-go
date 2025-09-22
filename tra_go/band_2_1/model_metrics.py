@@ -2,12 +2,12 @@ import tensorflow as tf
 
 # Small epsilon for safe divisions in percent metrics
 EPS = tf.constant(1e-7, dtype=tf.float32)
+import model_training.common as training_common
 from core.config import settings
-from model_training.common import metric_abs
 
 
 def loss_function(y_true, y_pred):
-    return metric_abs(y_true, y_pred) + metric_loss_comp_2(y_true, y_pred)
+    return training_common.metric_abs(y_true[:, :2], y_pred[:, :2]) + metric_loss_comp_2(y_true, y_pred)
 
 
 def _get_min_max_values(y_true, y_pred):
@@ -127,7 +127,7 @@ def metric_loss_comp_2(y_true, y_pred):
 def penalty_half_inside(y_true, y_pred):
     min_true, max_true, min_pred, max_pred = _get_min_max_values(y_true, y_pred)
 
-    # Use threshold boolean trend for consistent behavior with other metrics
+    # Use thresholded boolean trend for consistent behavior with other metrics
     pred_trend = tf.greater_equal(y_pred[:, 2], 0.5)  # bool
 
     is_max_pred_less_than_max_true = tf.less_equal(max_pred, max_true)
@@ -318,3 +318,11 @@ def metric_try_2(y_true, y_pred):
 
     total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
     return pred_trend_capture / (total_capture_possible + EPS) * 100
+
+
+def metric_abs_percent(y_true, y_pred):
+    return training_common.metric_abs_percent(y_true[:, :2], y_pred[:, :2])
+
+
+def metric_rmse_percent(y_true, y_pred):
+    return training_common.metric_rmse_percent(y_true[:, :2], y_pred[:, :2])

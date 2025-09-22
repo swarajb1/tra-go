@@ -50,12 +50,12 @@ class ModelCompileDetails:
     """
 
     def __init__(self) -> None:
-        self.learning_rate: float = 0.001
+        self.learning_rate: float = 0.0001
         self.optimizer = training_common.get_optimiser(self.learning_rate)
         self.loss = km_21_metrics.loss_function
         self.metrics = [
-            training_common.metric_rmse_percent,
-            training_common.metric_abs_percent,
+            km_21_metrics.metric_rmse_percent,
+            km_21_metrics.metric_abs_percent,
             km_21_metrics.metric_correct_trends_full,
             km_21_metrics.metric_loss_comp_2,
             km_21_metrics.metric_win_percent,
