@@ -1,9 +1,9 @@
+import model_training.common as training_common
 import tensorflow as tf
+from core.config import settings
 
 # Small epsilon for safe divisions in percent metrics
 EPS = tf.constant(1e-7, dtype=tf.float32)
-import model_training.common as training_common
-from core.config import settings
 
 
 def loss_function(y_true, y_pred):

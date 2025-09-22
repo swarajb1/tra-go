@@ -28,6 +28,7 @@ from tensorflow.keras.callbacks import (
 )
 from tensorflow.keras.models import Model
 from tf_data_utils import configure_tf_data_performance, log_tf_data_performance_tips
+from tf_utils import configure_tensorflow_performance
 
 from database.enums import BandType, IntervalType, TickerOne
 
@@ -433,6 +434,8 @@ def main_training_4_cores(ticker=None):
 
 
 if __name__ == "__main__":
+    configure_tensorflow_performance()
+
     # Example usage of the new 3-core functions
 
     # Option 1: Train a single ticker using 3 cores
@@ -440,4 +443,8 @@ if __name__ == "__main__":
     # main_training_3_cores(TickerOne.RELIANCE)  # Train specific ticker
 
     # Default: Run single training (original behavior)
-    main_training()
+    try:
+        main_training()
+    except Exception as e:
+        logger.error(f"Training process encountered an error: {str(e)}")
+        raise

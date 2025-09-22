@@ -69,7 +69,7 @@ def dispatch_command(args: argparse.Namespace) -> None:
         return
 
     if command == "train":
-        for ticker in list_of_tickers * 2:
+        for ticker in list_of_tickers * 5:
             main_training_4_cores(ticker)
 
     elif command == "training_new":
