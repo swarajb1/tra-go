@@ -17,15 +17,14 @@ Key improvements over the original:
 
 from typing import Optional
 
-import band_2_1.model_metrics as km_21_metrics
 import matplotlib.pyplot as plt
-import model_training.common as training_common
 import numpy as np
 import tensorflow as tf
 from core.config import settings
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (
     GRU,
+    LSTM,
     Attention,
     Bidirectional,
     Dense,
@@ -36,68 +35,6 @@ from tensorflow.keras.layers import (
     TimeDistributed,
 )
 from tensorflow.keras.models import Model
-
-
-class ModelCompileDetails:
-    """
-    Configuration class for model compilation details.
-
-    Attributes:
-        learning_rate (float): Learning rate for the optimizer.
-        optimizer: TensorFlow optimizer instance.
-        loss: Loss function for training.
-        metrics: List of metrics for evaluation.
-    """
-
-    def __init__(self) -> None:
-        self.learning_rate: float = 0.0001
-        self.optimizer = training_common.get_optimiser(self.learning_rate)
-        self.loss = km_21_metrics.loss_function
-        self.metrics = [
-            km_21_metrics.metric_rmse_percent,
-            km_21_metrics.metric_abs_percent,
-            km_21_metrics.metric_correct_trends_full,
-            km_21_metrics.metric_loss_comp_2,
-            km_21_metrics.metric_win_percent,
-            km_21_metrics.metric_win_pred_capture_percent,
-            km_21_metrics.metric_win_pred_capture_total_percent,
-            km_21_metrics.metric_win_correct_trend_percent,
-            km_21_metrics.metric_win_pred_trend_capture_percent,
-            km_21_metrics.metric_try_1,
-            km_21_metrics.stoploss_incurred,
-        ]
-
-
-class CustomActivationLayer(Layer):
-    """
-    Custom activation layer that applies linear activation to the first two features
-    and sigmoid to the third feature, with optional hard thresholding.
-
-    Args:
-        hard_threshold (bool): If True, rounds the third feature to 0/1 at inference.
-    """
-
-    def __init__(self, hard_threshold: bool = False, **kwargs) -> None:
-        self.hard_threshold = hard_threshold
-        super().__init__(**kwargs)
-
-    def call(self, inputs: tf.Tensor, training: Optional[bool] = None) -> tf.Tensor:
-        # Apply linear activation to the first two features
-        first_two_features = inputs[:, :2]
-
-        # Apply sigmoid to the third feature
-        third_feature = tf.sigmoid(inputs[:, 2:3])
-
-        if self.hard_threshold and training is False:
-            third_feature = tf.round(third_feature)
-
-        # Concatenate back
-        return tf.concat([first_two_features, third_feature], axis=-1)
-
-    def get_config(self) -> dict:
-        config = super().get_config()
-        config.update({"hard_threshold": self.hard_threshold})
-        return config
 
 
 class AttentionWithWeights(Layer):
@@ -128,7 +65,7 @@ class AttentionWithWeights(Layer):
 def get_untrained_model(
     X_train: NDArray,
     Y_train: NDArray,
-    include_attention: bool = True,
+    include_attention: bool = False,
     use_gru: bool = True,
 ) -> Model:
     """
@@ -156,7 +93,7 @@ def get_untrained_model(
     x = inputs
 
     # Recurrent layers with GRUs or LSTMs
-    rnn_layer = GRU if use_gru else tf.keras.layers.LSTM
+    rnn_layer = GRU if use_gru else LSTM
     for layer_num in range(settings.NUMBER_OF_LAYERS):
         units = settings.NUMBER_OF_NEURONS // (2**layer_num)
         x = Bidirectional(
@@ -197,12 +134,13 @@ def get_untrained_model(
     else:
         model = Model(inputs=inputs, outputs=outputs, name="Improved_TRA_GO_Model")
 
+    model_compile_config = ModelCompileConfig()
+
     # Compile
-    compile_details = ModelCompileDetails()
     model.compile(
-        optimizer=compile_details.optimizer,
-        loss=compile_details.loss,
-        metrics=compile_details.metrics,
+        optimizer=model_compile_config.optimizer,
+        loss=ModelCompileConfig.loss,
+        metrics=ModelCompileConfig.metrics,
     )
 
     model.summary()
