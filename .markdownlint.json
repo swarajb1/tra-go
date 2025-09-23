@@ -2,6 +2,13 @@
     "MD013": false,
     "MD029": true,
     "MD040": {
-        "allowed_languages": ["text", "bash", "python"]
+        "allowed_languages": [
+            "text",
+            "bash",
+            "python",
+            "properties",
+            "json",
+            "yaml"
+        ]
     }
 }

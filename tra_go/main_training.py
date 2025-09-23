@@ -1,6 +1,5 @@
 import gc
 import os
-import subprocess
 import time
 from datetime import datetime
 from typing import Final
@@ -22,15 +21,11 @@ from decorators.time import time_taken
 from numpy.typing import NDArray
 from tensorflow.keras.callbacks import (
     Callback,
-    EarlyStopping,
-    ModelCheckpoint,
-    ReduceLROnPlateau,
-    TensorBoard,
     TerminateOnNaN,
 )
 from tensorflow.keras.models import Model
 from tf_data_utils import log_tf_data_performance_tips
-from tf_utils import configure_tensorflow_performance
+from utils.training_utils import create_training_callbacks
 
 from database.enums import BandType, IntervalType, TickerOne
 
@@ -68,136 +63,6 @@ list_of_tickers: list[TickerOne] = [
 ]
 
 
-def suppress_cpu_usage():
-    if settings.NUMBER_OF_NEURONS <= 128:
-        return
-
-    # Get the current process ID
-    pid = os.getpid()
-
-    SUPPRESSION_LEVEL: int = 15
-
-    # The command you want to run
-    command = f"cpulimit -l {SUPPRESSION_LEVEL} -p {pid}"
-
-    # Open a new terminal and run the command
-    subprocess.Popen(
-        ["osascript", "-e", f'tell app "Terminal" to do script "{command}"'],
-    )
-
-
-def create_training_callbacks(checkpoint_prefix: str, log_dir: str) -> list[Callback]:
-    """
-    Create a modular list of training callbacks including model checkpoints,
-    early stopping, and learning rate decay.
-
-    Args:
-        checkpoint_prefix: Base path for model checkpoints
-        log_dir: Directory for TensorBoard logs
-
-    Returns:
-        List of configured callbacks
-    """
-    callbacks = []
-
-    # TensorBoard logging
-    tensorboard_cb = TensorBoard(log_dir=log_dir, histogram_freq=1)
-    callbacks.append(tensorboard_cb)
-
-    # Terminate on NaN
-    ter_nan = TerminateOnNaN()
-    callbacks.append(ter_nan)
-
-    # Model checkpoints for various metrics
-    model_checkpoints = [
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-1.keras",
-            save_best_only=True,
-            monitor="loss",
-            mode="min",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-2.keras",
-            save_best_only=True,
-            monitor="val_loss",
-            mode="min",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-3.keras",
-            save_best_only=True,
-            monitor="metric_win_pred_capture_total_percent",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-4.keras",
-            save_best_only=True,
-            monitor="val_metric_win_pred_capture_total_percent",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-5.keras",
-            save_best_only=True,
-            monitor="metric_win_pred_trend_capture_percent",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-6.keras",
-            save_best_only=True,
-            monitor="val_metric_win_pred_trend_capture_percent",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-7.keras",
-            save_best_only=True,
-            monitor="metric_try_1",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-8.keras",
-            save_best_only=True,
-            monitor="val_metric_try_1",
-            mode="max",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-9.keras",
-            save_best_only=True,
-            monitor="metric_loss_comp_2",
-            mode="min",
-        ),
-        ModelCheckpoint(
-            f"{checkpoint_prefix} - modelCheckPoint-10.keras",
-            save_best_only=True,
-            monitor="val_metric_loss_comp_2",
-            mode="min",
-        ),
-    ]
-    callbacks.extend(model_checkpoints)
-
-    # Training enhancements - Early Stopping
-    if settings.EARLY_STOPPING_ENABLED:
-        early_stopping = EarlyStopping(
-            monitor="val_loss",
-            patience=settings.EARLY_STOPPING_PATIENCE,
-            restore_best_weights=settings.EARLY_STOPPING_RESTORE_BEST_WEIGHTS,
-            min_delta=settings.EARLY_STOPPING_MIN_DELTA,
-            verbose=1,
-        )
-        callbacks.append(early_stopping)
-
-    # Training enhancements - Learning Rate Decay
-    if settings.LR_DECAY_ENABLED:
-        lr_decay = ReduceLROnPlateau(
-            monitor="val_loss",
-            factor=settings.LR_DECAY_FACTOR,
-            patience=settings.LR_DECAY_PATIENCE,
-            min_lr=settings.LR_DECAY_MIN_LR,
-            verbose=1,
-        )
-        callbacks.append(lr_decay)
-
-    return callbacks
-
-
 @time_taken
 def main_training(ticker=None):
     """Main training function with proper error handling and logging."""
@@ -213,8 +78,6 @@ def main_training(ticker=None):
         logger.info("Optimized data loader is ENABLED (tf.data pipelines)")
     else:
         logger.info("Optimized data loader is DISABLED (traditional numpy arrays)")
-
-    # suppress_cpu_usage()
 
     if ticker is not None:
         global TICKER
@@ -413,39 +276,3 @@ def main_training(ticker=None):
 
     # Final garbage collection before function completion
     gc.collect()
-
-
-def main_training_4_cores(ticker=None):
-    """
-    Run main training using 4 CPU cores for enhanced performance.
-
-    This function configures TensorFlow to use 4 CPU cores for the training process,
-    which can improve training speed compared to single-core execution while
-    maintaining system responsiveness.
-
-    Args:
-        ticker: Optional ticker to train. If None, uses the global TICKER.
-    """
-    logger.info(
-        f"TensorFlow threading configured via environment variables for {settings.TF_INTRA_OP_PARALLELISM_THREADS} CPU cores",
-    )
-
-    # Run the main training function
-    return main_training(ticker=ticker)
-
-
-if __name__ == "__main__":
-    configure_tensorflow_performance()
-
-    # Example usage of the new 3-core functions
-
-    # Option 1: Train a single ticker using 3 cores
-    # main_training_3_cores()  # Uses default TICKER
-    # main_training_3_cores(TickerOne.RELIANCE)  # Train specific ticker
-
-    # Default: Run single training (original behavior)
-    try:
-        main_training()
-    except Exception as e:
-        logger.error(f"Training process encountered an error: {str(e)}")
-        raise
