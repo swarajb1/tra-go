@@ -15,7 +15,7 @@ The model architecture includes:
 
 import band_2_1.model_metrics as km_21_metrics
 import tensorflow as tf
-from band_2_1.keras_model_common import ModelCompileConfig
+from band_2_1.keras_model_common import CustomActivationLayer, ModelCompileConfig
 from core.config import settings
 from numpy.typing import NDArray
 from tensorflow.keras.layers import (
