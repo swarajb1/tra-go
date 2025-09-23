@@ -16,7 +16,7 @@ WHITE := \033[37m
 RESET := \033[0m
 
 # .PHONY targets
-.PHONY: help create-venv install run clean clean-all clean-logs clean-cache clean-temp \
+.PHONY: help create-venv install run clean clean-all clean-logs clean-cache clean-temp clean-discarded \
         get-clean-data new-yf-data tensorboard script-1 create-data-folders \
         generate-dot-env setup dev-setup lint format test check status check-venv verify-venv \
         train train-parallel eval-new eval-saved eval-saved-double eval-saved-triple \
@@ -97,7 +97,7 @@ eval-saved-triple: ## Evaluate triple-tier saved models
 eval-old: ## Evaluate old models
 	@$(MAKE) run MODEL=old NUM=$(NUM) MOVE=$(MOVE)
 
-eval-discarded: ## Evaluate and clean discarded models
+eval-discarded: ## Evaluate discarded models
 	@$(MAKE) run MODEL=discarded NUM=$(NUM) MOVE=true
 
 # Data management targets
@@ -187,6 +187,11 @@ clean: clean-cache ## Basic cleanup (cache files only)
 
 clean-all: clean-cache clean-logs clean-temp ## Complete cleanup (cache + logs + temp)
 	@printf "$(GREEN)✓ Complete cleanup finished!$(RESET)\n"
+
+clean-discarded: ## Remove all models in discarded folder
+	@printf "$(BLUE)Removing all models in discarded folder...$(RESET)\n"
+	rm -rf training/models_zz_discarded/* 2>/dev/null || true
+	@printf "$(GREEN)✓ Discarded models removed!$(RESET)\n"
 
 # Project structure targets
 create-data-folders: ## Create data and training folders
