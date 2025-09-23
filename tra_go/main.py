@@ -5,6 +5,7 @@ import sys
 from core.assertions import assert_env_vals
 from core.evaluate_models import evaluate_models
 from main_training import list_of_tickers, main_training_4_cores
+from tf_utils import configure_tensorflow_performance
 
 from database.enums import ModelLocationType
 
@@ -111,6 +112,8 @@ def main():
     os.system("clear")  # Optional: Consider removing or making conditional for non-interactive runs
 
     assert_env_vals()
+
+    configure_tensorflow_performance()
 
     try:
         args = parse_arguments()

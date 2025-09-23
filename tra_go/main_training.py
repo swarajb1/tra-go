@@ -7,7 +7,9 @@ from typing import Final
 
 import band_2.keras_model as km_2
 import band_2.model_metrics as km_2_metrics
-import band_2_1.keras_model as km_21_model
+
+# import band_2_1.keras_model as km_21_model
+import band_2_1.keras_model_improved as km_21_model
 import model_training.common as training_common
 import psutil
 import tensorflow as tf
@@ -27,7 +29,7 @@ from tensorflow.keras.callbacks import (
     TerminateOnNaN,
 )
 from tensorflow.keras.models import Model
-from tf_data_utils import configure_tf_data_performance, log_tf_data_performance_tips
+from tf_data_utils import log_tf_data_performance_tips
 from tf_utils import configure_tensorflow_performance
 
 from database.enums import BandType, IntervalType, TickerOne
@@ -207,7 +209,6 @@ def main_training(ticker=None):
     # Configure TensorFlow for optimal performance with tf.data pipelines (if enabled)
 
     if settings.USE_OPTIMIZED_DATA_LOADER:
-        configure_tf_data_performance()
         log_tf_data_performance_tips()
         logger.info("Optimized data loader is ENABLED (tf.data pipelines)")
     else:

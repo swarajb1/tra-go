@@ -7,7 +7,11 @@ EPS = tf.constant(1e-7, dtype=tf.float32)
 
 
 def loss_function(y_true, y_pred):
-    return training_common.metric_abs(y_true[:, :2], y_pred[:, :2]) + metric_loss_comp_2(y_true, y_pred)
+    return (
+        training_common.metric_abs(y_true[:, :2], y_pred[:, :2])
+        + training_common.metric_rmse(y_true[:, :2], y_pred[:, :2])
+        + metric_loss_comp_2(y_true, y_pred)
+    )
 
 
 def _get_min_max_values(y_true, y_pred):
@@ -186,10 +190,6 @@ def metric_win_percent(y_true, y_pred):
     win_fraction = tf.reduce_mean(tf.cast(wins, dtype=tf.float32))
 
     return win_fraction * 100
-
-
-def metric_win_pred_capture_percent(y_true, y_pred):
-    return metric_pred_capture_per_win_percent(y_true, y_pred)
 
 
 def metric_pred_capture_per_win_percent(y_true, y_pred):

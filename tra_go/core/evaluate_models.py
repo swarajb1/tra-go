@@ -85,24 +85,18 @@ def evaluate_models(
             if band_type.value == x_type_str:
                 model_x_type = band_type
                 break
-        del band_type
-        del x_type_str
 
         y_type_str = file_name_1.split(" - ")[3]
         for band_type in BandType:
             if band_type.value == y_type_str:
                 model_y_type = band_type
                 break
-        del band_type
-        del y_type_str
 
         ticker_str = file_name_1.split(" - ")[4]
         for ticker in TickerOne:
             if ticker.name == ticker_str:
                 model_ticker = ticker
                 break
-        del ticker
-        del ticker_str
 
         df = an.get_data_all_df(ticker=model_ticker, interval=model_interval.value)
 
