@@ -4,7 +4,8 @@ import sys
 
 from core.assertions import assert_env_vals
 from core.evaluate_models import evaluate_models
-from main_training import list_of_tickers, main_training_4_cores
+from core.logger import log_warning
+from main_training import list_of_tickers, main_training
 from tf_utils import configure_tensorflow_performance
 
 from database.enums import ModelLocationType
@@ -61,6 +62,7 @@ def dispatch_command(args: argparse.Namespace) -> None:
     move_files = args.move_files == "true"
 
     if not command:
+        log_warning("No command provided, defaulting to evaluating the latest trained model.")
         # Default behavior when no command is provided
         evaluate_models(
             model_location_type=ModelLocationType.TRAINED_NEW,
@@ -71,7 +73,7 @@ def dispatch_command(args: argparse.Namespace) -> None:
 
     if command == "train":
         for ticker in list_of_tickers * 5:
-            main_training_4_cores(ticker)
+            main_training(ticker)
 
     elif command == "training_new":
         evaluate_models(

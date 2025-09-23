@@ -14,10 +14,10 @@ import psutil
 import tensorflow as tf
 import training_zero as an
 from core.config import settings
-from core.logger import log_model_training_complete, log_model_training_start, logger
+from core.logger import logger
 from data_loader import DataLoader
 from data_loader_tf import create_optimized_data_loader
-from decorators.time import time_taken
+from decorators.time import format_time, time_taken
 from numpy.typing import NDArray
 from tensorflow.keras.callbacks import (
     Callback,
@@ -112,7 +112,7 @@ def main_training(ticker=None):
 
     terNan: Callback = TerminateOnNaN()
 
-    log_model_training_start(TICKER.name, Y_TYPE.value, now_datetime)
+    logger.info(f"Starting model training | Ticker: {TICKER.name} | Type: {Y_TYPE.value} | Time: {now_datetime}")
 
     log_dir: str = os.path.join(
         "training",
@@ -260,7 +260,8 @@ def main_training(ticker=None):
         logger.error(f"Model training failed: {str(e)}")
         raise
 
-    log_model_training_complete(TICKER.name, Y_TYPE.value, time.time() - time_start)
+    duration = format_time(time.time() - time_start)
+    logger.info(f"Completed model training | Ticker: {TICKER.name} | Type: {Y_TYPE.value} | Duration: {duration}")
 
     print("\nmodel : training done. \n")
 

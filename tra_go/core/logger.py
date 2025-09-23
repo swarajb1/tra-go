@@ -2,6 +2,7 @@
 Centralized logging configuration for the tra_go project.
 """
 
+import inspect
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
@@ -9,7 +10,6 @@ from pathlib import Path
 from typing import Optional
 
 from core.config import settings
-from decorators.time import format_time
 
 
 def setup_logger(
@@ -84,27 +84,12 @@ def setup_logger(
 logger = setup_logger()
 
 
-def log_model_training_start(ticker: str, model_type: str, datetime: str) -> None:
-    """Log the start of model training."""
-    logger.info(f"Starting model training | Ticker: {ticker} | Type: {model_type} | Time: {datetime}")
-
-
-def log_model_training_complete(ticker: str, model_type: str, duration_seconds: float) -> None:
-    """Log the completion of model training."""
-    duration = format_time(duration_seconds)
-
-    logger.info(f"Completed model training | Ticker: {ticker} | Type: {model_type} | Duration: {duration}")
-
-
-def log_data_loading(ticker: str, interval: str, shape: tuple) -> None:
-    """Log data loading information."""
-    logger.info(f"Data loaded | Ticker: {ticker} | Interval: {interval} | Shape: {shape}")
-
-
 def log_error(operation: str, error: Exception, **kwargs) -> None:
     """Log error with context and additional metadata."""
+    caller_frame = inspect.stack()[1]
+    caller_info = f"{Path(caller_frame.filename).name}:{caller_frame.lineno} in {caller_frame.function}"
     context = " | ".join([f"{k}: {v}" for k, v in kwargs.items()])
-    error_msg = f"Error in {operation}: {str(error)}"
+    error_msg = f"[{caller_info}] Error in {operation}: {str(error)}"
     if context:
         error_msg += f" | Context: {context}"
     logger.error(error_msg, exc_info=True, stack_info=True)
@@ -112,8 +97,10 @@ def log_error(operation: str, error: Exception, **kwargs) -> None:
 
 def log_warning(message: str, **kwargs) -> None:
     """Log warning message with optional context."""
+    caller_frame = inspect.stack()[1]
+    caller_info = f"{Path(caller_frame.filename).name}:{caller_frame.lineno} in {caller_frame.function}"
     context = " | ".join([f"{k}: {v}" for k, v in kwargs.items()])
-    warning_msg = message
+    warning_msg = f"[{caller_info}] {message}"
     if context:
         warning_msg += f" | Context: {context}"
     logger.warning(warning_msg)
