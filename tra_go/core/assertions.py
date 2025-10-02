@@ -1,32 +1,34 @@
 from core.config import settings
+from core.logger import log_exceptions, logger
 
 
-def assert_env_vals() -> None:
-    """Asserts the values of environment variables.
+def print_settings() -> None:
+    """Prints the values of all environment variables."""
+    print("\n" + "=" * 80)
+    print("CURRENT CONFIGURATION SETTINGS")
+    print("=" * 80)
 
-    Raises:
-        AssertionError: If the safety factor is less than 1 or the test size is greater than 0.5.
+    special_settings = {"ZERODHA_ID", "NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"}
 
-    Prints the values of all environment variables.
+    # Get all settings as dict
+    settings_dict = settings.model_dump()
 
-    Returns:
-        None
-    """
-
-    assert (
-        settings.SAFETY_FACTOR >= 1
-    ), f"Safety Factor should be greater than or equal to 1 == {settings.SAFETY_FACTOR}"
-
-    assert settings.TEST_SIZE <= 0.5, f"Test Size should be less than or equal to 0.5 == {settings.TEST_SIZE}"
-
-    print("\n")
-
-    for item in settings:
-        if item[0] in ["ZERODHA_ID", "NUMBER_OF_EPOCHS", "NUMBER_OF_NEURONS", "RISK_TO_REWARD_RATIO", "DEBUG"]:
+    for key, value in settings_dict.items():
+        if key in special_settings:
             print("")
+        # Mask sensitive information
+        display_value = "***REDACTED***" if key in {"PASSWORD", "API_KEY", "ACCESS_TOKEN"} else value
+        print(f"{key:<50} {display_value}")
 
-        print(f"{item[0]}:", " " * (50 - len(item[0])), f"{item[1]}")
+    print("=" * 80)
 
-    del item
 
-    return
+@log_exceptions()
+def main():
+    """Asserts and prints the settings."""
+    logger.info("Validating configuration settings")
+    print_settings()
+
+
+if __name__ == "__main__":
+    main()

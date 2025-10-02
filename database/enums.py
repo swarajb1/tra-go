@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Final
 
 
 class BandType(Enum):
@@ -8,6 +9,21 @@ class BandType(Enum):
     BAND_2_1 = "band_2_1"
     BAND_4 = "band_4"
     BAND_5 = "band_5"
+
+
+ModelInputDataTypes: Final[list[BandType]] = [
+    BandType.BAND_1_CLOSE,
+    BandType.BAND_2,
+    BandType.BAND_4,
+    BandType.BAND_5,
+]
+
+
+ModelOutputDataTypes: Final[list[BandType]] = [
+    BandType.BAND_1_1,
+    BandType.BAND_2_1,
+    BandType.BAND_2,
+]
 
 
 class IntervalType(Enum):

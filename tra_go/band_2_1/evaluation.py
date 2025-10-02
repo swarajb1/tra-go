@@ -1,6 +1,4 @@
 import band_2_1.keras_model as km_21_model
-import band_2_1.model_metrics as km_21_metrics
-import keras_model_tf as km_tf
 import numpy as np
 from core.config import settings
 from core.evaluation import CoreEvaluation
@@ -46,23 +44,7 @@ class CustomEvaluation(CoreEvaluation):
         self.custom_evaluate_safety_factor()
 
     def custom_evaluate_safety_factor(self):
-        custom_scope = {
-            "loss_function": km_21_metrics.loss_function,
-            "metric_rmse_percent": km_tf.metric_rmse_percent,
-            "metric_abs_percent": km_tf.metric_abs_percent,
-            "metric_loss_comp_2": km_21_metrics.metric_loss_comp_2,
-            "metric_win_percent": km_21_metrics.metric_win_percent,
-            "metric_pred_capture_per_win_percent": km_21_metrics.metric_pred_capture_per_win_percent,
-            "metric_win_pred_capture_percent": km_21_metrics.metric_win_pred_capture_percent,
-            "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
-            "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
-            "metric_win_pred_capture_total_percent": km_21_metrics.metric_win_pred_capture_total_percent,
-            "metric_try_1": km_21_metrics.metric_try_1,
-            "metric_try_2": km_21_metrics.metric_try_2,
-            "stoploss_incurred": km_21_metrics.stoploss_incurred,
-            "CustomActivationLayer": km_21_model.CustomActivationLayer,
-            "metric_correct_trends_full": km_21_metrics.metric_correct_trends_full,
-        }
+        custom_scope = km_21_model.get_custom_scope()
 
         model: Model = self.load_model(custom_scope)
 
@@ -80,10 +62,16 @@ class CustomEvaluation(CoreEvaluation):
         self.x_last_zone_close_real: NDArray = round_to_nearest_0_05(x_last_zone_close * self.prev_day_close)
 
         # (low, high) = (0, 1)
+        # Preserve raw predictions and operate on a copy for "real" (scaled/rounded)
+        self.y_pred_real = np.copy(self.y_pred)
 
-        self.y_pred_real = self.y_pred
+        # Scale and round the numeric band edges to price units
         self.y_pred_real[:, 0] = round_to_nearest_0_05(self.y_pred[:, 0] * self.prev_day_close)
         self.y_pred_real[:, 1] = round_to_nearest_0_05(self.y_pred[:, 1] * self.prev_day_close)
+
+        # The third output is a trend/probability from the model (sigmoid). Convert
+        # it to a hard 0/1 decision here for evaluation (threshold at 0.5).
+        self.y_pred_real[:, 2] = (self.y_pred[:, 2] >= 0.5).astype(int)
 
         self.correct_pred_values()
 
@@ -94,7 +82,9 @@ class CustomEvaluation(CoreEvaluation):
         min_pred: NDArray = self.y_pred_real[:, 0]
         max_pred: NDArray = self.y_pred_real[:, 1]
 
-        buy_order_pred: NDArray[np.bool_] = self.y_pred_real[:, 2].astype(bool)
+        # Convert the third column to a boolean mask. Use numpy to ensure dtype is bool
+        # This is robust whether the third column contains 0/1 ints or boolean-like values.
+        buy_order_pred = np.asarray(self.y_pred_real[:, 2], dtype=bool)
 
         self.generate_win_graph(
             max_pred=max_pred,

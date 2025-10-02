@@ -1,13 +1,17 @@
+import multiprocessing as mp
 import os
 from copy import deepcopy
 from datetime import datetime, time, timedelta
+from functools import partial
 
 import pandas as pd
 import pytz
 from sklearn.preprocessing import MinMaxScaler
+from utils.functions import min_max_scaler
 
 from scripts.script_2 import nifty50_symbols
-from utils.functions import min_max_scaler
+
+SAFETY_FACTOR_CPU_CORES_USAGE: int = 2
 
 
 class DataCleanerZero:
@@ -176,7 +180,7 @@ class DataCleanerZero:
 
             missing_rows -= 1
 
-        print("missing_indexes \t= ", len(missing_indexes))
+        print(f"{self.symbol} \t- , missing_indexes \t= ", len(missing_indexes))
 
         df["date"] = df["datetime"].apply(lambda x: to_date_str(x))
 
@@ -204,8 +208,13 @@ class DataCleanerZero:
         if right_index not in missing_indexes and right_index <= max_index:
             return right_index
 
+        # This should never happen, but added for type safety
+        return 0
+
     def save_cleaned_data(self) -> None:
         print(self.symbol, "\t= ", len(self.data_cleaned) / 375)
+
+        os.makedirs(f"./data_cleaned/{self.interval}", exist_ok=True)
 
         file_path: str = os.path.join(
             "./data_cleaned",
@@ -341,21 +350,49 @@ class DataScalerZero:
         return df[["open", "high", "low", "close", "real_close", "volume"]]
 
     def save_scaled_data(self) -> None:
+        os.makedirs(f"./data_training/{self.interval}", exist_ok=True)
+
         self.data_scaled.to_csv(
             f"./data_training/{self.symbol} - {self.interval}.csv",
             index=True,
         )
 
 
+def process_symbol(symbol: str, interval: str) -> None:
+    """Process a single symbol with data cleaning and scaling."""
+    try:
+        print(f"\n{symbol} \t- Starting processing")
+
+        # Data cleaning
+        DataCleanerZero(symbol=symbol, interval=interval)
+        print(f"{symbol} \t- Data Cleaning Done.")
+
+        # Data scaling
+        DataScalerZero(symbol=symbol, interval=interval)
+        print(f"{symbol} \t- Data Scaling Done.")
+
+    except Exception as e:
+        print(f"Error processing {symbol}: {str(e)}")
+
+
+def process_symbols_parallel(symbols: list[str], interval: str) -> None:
+    """Process multiple symbols in parallel using all available CPU cores."""
+
+    # Get the number of CPU cores
+    num_cores = mp.cpu_count() // SAFETY_FACTOR_CPU_CORES_USAGE
+    print(f"Using {num_cores} CPU cores for parallel processing out of total {mp.cpu_count()}")
+
+    # Create a partial function with interval pre-filled
+    process_func = partial(process_symbol, interval=interval)
+
+    # Use multiprocessing Pool to process symbols in parallel
+    with mp.Pool(processes=num_cores) as pool:
+        pool.map(process_func, symbols)
+
+
 if __name__ == "__main__":
     interval = "1m"
 
-    for symbol in nifty50_symbols:
-        print("\n" * 2)
-        print(symbol)
-
-        DataCleanerZero(symbol=symbol, interval=interval)
-        print("Data Cleaning Done.")
-
-        DataScalerZero(symbol=symbol, interval=interval)
-        print("Data Scaling Done.")
+    print(f"Processing {len(nifty50_symbols)} symbols using parallel processing...")
+    process_symbols_parallel(nifty50_symbols, interval)
+    print("\nAll symbols processed successfully!")

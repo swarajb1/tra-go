@@ -63,8 +63,12 @@ def is_in_zone(check_datetime, interval) -> bool:
     elif interval == "5m":
         time_2 = (datetime_1 + timedelta(minutes=132 * 2 + 5)).time()
 
+    else:
+        raise ValueError("Interval not supported")
+
     if time_check > time_1 and time_check < time_2:
         return True
+
     return False
 
 
@@ -91,7 +95,7 @@ def get_data_df(ticker, interval, which_half: str) -> pd.DataFrame:
     df["high"] = df["High"].apply(lambda x: round(number=x, ndigits=2))
     df["low"] = df["Low"].apply(lambda x: round(number=x, ndigits=2))
 
-    new_2 = df[df["to_add"] is True].copy(deep=True)
+    new_2 = df[df["to_add"]].copy(deep=True)
     new_2.rename(columns={"Datetime": "datetime"}, inplace=True)
 
     return new_2[
@@ -106,9 +110,6 @@ def get_data_df(ticker, interval, which_half: str) -> pd.DataFrame:
 
 
 def get_data_all_df(ticker, interval) -> pd.DataFrame:
-    if ticker == "CCI":
-        ticker = "ICICIBANK.NS"
-
     df = pd.read_csv(get_csv_file_path(ticker, interval))
 
     df["open"] = df["Open"].apply(lambda x: round(number=x, ndigits=2))

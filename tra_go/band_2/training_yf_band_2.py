@@ -1,14 +1,51 @@
+"""
+Band 2 Model Evaluation Module
+
+This module provides evaluation functionality for BAND_2 neural network models in the TRA-GO trading system.
+The BAND_2 architecture predicts price ranges (min/max) over multiple time ticks within a trading day,
+enabling sophisticated trading strategy simulation and performance assessment.
+
+Key Features:
+- Model loading with custom metrics and loss functions
+- Prediction processing with safety factors and value corrections
+- Multi-tick price range evaluation over trading days
+- Trading simulation with risk-reward analysis
+- Model worthiness assessment based on 250-day performance projections
+
+The CustomEvaluation class handles the complete evaluation pipeline:
+1. Loads trained Keras models with custom objects
+2. Generates predictions on test/validation data
+3. Applies safety factors and prediction corrections
+4. Performs tick-by-tick trading simulation
+5. Calculates performance metrics and model worthiness
+
+Model predictions are processed to ensure:
+- Low/high values are correctly ordered
+- Predictions are truncated to eliminate extreme outliers
+- Safety factors narrow prediction bands for conservative trading
+- Bands are adjusted relative to last known closing prices
+
+Evaluation metrics include:
+- Win percentage (days where predictions contain actual price ranges)
+- Prediction capture percentage (portion of actual volatility captured)
+- 250-day compound returns projection
+- Model worthiness flags for saving/promotion
+
+Used by the main training pipeline to evaluate newly trained models and determine
+which models should be saved for production trading.
+"""
+
 import os
 
-import band_2.keras_model_band_2 as km_2
-import keras_model as km
+import band_2.model_metrics as km_2_metrics
 import matplotlib.pyplot as plt
+import model_training.common as training_common
 import numpy as np
 from core.config import settings
 from core.simulation import Simulation
-from keras.models import load_model
-from keras.utils import custom_object_scope
 from numpy.typing import NDArray
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import custom_object_scope
 from training_yf import round_to_nearest_0_05
 
 from database.enums import BandType, ModelLocationType, TickerOne
@@ -75,19 +112,19 @@ class CustomEvaluation:
 
         with custom_object_scope(
             {
-                "metric_new_idea": km_2.metric_new_idea,
-                "metric_rmse_percent": km.metric_rmse_percent,
-                "metric_abs_percent": km.metric_abs_percent,
-                "metric_loss_comp_2": km_2.metric_loss_comp_2,
-                "metric_win_percent": km_2.metric_win_percent,
-                "metric_win_pred_capture_percent": km_2.metric_win_pred_capture_percent,
-                "metric_pred_capture_percent": km_2.metric_pred_capture_percent,
-                "metric_correct_win_trend_percent": km_2.metric_win_correct_trend_percent,
-                "metric_pred_capture": km_2.metric_pred_capture,
-                "metric_win_checkpoint": km_2.metric_win_checkpoint,
-                "metric_win_checkpoint_open": km_2.metric_win_correct_trend_percent,
-                "metric_pred_trend_capture_percent": km_2.metric_pred_trend_capture_percent,
-                "metric_win_correct_trend_percent": km_2.metric_pred_trend_capture_percent,
+                "metric_new_idea": km_2_metrics.metric_new_idea,
+                "metric_rmse_percent": training_common.metric_rmse_percent,
+                "metric_abs_percent": training_common.metric_abs_percent,
+                "metric_loss_comp_2": km_2_metrics.metric_loss_comp_2,
+                "metric_win_percent": km_2_metrics.metric_win_percent,
+                "metric_win_pred_capture_percent": km_2_metrics.metric_win_pred_capture_percent,
+                "metric_pred_capture_percent": km_2_metrics.metric_pred_capture_percent,
+                "metric_correct_win_trend_percent": km_2_metrics.metric_win_correct_trend_percent,
+                "metric_pred_capture": km_2_metrics.metric_pred_capture,
+                "metric_win_checkpoint": km_2_metrics.metric_win_checkpoint,
+                "metric_win_checkpoint_open": km_2_metrics.metric_win_correct_trend_percent,
+                "metric_pred_trend_capture_percent": km_2_metrics.metric_pred_trend_capture_percent,
+                "metric_win_correct_trend_percent": km_2_metrics.metric_pred_trend_capture_percent,
             },
         ):
             model = load_model(file_path)
@@ -139,10 +176,12 @@ class CustomEvaluation:
         return
 
     def truncated_y_pred(self, y_arr: NDArray) -> NDArray:
-        first_non_eliminated_element_index: int = int(km_2.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
-        last_non_eliminated_element_index: int = y_arr.shape[1] - int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        first_non_eliminated_element_index: int = int(km_2_metrics.SKIP_FIRST_PERCENTILE * y_arr.shape[1])
+        last_non_eliminated_element_index: int = (
+            y_arr.shape[1] - int(km_2_metrics.SKIP_LAST_PERCENTILE * y_arr.shape[1]) - 1
+        )
 
-        last_skipped_elements: int = int(km_2.SKIP_LAST_PERCENTILE * y_arr.shape[1])
+        last_skipped_elements: int = int(km_2_metrics.SKIP_LAST_PERCENTILE * y_arr.shape[1])
 
         res: NDArray = y_arr.copy()
 
@@ -232,7 +271,7 @@ class CustomEvaluation:
             + f"settings.NUMBER_OF_NEURONS = {settings.NUMBER_OF_NEURONS}  "
             + f"settings.NUMBER_OF_LAYERS = {settings.NUMBER_OF_LAYERS}\n"
             + f"settings.NUMBER_OF_EPOCHS = {settings.NUMBER_OF_EPOCHS} | "
-            + f"INITIAL_DROPOUT = {settings.INITIAL_DROPOUT_PERCENT}",
+            + f"INITIAL_DROPOUT = {settings.INITIAL_DROPOUT}",
             fontsize=20,
         )
 
@@ -375,18 +414,18 @@ class CustomEvaluation:
             total_capture_possible_arr,
         )
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
         cdgr: float = pow(all_days_pro_cumulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         # y_min = min(np.min(min_pred), np.min(min_true))
         # y_max = max(np.max(max_pred), np.max(max_true))
@@ -470,7 +509,7 @@ class CustomEvaluation:
         print("\n\nNUMBER_OF_NEURONS\t\t", settings.NUMBER_OF_NEURONS)
         print("settings.NUMBER_OF_LAYERS\t\t", settings.NUMBER_OF_LAYERS)
         print("settings.NUMBER_OF_EPOCHS\t\t", settings.NUMBER_OF_EPOCHS)
-        print("INITIAL_DROPOUT\t\t\t", settings.INITIAL_DROPOUT_PERCENT)
+        print("INITIAL_DROPOUT\t\t\t", settings.INITIAL_DROPOUT)
 
         print("folder_name\t", self.model_file_name)
 
@@ -597,18 +636,18 @@ class CustomEvaluation:
             total_capture_possible_arr,
         )
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
         cdgr: float = pow(all_days_pro_cummulative_val, 1 / len(wins)) - 1
 
         pro_250: float = pow(cdgr + 1, 250) - 1
         pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         self.win_250_days = round(pro_250 * 100, 2)
 

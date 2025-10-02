@@ -1,7 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from core.simulation import Simulation
+
+# from core.simulation import Simulation
+from core.simulation_improved import Simulation
 from numpy.typing import NDArray
+
+SPECIAL_THRESHOLD = 0.8
 
 
 class WinGraph:
@@ -12,13 +15,16 @@ class WinGraph:
         order_type_buy: NDArray[np.bool_],
         y_real: NDArray[np.float64],
     ):
-        assert y_real.ndim == 3, "Y Real Data array must be 3-dimensional"
+        assert y_real.ndim == 3, "Y Real Data array must be 3-dimensional (days, ticks, features)"
 
         assert max_pred.ndim == 1, "Buy Price Data array must be 1-dimensional"
         assert min_pred.ndim == 1, "Sell Price Data array must be 1-dimensional"
         assert order_type_buy.ndim == 1, "Order Type Buy Data array must be 1-dimensional"
 
+        assert np.issubdtype(max_pred.dtype, np.floating), "Buy Price Data array must be of type float"
+        assert np.issubdtype(min_pred.dtype, np.floating), "Sell Price Data array must be of type float"
         assert np.issubdtype(order_type_buy.dtype, np.bool_), "Order Price Data array must be of type bool"
+        assert np.issubdtype(y_real.dtype, np.floating), "Y Real Data array must be of type float"
 
         self.y_data_real: NDArray[np.float64] = y_real
 
@@ -29,17 +35,19 @@ class WinGraph:
         self.win_250_days: float = 0
         self.win_pred_capture_percent: float = 0
 
-        # copied values form simulation
+        # copied values from simulation
         self.simulation_250_days: float = 0
         self.all_simulations_max_250_days: float = 0
 
-        self.is_model_worth_saving: bool
-        self.is_model_worth_double_saving: bool
+        self.is_model_worth_saving: bool = False
+        self.is_model_worth_double_saving: bool = False
 
         self._make_win_graph()
 
     def _make_win_graph(self) -> None:
+        # min_true: true min price per day, extracted from the 3rd feature (index 2) across all ticks
         min_true: NDArray = np.min(self.y_data_real[:, :, 2], axis=1)
+        # max_true: true max price per day, extracted from the 2nd feature (index 1) across all ticks
         max_true: NDArray = np.max(self.y_data_real[:, :, 1], axis=1)
 
         pred_average: NDArray[np.float64] = (self.max_pred + self.min_pred) / 2
@@ -116,26 +124,34 @@ class WinGraph:
 
         total_capture_possible_arr: NDArray = max_true - min_true
 
-        pred_capture_ratio: float = np.sum(pred_capture_arr) / np.sum(total_capture_possible_arr)
+        total_capture_possible_sum: float = np.sum(total_capture_possible_arr)
+        pred_capture_ratio: float
+        if total_capture_possible_sum == 0:
+            pred_capture_ratio = 0.0
+        else:
+            pred_capture_ratio = np.sum(pred_capture_arr) / total_capture_possible_sum
 
-        pred_capture_percent_str: str = "{:.2f}".format(pred_capture_ratio * 100)
+        pred_capture_percent_str: str = f"{pred_capture_ratio * 100:.2f}"
 
         self.win_pred_capture_percent = float(pred_capture_percent_str)
 
-        win_percent_str: str = "{:.2f}".format(fraction_win * 100)
+        win_percent_str: str = f"{fraction_win * 100:.2f}"
 
-        average_in_percent_str: str = "{:.2f}".format(fraction_average_in * 100)
+        average_in_percent_str: str = f"{fraction_average_in * 100:.2f}"
 
-        cdgr: float = pow(all_days_pro_cumulative_value, 1 / len(wins)) - 1
+        cagr: float
 
-        pro_250: float = pow(cdgr + 1, 250) - 1
-        pro_250_5: float = pow(cdgr * 5 + 1, 250) - 1
-        pro_250_str: str = "{:.2f}".format(pro_250 * 100)
-        pro_250_5_str: str = "{:.2f}".format(pro_250_5 * 100)
+        if len(wins) == 0:
+            cagr = 0.0
+        else:
+            cagr = pow(all_days_pro_cumulative_value, 1 / len(wins)) - 1
+
+        pro_250: float = pow(cagr + 1, 250) - 1
+        pro_250_5: float = pow(cagr * 5 + 1, 250) - 1
+        pro_250_str: str = f"{pro_250 * 100:.2f}"
+        pro_250_5_str: str = f"{pro_250_5 * 100:.2f}"
 
         self.win_250_days = round(pro_250 * 100, 2)
-
-        SPECIAL_THRESHOLD = 0.75
 
         # special_condition
         if (
@@ -148,7 +164,7 @@ class WinGraph:
 
             print(f"\nall fractions are greater than {SPECIAL_THRESHOLD}")
 
-            # TODOO: do a special simulation agian, if all fractions are greater than 0.75,
+            # TODO: do a special simulation again, if all fractions are greater than 0.8,
             # where price 1 is that pred val, as most of times max/max are very close, and another will be price at 2m from the 2nd zone start, the trend will from set. based on 22 prices.
 
             # price_pred = (self.max_pred + self.min_pred) / 2
@@ -176,7 +192,7 @@ class WinGraph:
         print("Win Days Perc:\t\t\t", win_percent_str, " %")
         print("Pred Capture:\t\t\t", pred_capture_percent_str, " %")
 
-        print("Per Day:\t\t\t", round(cdgr * 100, 3), " %")
+        print("Per Day:\t\t\t", round(cagr * 100, 3), " %")
         print("250 days:\t\t\t", pro_250_str)
 
         print("\n")
@@ -193,20 +209,21 @@ class WinGraph:
     def get_model_worthiness(self) -> tuple[bool, bool]:
         return self.is_model_worth_saving, self.is_model_worth_double_saving
 
-    def day_candle_pred_true(self, i_day: int) -> None:
-        error = self.y_data_real - self.y_pred_real
+    # def day_candle_pred_true(self, i_day: int) -> None:
+    #     # plots each day error, real min max vs pred min max.
+    #     error = self.y_data_real - self.y_pred_real
 
-        y_l = error[i_day, :, 0]
-        y_h = error[i_day, :, 1]
+    #     y_l = error[i_day, :, 0]
+    #     y_h = error[i_day, :, 1]
 
-        x = np.arange(error.shape[1])
+    #     x = np.arange(error.shape[1])
 
-        plt.figure(figsize=(16, 9))
-        plt.title(f"Day - {i_day}")
+    #     plt.figure(figsize=(16, 9))
+    #     plt.title(f"Day - {i_day}")
 
-        plt.axhline(y=0, xmin=x[0], xmax=x[-1], color="blue")
+    #     plt.axhline(y=0, xmin=x[0], xmax=x[-1], color="blue")
 
-        plt.plot(x, y_l, label="low Δ")
-        plt.plot(x, y_h, label="high Δ")
+    #     plt.plot(x, y_l, label="low Δ")
+    #     plt.plot(x, y_h, label="high Δ")
 
-        return None
+    #     return

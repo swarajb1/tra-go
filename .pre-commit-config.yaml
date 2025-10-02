@@ -1,76 +1,88 @@
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
-    hooks:
-      - id: pyupgrade
-  - repo: https://github.com/sondrelg/pep585-upgrade
-    rev: v1.0
-    hooks:
-      - id: upgrade-type-hints
-  - repo: https://github.com/asottile/add-trailing-comma
-    rev: v3.1.0
-    hooks:
-      - id: add-trailing-comma
-  - repo: https://github.com/psf/black
-    rev: 23.7.0
-    hooks:
-      - id: black
-        args: ['-l', '119']
-        verbose: true
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v2.3.1
-    hooks:
-      - id: autoflake
-        args: ['-r', '-i', '--remove-all-unused-imports', '--remove-unused-variables']
-        verbose: true
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: isort (python)
-        args: ['--profile', 'black']
-        verbose: true
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: check-added-large-files
-      - id: check-ast
-      - id: check-case-conflict
-      - id: check-docstring-first
-      - id: check-json
-      - id: check-merge-conflict
-      - id: check-toml
-      - id: check-yaml
-      - id: debug-statements
-      - id: end-of-file-fixer
-      - id: fix-encoding-pragma
-        args: ['--remove']
-      - id: mixed-line-ending
-        args: ['--fix=lf']
-      - id: name-tests-test
-        args: ['--pytest-test-first']
-      - id: requirements-txt-fixer
-      - id: trailing-whitespace
-        args: ['--markdown-linebreak-ext=md']
-  # - repo: https://github.com/PyCQA/docformatter
-  #   rev: v1.7.5
-  #   hooks:
-  #     - id: docformatter
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
-    hooks:
-      - id: markdownlint
-        # args: ['--fix']
-        args: ['--fix', '.markdownlint.json']
+    - repo: https://github.com/asottile/pyupgrade
+      rev: v3.20.0
+      hooks:
+          - id: pyupgrade
+            args: ["--py39-plus"]
 
-  # - repo: https://github.com/pre-commit/pre-commit-hooks
-  #   rev: v4.6.0
-  #   hooks:
-  #     - id: check-xml
-  #     - id: pretty-format-json
-  #       args: ['--autofix']
-  # - repo: https://github.com/prettier/prettier
-  #   rev: 3.3.2
-  #   hooks:
-  #     - id: prettier
-  #       args: ['--write', '**/*.{js,jsx,ts,tsx,json,css,md}']
+    - repo: https://github.com/sondrelg/pep585-upgrade
+      rev: v1.0
+      hooks:
+          - id: upgrade-type-hints
+
+    - repo: https://github.com/asottile/add-trailing-comma
+      rev: v3.2.0
+      hooks:
+          - id: add-trailing-comma
+
+    - repo: https://github.com/psf/black
+      rev: 25.1.0
+      hooks:
+          - id: black
+            args: ["--line-length", "119"]
+            verbose: true
+
+    - repo: https://github.com/PyCQA/autoflake
+      rev: v2.3.1
+      hooks:
+          - id: autoflake
+            args:
+                [
+                    "--recursive",
+                    "--in-place",
+                    "--remove-all-unused-imports",
+                    "--remove-unused-variables",
+                ]
+            verbose: true
+
+    - repo: https://github.com/pycqa/isort
+      rev: 6.0.1
+      hooks:
+          - id: isort
+            name: isort (python)
+            args: ["--profile", "black", "--line-length", "119"]
+            verbose: true
+
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: check-added-large-files
+          - id: check-ast
+          - id: check-case-conflict
+          - id: check-docstring-first
+          - id: check-json
+          - id: check-merge-conflict
+          - id: check-toml
+          - id: check-yaml
+          - id: debug-statements
+          - id: end-of-file-fixer
+          - id: mixed-line-ending
+            args: ["--fix=lf"]
+          - id: name-tests-test
+            args: ["--pytest-test-first"]
+          - id: requirements-txt-fixer
+          - id: trailing-whitespace
+            args: ["--markdown-linebreak-ext=md"]
+    # - repo: https://github.com/PyCQA/docformatter
+    #   rev: v1.7.5
+    #   hooks:
+    #     - id: docformatter
+
+    - repo: https://github.com/igorshubovych/markdownlint-cli
+      rev: v0.45.0
+      hooks:
+          - id: markdownlint
+            # args: ['--fix']
+            args: ["--fix", ".markdownlint.json"]
+
+    # - repo: https://github.com/pre-commit/pre-commit-hooks
+    #   rev: v4.6.0
+    #   hooks:
+    #     - id: check-xml
+    #     - id: pretty-format-json
+    #       args: ['--autofix']
+    # - repo: https://github.com/prettier/prettier
+    #   rev: 3.3.2
+    #   hooks:
+    #     - id: prettier
+    #       args: ['--write', '**/*.{js,jsx,ts,tsx,json,css,md}']

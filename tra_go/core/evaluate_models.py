@@ -3,6 +3,8 @@ import time
 
 import training_zero as an
 from core.config import settings
+from core.logger import logger
+from core.model_utils import move_model_to_discarded
 from data_loader import DataLoader
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
@@ -11,9 +13,6 @@ from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
 def _get_custom_evaluation_class(x_type: BandType, y_type: BandType):
     if y_type not in [BandType.BAND_4, BandType.BAND_2, BandType.BAND_2_1, BandType.BAND_1_1]:
         raise ValueError(f"Invalid y_type: {y_type}")
-
-    if y_type == BandType.BAND_4:
-        from band_4.training_yf_band_4 import CustomEvaluation
 
     elif y_type == BandType.BAND_2:
         from band_2.training_yf_band_2 import CustomEvaluation
@@ -88,24 +87,18 @@ def evaluate_models(
             if band_type.value == x_type_str:
                 model_x_type = band_type
                 break
-        del band_type
-        del x_type_str
 
         y_type_str = file_name_1.split(" - ")[3]
         for band_type in BandType:
             if band_type.value == y_type_str:
                 model_y_type = band_type
                 break
-        del band_type
-        del y_type_str
 
         ticker_str = file_name_1.split(" - ")[4]
         for ticker in TickerOne:
             if ticker.name == ticker_str:
                 model_ticker = ticker
                 break
-        del ticker
-        del ticker_str
 
         df = an.get_data_all_df(ticker=model_ticker, interval=model_interval.value)
 
@@ -138,31 +131,58 @@ def evaluate_models(
 
         evaluation_class = _get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
 
-        training_data_custom_evaluation = evaluation_class(
-            ticker=model_ticker,
-            X_data=X_train,
-            Y_data=Y_train,
-            Y_data_real=Y_train_data_real,
-            prev_day_close=train_prev_close,
-            x_type=model_x_type,
-            y_type=model_y_type,
-            test_size=settings.TEST_SIZE,
-            model_file_name=file_name,
-            model_location_type=model_location_type,
-        )
+        # Create training evaluation; if creation fails (e.g. model load error),
+        # move the problematic model file to the discarded folder and skip it.
+        try:
+            training_data_custom_evaluation = evaluation_class(
+                ticker=model_ticker,
+                X_data=X_train,
+                Y_data=Y_train,
+                Y_data_real=Y_train_data_real,
+                prev_day_close=train_prev_close,
+                x_type=model_x_type,
+                y_type=model_y_type,
+                test_size=settings.TEST_SIZE,
+                model_file_name=file_name,
+                model_location_type=model_location_type,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            logger.warning(
+                "Skipping model due to evaluation error: %s | error: %s",
+                file_name,
+                err,
+            )
 
-        valid_data_custom_evaluation = evaluation_class(
-            ticker=model_ticker,
-            X_data=X_test,
-            Y_data=Y_test,
-            Y_data_real=Y_test_data_real,
-            prev_day_close=test_prev_close,
-            x_type=model_x_type,
-            y_type=model_y_type,
-            test_size=0,
-            model_file_name=file_name,
-            model_location_type=model_location_type,
-        )
+            # Attempt to move the file to the discarded folder
+            move_model_to_discarded(model_location_prefix, file_name)
+
+            # Skip this file and continue with next
+            continue
+
+        # Create validation evaluation; if it fails, treat similarly and skip file
+        try:
+            valid_data_custom_evaluation = evaluation_class(
+                ticker=model_ticker,
+                X_data=X_test,
+                Y_data=Y_test,
+                Y_data_real=Y_test_data_real,
+                prev_day_close=test_prev_close,
+                x_type=model_x_type,
+                y_type=model_y_type,
+                test_size=0,
+                model_file_name=file_name,
+                model_location_type=model_location_type,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            logger.warning(
+                "Skipping model due to validation evaluation error: %s | error: %s",
+                file_name,
+                err,
+            )
+            # Attempt to move the file to the discarded folder
+            move_model_to_discarded(model_location_prefix, file_name)
+
+            continue
 
         is_triple_saving: bool = (
             training_data_custom_evaluation.is_model_worth_double_saving
@@ -243,10 +263,10 @@ def evaluate_models(
 
     print("\n\n", "-" * 280, "\n", sep="")
 
-    print("\nMAX 250 days Win Value achieved:\t\t", max_250_days_win_value, "%")
-    print("\nMAX Win Pred Capture Percent achieved:\t\t", max_win_pred_capture_percent_value, "%")
-    print("\nMAX 250 Days Simulation Value:\t\t\t", max_250_days_simulation_value, "%")
-    print("\nMAX All Possible 250 Days Simulation Value:\t", max_all_simulations_max_250_days, "%")
+    print("\nMAX 250 days Win Value achieved:\t\t", f"{max_250_days_win_value:.2f}", "%")
+    print("\nMAX Win Pred Capture Percent achieved:\t\t", f"{max_win_pred_capture_percent_value:.2f}", "%")
+    print("\nMAX 250 Days Simulation Value:\t\t\t", f"{max_250_days_simulation_value:.2f}", "%")
+    print("\nMAX All Possible 250 Days Simulation Value:\t", f"{max_all_simulations_max_250_days:.2f}", "%")
 
     print(f"\n\n\nMODELS NOT WORTH SAVING: \t\t[{len(models_worth_not_saving)}]\n")
     for model_file_name in models_worth_not_saving:
@@ -265,6 +285,3 @@ def evaluate_models(
         print("\t", model_file_name, " " * (95 - len(model_file_name)), " \033[92m+++++++++++++++\033[0m ")
 
     print("\n\n")
-
-    # add code to move files into one/double/triple saving folders
-    # on prompt if written 'MOVE'

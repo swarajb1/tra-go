@@ -60,7 +60,7 @@ class Simulation:
         # for i in range(4):
         #     rrr_list.append(round(i / 3, 2))
 
-        rrr_list.extend([0, 0.33, 0.66, 1, 1.5, 2, 3, 5, 8, 15])
+        rrr_list.extend([0, 0.33, 0.66, 1, 2, 3, 5, 8, 15])
 
         if settings.RISK_TO_REWARD_RATIO not in rrr_list:
             rrr_list.append(settings.RISK_TO_REWARD_RATIO)
@@ -225,7 +225,8 @@ class Simulation:
                 expected_reward_percent_day_wise_list[i_day] = expected_reward / invested_day_wise_list[i_day] * 100
 
             new_invested_day_wise_list = np.copy(invested_day_wise_list)
-            new_invested_day_wise_list[new_invested_day_wise_list == 0] = 1
+            # Ensure all zero values are set to 1 to avoid division by zero
+            new_invested_day_wise_list = np.where(new_invested_day_wise_list == 0, 1, new_invested_day_wise_list)
 
             arr = np.array(wins_day_wise_list)
             arr_real_percent = (arr / new_invested_day_wise_list) * 100
@@ -235,12 +236,12 @@ class Simulation:
             days_250: float = (pow(1 + avg_win_per_day, 250) - 1) * 100
 
             percent_prefix: str = " " if round(days_250, 2) < 10 else ""
-            percent_val: str = percent_prefix + "{:.2f}".format(days_250) + " %"
+            percent_val: str = percent_prefix + f"{days_250:.2f}" + " %"
 
             print(
                 "\t\t",
                 "Risk To Reward Ratio:",
-                "{:.2f}".format(RISK_TO_REWARD_RATIO),
+                f"{RISK_TO_REWARD_RATIO:.2f}",
                 "\t",
                 "250 Days s: ",
                 percent_val if days_250 > PERCENT_250_DAYS_MIN_THRESHOLD else "\t   --",
@@ -290,46 +291,46 @@ class Simulation:
                 # print("\n\t\t\t Number Of Days\t\t\t\t", number_of_days)
                 print(
                     "\n\t\t\t Percent Trade Taken\t\t\t",
-                    "{:.2f}".format(percent_trades_taken),
+                    f"{percent_trades_taken:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Trade Taken And Out\t\t",
-                    "{:.2f}".format(count_trade_taken_and_out / number_of_days * 100),
+                    f"{count_trade_taken_and_out / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_trade_taken_and_out / count_trade_taken * 100),
+                    f"{count_trade_taken_and_out / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Stop Loss Hit\t\t\t",
-                    "{:.2f}".format(count_stop_loss_hit / number_of_days * 100),
+                    f"{count_stop_loss_hit / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_stop_loss_hit / count_trade_taken * 100),
+                    f"{count_stop_loss_hit / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Percent Completed At Closing\t\t",
-                    "{:.2f}".format(count_completed_at_closing / number_of_days * 100),
+                    f"{count_completed_at_closing / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(count_completed_at_closing / count_trade_taken * 100),
+                    f"{count_completed_at_closing / count_trade_taken * 100:.2f}",
                     " %",
                 )
                 print(
                     "\t\t\t Closing Trades Per Day contribution\t",
-                    "{:.2f}".format(closing_arr_percent_avg_win_per_day),
+                    f"{closing_arr_percent_avg_win_per_day:.2f}",
                 )
                 print(
                     "\t\t\t Percent Expected Trades\t\t",
-                    "{:.2f}".format(count_expected_trades / number_of_days * 100),
+                    f"{count_expected_trades / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(percent_expected_trades),
+                    f"{percent_expected_trades:.2f}",
                     " %",
                 )
                 print(
                     "\n\t\t\t Percent Win Trades\t\t\t",
-                    "{:.2f}".format(number_of_win_trades / number_of_days * 100),
+                    f"{number_of_win_trades / number_of_days * 100:.2f}",
                     " % \t | \t",
-                    "{:.2f}".format(number_of_win_trades / count_trade_taken * 100),
+                    f"{number_of_win_trades / count_trade_taken * 100:.2f}",
                     " %\n",
                 )
 
@@ -374,7 +375,7 @@ class Simulation:
 
         print(
             "\n\nCapture Return Percent:\t\t",
-            "{:.2f}".format(self.real_mean / self.actual_full_reward_mean * 100),
+            f"{self.real_mean / self.actual_full_reward_mean * 100:.2f}",
             " %",
         )
 
@@ -408,7 +409,7 @@ class Simulation:
         print("Max: \t\t\t\t", round_num_str(np.max(sorted_arr), 2))
 
         if self.print_log_stats_extra:
-            self._log_statistics_extra(self, sorted_arr)
+            self._log_statistics_extra(sorted_arr)
 
         return
 
@@ -464,7 +465,7 @@ class Simulation:
 
         invested_day_wise_list: NDArray = np.zeros(number_of_days)
 
-        real_order_type_buy: NDArray = np.zeros(number_of_days)
+        real_order_type_buy: NDArray = np.zeros(number_of_days, dtype=bool)
 
         real_full_reward_percent_day_wise_list: NDArray = np.zeros(number_of_days)
 

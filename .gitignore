@@ -6,13 +6,14 @@
 
 # cache
 __pycache__
+.pytest_cache
 
 # diff files
 *.diff
 
 # secret keys
 api_key.txt
-.env
+*.env
 
 # training files
 training/
