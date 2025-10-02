@@ -1,8 +1,9 @@
 import gc
 import os
 import time
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Final
+from typing import Final, Optional, cast
 
 import band_2.keras_model as km_2
 import band_2.model_metrics as km_2_metrics
@@ -14,16 +15,16 @@ import psutil
 import tensorflow as tf
 import training_zero as an
 from core.config import settings
-from core.logger import logger
+from core.logger import log_exceptions, logger
 from data_loader import DataLoader
 from data_loader_tf import create_optimized_data_loader
 from decorators.time import format_time, time_taken
 from numpy.typing import NDArray
-from tensorflow.keras.callbacks import (
+from tensorflow.keras.callbacks import (  # type: ignore[import-error]
     Callback,
     TerminateOnNaN,
 )
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model  # type: ignore[import-error]
 from tf_data_utils import log_tf_data_performance_tips
 from utils.training_utils import create_training_callbacks
 
@@ -63,6 +64,20 @@ list_of_tickers: list[TickerOne] = [
 ]
 
 
+@dataclass
+class TrainingArtifacts:
+    model: Model
+    X_train: NDArray
+    Y_train: NDArray
+    X_test: NDArray
+    Y_test: NDArray
+    train_prev_close: Optional[NDArray] = None
+    test_prev_close: Optional[NDArray] = None
+    train_dataset: Optional[tf.data.Dataset] = None
+    test_dataset: Optional[tf.data.Dataset] = None
+
+
+@log_exceptions(exit_on_exception=False)
 @time_taken
 def main_training(ticker=None):
     """Main training function with proper error handling and logging."""
@@ -100,16 +115,6 @@ def main_training(ticker=None):
         logger.error(f"Error occurred while loading data: {e}")
         return
 
-    model: Model
-
-    X_train: NDArray
-    Y_train: NDArray
-    train_prev_close: NDArray
-
-    X_test: NDArray
-    Y_test: NDArray
-    test_prev_close: NDArray
-
     terNan: Callback = TerminateOnNaN()
 
     logger.info(f"Starting model training | Ticker: {TICKER.name} | Type: {Y_TYPE.value} | Time: {now_datetime}")
@@ -130,11 +135,10 @@ def main_training(ticker=None):
 
     print(f"\n\nnow_datetime:\t{now_datetime}\n\n")
 
+    artifacts: TrainingArtifacts
+
     if Y_TYPE == BandType.BAND_2:
-        (
-            (X_train, Y_train, train_prev_close),
-            (X_test, Y_test, test_prev_close),
-        ) = an.train_test_split(
+        train_split, test_split = an.train_test_split(
             data_df=df,
             test_size=settings.TEST_SIZE,
             x_type=X_TYPE,
@@ -142,10 +146,12 @@ def main_training(ticker=None):
             interval=INTERVAL.value,
         )
 
+        X_train, Y_train, train_prev_close = cast(tuple[NDArray, NDArray, NDArray], train_split)
+        X_test, Y_test, test_prev_close = cast(tuple[NDArray, NDArray, NDArray], test_split)
+
         model = km_2.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
         optimizer = training_common.get_optimiser(learning_rate=settings.LEARNING_RATE)
-
         loss = km_2_metrics.metric_new_idea
 
         model.compile(
@@ -163,14 +169,25 @@ def main_training(ticker=None):
             ],
         )
 
-        # Force garbage collection after model compilation
         gc.collect()
 
+        artifacts = TrainingArtifacts(
+            model=model,
+            X_train=X_train,
+            Y_train=Y_train,
+            X_test=X_test,
+            Y_test=Y_test,
+            train_prev_close=train_prev_close,
+            test_prev_close=test_prev_close,
+        )
+
     elif Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]:
+        train_dataset: Optional[tf.data.Dataset] = None
+        test_dataset: Optional[tf.data.Dataset] = None
+
         if settings.USE_OPTIMIZED_DATA_LOADER:
             logger.info("Using optimized TensorFlow DataLoader with tf.data pipelines")
 
-            # Use the new TensorFlow DataLoader for better performance
             data_loader = create_optimized_data_loader(
                 ticker=TICKER,
                 interval=INTERVAL,
@@ -183,19 +200,15 @@ def main_training(ticker=None):
                 enable_shuffle=True,
             )
 
-            # Get optimized tf.data datasets
             train_dataset, test_dataset = data_loader.get_tf_datasets()
 
-            # Also get numpy arrays for model creation (required for determining input/output shapes)
             (X_train, Y_train), (X_test, Y_test) = data_loader.get_train_test_split_data()
 
-            # Log dataset information
             dataset_info = data_loader.get_dataset_info()
             logger.info("TensorFlow DataLoader configuration:")
             for key, value in dataset_info.items():
                 logger.info(f"  {key}: {value}")
 
-            # Benchmark data loading performance
             try:
                 perf_metrics = data_loader.benchmark_performance(num_batches=5)
                 logger.info("Data loading performance metrics recorded")
@@ -204,7 +217,6 @@ def main_training(ticker=None):
         else:
             logger.info("Using traditional DataLoader (optimized loader disabled)")
 
-            # Use the traditional DataLoader
             data_loader = DataLoader(
                 ticker=TICKER,
                 interval=INTERVAL,
@@ -217,8 +229,28 @@ def main_training(ticker=None):
 
         model = km_21_model.get_untrained_model(X_train=X_train, Y_train=Y_train)
 
-        # Force garbage collection after model creation
         gc.collect()
+
+        artifacts = TrainingArtifacts(
+            model=model,
+            X_train=X_train,
+            Y_train=Y_train,
+            X_test=X_test,
+            Y_test=Y_test,
+            train_dataset=train_dataset,
+            test_dataset=test_dataset,
+        )
+
+    else:
+        raise ValueError(f"Unsupported Y_TYPE: {Y_TYPE}")
+
+    X_train = artifacts.X_train
+    Y_train = artifacts.Y_train
+    X_test = artifacts.X_test
+    Y_test = artifacts.Y_test
+    model = artifacts.model
+    train_dataset = artifacts.train_dataset
+    test_dataset = artifacts.test_dataset
 
     print("training x data shape\t", X_train.shape)
     print("training y data shape\t", Y_train.shape)
@@ -226,39 +258,29 @@ def main_training(ticker=None):
     print("model input shape\t", model.input_shape)
     print("model output shape\t", model.output_shape, "\n" * 2)
 
-    try:
-        if (
-            settings.USE_OPTIMIZED_DATA_LOADER
-            and Y_TYPE in [BandType.BAND_2_1, BandType.BAND_1_1]
-            and "train_dataset" in locals()
-        ):
-            logger.info("Training with optimized tf.data pipelines")
-            history = model.fit(
-                train_dataset,
-                epochs=settings.NUMBER_OF_EPOCHS,
-                validation_data=test_dataset,
-                callbacks=callbacks,
-            )
-        else:
-            logger.info("Training with numpy arrays (legacy mode)")
-            history = model.fit(
-                x=X_train,
-                y=Y_train,
-                epochs=settings.NUMBER_OF_EPOCHS,
-                batch_size=settings.BATCH_SIZE,
-                validation_data=(X_test, Y_test),
-                callbacks=callbacks,
-            )
+    if train_dataset is not None and test_dataset is not None:
+        logger.info("Training with optimized tf.data pipelines")
+        history = model.fit(
+            train_dataset,
+            epochs=settings.NUMBER_OF_EPOCHS,
+            validation_data=test_dataset,
+            callbacks=callbacks,
+        )
+    else:
+        logger.info("Training with numpy arrays (legacy mode)")
+        history = model.fit(
+            x=X_train,
+            y=Y_train,
+            epochs=settings.NUMBER_OF_EPOCHS,
+            batch_size=settings.BATCH_SIZE,
+            validation_data=(X_test, Y_test),
+            callbacks=callbacks,
+        )
 
-        model.save(f"{checkpoint_path_prefix}.keras")
-        logger.info(f"Model saved successfully to {checkpoint_path_prefix}.keras")
+    model.save(f"{checkpoint_path_prefix}.keras")
+    logger.info(f"Model saved successfully to {checkpoint_path_prefix}.keras")
 
-        # Force garbage collection after model saving
-        gc.collect()
-
-    except Exception as e:
-        logger.error(f"Model training failed: {str(e)}")
-        raise
+    gc.collect()
 
     duration = format_time(time.time() - time_start)
     logger.info(f"Completed model training | Ticker: {TICKER.name} | Type: {Y_TYPE.value} | Duration: {duration}")

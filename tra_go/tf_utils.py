@@ -47,9 +47,14 @@ def configure_tensorflow_performance():
         # Use modern TensorFlow API instead of deprecated experimental API
         gpus = tf.config.list_physical_devices("GPU")
         if gpus:
+
             for gpu in gpus:
                 # Enable memory growth to prevent OOM on Mac M4's unified memory
                 tf.config.experimental.set_memory_growth(gpu, True)
+
+            # tf.config.set_logical_device_configuration(
+            #     gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=8000)]
+            # )
 
             logger.info(f"Mac M4 GPU memory growth enabled for {len(gpus)} GPU(s) (Metal Performance Shaders)")
             logger.info("Memory growth configuration helps with Mac M4's unified memory architecture")

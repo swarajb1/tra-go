@@ -1,3 +1,40 @@
+"""
+Band 2 Model Evaluation Module
+
+This module provides evaluation functionality for BAND_2 neural network models in the TRA-GO trading system.
+The BAND_2 architecture predicts price ranges (min/max) over multiple time ticks within a trading day,
+enabling sophisticated trading strategy simulation and performance assessment.
+
+Key Features:
+- Model loading with custom metrics and loss functions
+- Prediction processing with safety factors and value corrections
+- Multi-tick price range evaluation over trading days
+- Trading simulation with risk-reward analysis
+- Model worthiness assessment based on 250-day performance projections
+
+The CustomEvaluation class handles the complete evaluation pipeline:
+1. Loads trained Keras models with custom objects
+2. Generates predictions on test/validation data
+3. Applies safety factors and prediction corrections
+4. Performs tick-by-tick trading simulation
+5. Calculates performance metrics and model worthiness
+
+Model predictions are processed to ensure:
+- Low/high values are correctly ordered
+- Predictions are truncated to eliminate extreme outliers
+- Safety factors narrow prediction bands for conservative trading
+- Bands are adjusted relative to last known closing prices
+
+Evaluation metrics include:
+- Win percentage (days where predictions contain actual price ranges)
+- Prediction capture percentage (portion of actual volatility captured)
+- 250-day compound returns projection
+- Model worthiness flags for saving/promotion
+
+Used by the main training pipeline to evaluate newly trained models and determine
+which models should be saved for production trading.
+"""
+
 import os
 
 import band_2.model_metrics as km_2_metrics

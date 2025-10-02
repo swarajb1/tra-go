@@ -1,10 +1,8 @@
 import argparse
 import os
-import sys
 
-from core.assertions import assert_env_vals
 from core.evaluate_models import evaluate_models
-from core.logger import log_warning
+from core.logger import log_exceptions, log_warning, logger
 from main_training import list_of_tickers, main_training
 from tf_utils import configure_tensorflow_performance
 
@@ -72,7 +70,7 @@ def dispatch_command(args: argparse.Namespace) -> None:
         return
 
     if command == "train":
-        for ticker in list_of_tickers * 5:
+        for ticker in list_of_tickers * 100:
             main_training(ticker)
 
     elif command == "training_new":
@@ -109,23 +107,18 @@ def dispatch_command(args: argparse.Namespace) -> None:
         )
 
 
+@log_exceptions()
 def main():
     """Main entry point for the TRA-GO application."""
     os.system("clear")  # Optional: Consider removing or making conditional for non-interactive runs
-
-    assert_env_vals()
+    # Configuration is validated on settings instantiation via Pydantic model validators
 
     configure_tensorflow_performance()
 
-    try:
-        args = parse_arguments()
-        dispatch_command(args)
-    except ValueError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        sys.exit(1)
+    logger.info("Starting TRA-GO CLI execution")
+
+    args = parse_arguments()
+    dispatch_command(args)
 
 
 if __name__ == "__main__":
