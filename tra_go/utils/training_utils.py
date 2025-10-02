@@ -155,6 +155,7 @@ def create_training_callbacks(checkpoint_prefix: str, log_dir: str) -> list[Call
             mode="min",
         ),
     ]
+
     callbacks.extend(other_model_checkpoints)
 
     # Training enhancements - Early Stopping

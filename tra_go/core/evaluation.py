@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
+from core.logger import logger
 from core.win_graph import WinGraph
 from numpy.typing import NDArray
 from tensorflow.keras.models import Model, load_model
@@ -88,7 +89,25 @@ class CoreEvaluation:
             custom_objects = {}
 
         with custom_object_scope(custom_objects):
-            model = load_model(self.model_file_path)
+            try:
+                model = load_model(self.model_file_path)
+            except Exception as err:  # pylint: disable=broad-except
+                # Log the load error and attempt to move the problematic model file to discarded folder
+                logger.warning("Error loading model %s: %s", self.model_file_path, err)
+                try:
+                    # import here to avoid potential import cycles during module import
+                    from core.model_utils import move_model_path
+
+                    moved_path = move_model_path(str(self.model_file_path))
+                    if moved_path:
+                        logger.info("Moved problematic model to discarded: %s", moved_path)
+                    else:
+                        logger.debug("Model file was not moved (may not exist): %s", self.model_file_path)
+                except Exception as mv_err:
+                    logger.warning("Failed to move problematic model %s: %s", self.model_file_path, mv_err)
+
+                # Re-raise original exception so callers can handle/skip
+                raise
 
         if print_summary:
             # print model summary

@@ -3,7 +3,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
-from pydantic import Field, computed_field, field_validator
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.config import Config
 
@@ -97,6 +97,40 @@ class GlobalConfig(BaseSettings):
         if v <= 0:
             raise ValueError("Risk to reward ratio must be positive")
         return v
+
+    @model_validator(mode="after")
+    def _validate_env_values(self) -> "GlobalConfig":
+        """Model-level validation for environment variables (runs after field validation).
+
+        This mirrors the assertions that used to live in `core.assertions` so
+        that configuration is validated as soon as the settings object is
+        created.
+        """
+        if self.SAFETY_FACTOR < 1:
+            raise ValueError(f"Safety Factor should be greater than or equal to 1, got {self.SAFETY_FACTOR}")
+
+        if not (0 < self.TEST_SIZE <= 0.5):
+            raise ValueError(f"Test Size should be between 0 and 0.5, got {self.TEST_SIZE}")
+
+        if not (0 < self.LEARNING_RATE <= 1):
+            raise ValueError(f"Learning rate should be between 0 and 1, got {self.LEARNING_RATE}")
+
+        if self.BATCH_SIZE <= 0:
+            raise ValueError(f"Batch size should be positive, got {self.BATCH_SIZE}")
+
+        if self.NUMBER_OF_EPOCHS <= 0:
+            raise ValueError(f"Number of epochs should be positive, got {self.NUMBER_OF_EPOCHS}")
+
+        if self.NUMBER_OF_NEURONS <= 0:
+            raise ValueError(f"Number of neurons should be positive, got {self.NUMBER_OF_NEURONS}")
+
+        if self.NUMBER_OF_LAYERS <= 0:
+            raise ValueError(f"Number of layers should be positive, got {self.NUMBER_OF_LAYERS}")
+
+        if not (0 <= self.INITIAL_DROPOUT <= 1):
+            raise ValueError(f"Dropout should be between 0 and 1, got {self.INITIAL_DROPOUT}")
+
+        return self
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILEPATH,

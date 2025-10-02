@@ -3,6 +3,8 @@ import time
 
 import training_zero as an
 from core.config import settings
+from core.logger import logger
+from core.model_utils import move_model_to_discarded
 from data_loader import DataLoader
 
 from database.enums import BandType, IntervalType, ModelLocationType, TickerOne
@@ -129,31 +131,58 @@ def evaluate_models(
 
         evaluation_class = _get_custom_evaluation_class(x_type=model_x_type, y_type=model_y_type)
 
-        training_data_custom_evaluation = evaluation_class(
-            ticker=model_ticker,
-            X_data=X_train,
-            Y_data=Y_train,
-            Y_data_real=Y_train_data_real,
-            prev_day_close=train_prev_close,
-            x_type=model_x_type,
-            y_type=model_y_type,
-            test_size=settings.TEST_SIZE,
-            model_file_name=file_name,
-            model_location_type=model_location_type,
-        )
+        # Create training evaluation; if creation fails (e.g. model load error),
+        # move the problematic model file to the discarded folder and skip it.
+        try:
+            training_data_custom_evaluation = evaluation_class(
+                ticker=model_ticker,
+                X_data=X_train,
+                Y_data=Y_train,
+                Y_data_real=Y_train_data_real,
+                prev_day_close=train_prev_close,
+                x_type=model_x_type,
+                y_type=model_y_type,
+                test_size=settings.TEST_SIZE,
+                model_file_name=file_name,
+                model_location_type=model_location_type,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            logger.warning(
+                "Skipping model due to evaluation error: %s | error: %s",
+                file_name,
+                err,
+            )
 
-        valid_data_custom_evaluation = evaluation_class(
-            ticker=model_ticker,
-            X_data=X_test,
-            Y_data=Y_test,
-            Y_data_real=Y_test_data_real,
-            prev_day_close=test_prev_close,
-            x_type=model_x_type,
-            y_type=model_y_type,
-            test_size=0,
-            model_file_name=file_name,
-            model_location_type=model_location_type,
-        )
+            # Attempt to move the file to the discarded folder
+            move_model_to_discarded(model_location_prefix, file_name)
+
+            # Skip this file and continue with next
+            continue
+
+        # Create validation evaluation; if it fails, treat similarly and skip file
+        try:
+            valid_data_custom_evaluation = evaluation_class(
+                ticker=model_ticker,
+                X_data=X_test,
+                Y_data=Y_test,
+                Y_data_real=Y_test_data_real,
+                prev_day_close=test_prev_close,
+                x_type=model_x_type,
+                y_type=model_y_type,
+                test_size=0,
+                model_file_name=file_name,
+                model_location_type=model_location_type,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            logger.warning(
+                "Skipping model due to validation evaluation error: %s | error: %s",
+                file_name,
+                err,
+            )
+            # Attempt to move the file to the discarded folder
+            move_model_to_discarded(model_location_prefix, file_name)
+
+            continue
 
         is_triple_saving: bool = (
             training_data_custom_evaluation.is_model_worth_double_saving

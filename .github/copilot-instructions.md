@@ -167,6 +167,7 @@ Environment setup requires careful attention to TensorFlow platform-specific dep
 
 ## General Instructions for Copilot
 
+- Use .venv/bin/python to run scripts.
 - To run any python script, use the command `.venv/bin/python path/to/script.py`.
 - Any docs/readme file created during a chat session should be in the `docs/` directory.
 - To execute any python code, always create a Python file in the `temp/` directory of the project and put the code block there. Execute that file in the terminal using `.venv/bin/python`. Delete the file after use.
