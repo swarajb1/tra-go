@@ -5,9 +5,11 @@ Centralized logging configuration for the tra_go project.
 import inspect
 import logging
 import sys
+from collections.abc import Callable
+from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, TypeVar, cast
 
 from core.config import settings
 
@@ -83,6 +85,8 @@ def setup_logger(
 # Global logger instance
 logger = setup_logger()
 
+F = TypeVar("F", bound=Callable[..., Any])
+
 
 def log_error(operation: str, error: Exception, **kwargs) -> None:
     """Log error with context and additional metadata."""
@@ -113,3 +117,22 @@ def log_performance_metric(metric_name: str, value: float, **kwargs) -> None:
     if context:
         metric_msg += f" | {context}"
     logger.info(metric_msg)
+
+
+def log_exceptions(exit_on_exception: bool = True, exit_code: int = 1) -> Callable[[F], F]:
+    """Decorator to log exceptions and optionally exit the application."""
+
+    def decorator(func: F) -> F:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any):
+            try:
+                return func(*args, **kwargs)
+            except Exception as error:  # pylint: disable=broad-except
+                log_error(operation=func.__name__, error=error)
+                if exit_on_exception:
+                    raise SystemExit(exit_code) from error
+                raise
+
+        return cast(F, wrapper)
+
+    return decorator
