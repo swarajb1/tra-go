@@ -1,37 +1,5 @@
-import logging
-
 from core.config import settings
-
-logger = logging.getLogger(__name__)
-
-
-def assert_env_vals() -> None:
-    """Asserts the values of environment variables."""
-    # Safety Factor validation
-    assert (
-        settings.SAFETY_FACTOR >= 1
-    ), f"Safety Factor should be greater than or equal to 1, got {settings.SAFETY_FACTOR}"
-
-    # Test size validation
-    assert 0 < settings.TEST_SIZE <= 0.5, f"Test Size should be between 0 and 0.5, got {settings.TEST_SIZE}"
-
-    # Learning rate validation
-    assert 0 < settings.LEARNING_RATE <= 1, f"Learning rate should be between 0 and 1, got {settings.LEARNING_RATE}"
-
-    # Batch size validation
-    assert settings.BATCH_SIZE > 0, f"Batch size should be positive, got {settings.BATCH_SIZE}"
-
-    # Number of epochs validation
-    assert settings.NUMBER_OF_EPOCHS > 0, f"Number of epochs should be positive, got {settings.NUMBER_OF_EPOCHS}"
-
-    # Number of neurons validation
-    assert settings.NUMBER_OF_NEURONS > 0, f"Number of neurons should be positive, got {settings.NUMBER_OF_NEURONS}"
-
-    # Number of layers validation
-    assert settings.NUMBER_OF_LAYERS > 0, f"Number of layers should be positive, got {settings.NUMBER_OF_LAYERS}"
-
-    # Dropout validation
-    assert 0 <= settings.INITIAL_DROPOUT <= 1, f"Dropout should be between 0 and 1, got {settings.INITIAL_DROPOUT}"
+from core.logger import log_exceptions, logger
 
 
 def print_settings() -> None:
@@ -55,13 +23,11 @@ def print_settings() -> None:
     print("=" * 80)
 
 
+@log_exceptions()
 def main():
     """Asserts and prints the settings."""
-    try:
-        assert_env_vals()
-        print_settings()
-    except AssertionError as e:
-        logger.error(e)
+    logger.info("Validating configuration settings")
+    print_settings()
 
 
 if __name__ == "__main__":

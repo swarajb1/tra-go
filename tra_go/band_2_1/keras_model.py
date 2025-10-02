@@ -49,16 +49,17 @@ def get_custom_scope():
         "metric_abs_percent": km_21_metrics.metric_abs_percent,
         "metric_loss_comp_2": km_21_metrics.metric_loss_comp_2,
         "metric_win_percent": km_21_metrics.metric_win_percent,
-        "metric_pred_capture_per_win_percent": km_21_metrics.metric_pred_capture_per_win_percent,
-        "metric_win_correct_trend_percent": km_21_metrics.metric_win_correct_trend_percent,
         "metric_win_pred_trend_capture_percent": km_21_metrics.metric_win_pred_trend_capture_percent,
         "metric_win_pred_capture_total_percent": km_21_metrics.metric_win_pred_capture_total_percent,
+        "metric_pred_capture_per_win_percent": km_21_metrics.metric_pred_capture_per_win_percent,
+        "metric_correct_trend_per_win_percent": km_21_metrics.metric_correct_trend_per_win_percent,
         "metric_try_1": km_21_metrics.metric_try_1,
         "metric_try_2": km_21_metrics.metric_try_2,
         "stoploss_incurred": km_21_metrics.stoploss_incurred,
         "CustomActivationLayer": CustomActivationLayer,
-        "metric_correct_trends_full": km_21_metrics.metric_correct_trends_full,
-        "metric_win_pred_capture_percent": km_21_metrics.metric_pred_capture_per_win_percent,
+        "metric_win_pred_capture_percent": km_21_metrics.metric_placeholder,
+        "metric_win_correct_trend_percent": km_21_metrics.metric_placeholder,
+        "metric_correct_trends_full": km_21_metrics.metric_placeholder,
     }
 
 

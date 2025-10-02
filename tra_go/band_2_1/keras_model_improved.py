@@ -37,7 +37,6 @@ separately in training scripts to maintain modularity.
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
 from band_2_1.keras_model_common import CustomActivationLayer, ModelCompileConfig
 from core.config import settings
@@ -181,16 +180,17 @@ def get_untrained_model(
             use_bias=True,
             recurrent_dropout=settings.RECURRENT_DROPOUT,
             unroll=False,
-            name=f"rnn_{'gru' if use_gru else 'lstm'}_{layer_num}",
+            name=f"rnn_{'gru' if use_gru else 'lstm'}_{layer_num}__units_{units}",
         )(x)
 
         # Exponential dropout
         dropout_rate = (1 + settings.INITIAL_DROPOUT) ** (1 / (layer_num + 1)) - 1
 
-        x = Dropout(dropout_rate, name=f"dropout_{layer_num}")(x)
+        x = Dropout(dropout_rate, name=f"dropout_{layer_num}__dropout_{dropout_rate:.2f}")(x)
 
     # TimeDistributed Dense
-    x = TimeDistributed(Dense(units=3), name="time_distributed_dense")(x)
+    units_output = 3
+    x = TimeDistributed(Dense(units=units_output), name=f"time_distributed_dense__units_{units_output}")(x)
 
     # Attention mechanism (optional)
     attention_weights = None
@@ -199,7 +199,7 @@ def get_untrained_model(
         x = attended
 
     # Global pooling
-    x = GlobalAveragePooling1D(name="global_avg_pool")(x)
+    x = GlobalAveragePooling1D(name="global_average_pooling_1d")(x)
 
     # Custom activation
     outputs = CustomActivationLayer(name="custom_activation")(x)
@@ -225,7 +225,7 @@ def get_untrained_model(
     return model
 
 
-def extract_attention_weights(model: Model, input_data: NDArray) -> np.ndarray:
+def extract_attention_weights(model: Model, input_data: NDArray) -> NDArray:
     """
     Extract attention weights from a trained model with attention mechanism.
 
@@ -240,7 +240,7 @@ def extract_attention_weights(model: Model, input_data: NDArray) -> np.ndarray:
                              Shape: (batch_size, sequence_length, features)
 
     Returns:
-        np.ndarray: Attention weights tensor.
+        NDArray: Attention weights tensor.
                    Shape: (batch_size, sequence_length, sequence_length)
                    Values represent attention scores between query and key positions.
 
@@ -266,7 +266,7 @@ def extract_attention_weights(model: Model, input_data: NDArray) -> np.ndarray:
     return weights
 
 
-def plot_attention_weights(weights: np.ndarray, sample_idx: int = 0, save_path: Optional[str] = None) -> None:
+def plot_attention_weights(weights: NDArray, sample_idx: int = 0, save_path: Optional[str] = None) -> None:
     """
     Visualize attention weights as a heatmap for model interpretability.
 
@@ -275,7 +275,7 @@ def plot_attention_weights(weights: np.ndarray, sample_idx: int = 0, save_path: 
     query positions. Brighter colors indicate stronger attention connections.
 
     Args:
-        weights (np.ndarray): Attention weights from extract_attention_weights().
+        weights (NDArray): Attention weights from extract_attention_weights().
                             Shape: (batch_size, sequence_length, sequence_length)
         sample_idx (int): Index of the sample to visualize from the batch.
                          Defaults to 0 (first sample).

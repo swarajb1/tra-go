@@ -47,15 +47,80 @@ def _get_correct_trends(y_true, y_pred):
     return correct_trends
 
 
-def metric_correct_trends_full(y_true, y_pred):
+def metric_loss_comp_2(y_true, y_pred):
+    min_true, max_true, min_pred, max_pred = _get_min_max_values(y_true, y_pred)
+
+    is_valid_pred = tf.greater_equal(max_pred, min_pred)
+
+    is_max_pred_less_than_max_true = tf.less_equal(max_pred, max_true)
+
+    is_min_pred_more_than_min_true = tf.greater_equal(min_pred, min_true)
+
+    is_max_min_diff_more_than_00_1 = tf.greater_equal(max_pred - min_pred, 0.015)
+
+    band_inside = is_valid_pred & is_max_pred_less_than_max_true & is_min_pred_more_than_min_true
+
+    z_max_above_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(is_max_pred_less_than_max_true), dtype=tf.float32) * tf.abs(max_true - max_pred),
+    )
+
+    z_pred_valid_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(tf.greater_equal(min_pred, min_true)), dtype=tf.float32) * tf.abs(max_pred - min_pred),
+    )
+
+    z_max_min_diff_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(is_max_min_diff_more_than_00_1), dtype=tf.float32)
+        * (tf.abs(max_pred - min_pred) - 0.03),
+    )
+
+    z_min_below_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(is_min_pred_more_than_min_true), dtype=tf.float32) * tf.abs(min_pred - min_true),
+    )
+
+    win_amt_true_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(band_inside), dtype=tf.float32) * tf.abs(max_true - min_true),
+    )
+
+    win_amt_pred_error = tf.reduce_mean(
+        tf.abs(max_true - min_true) - tf.cast(band_inside, dtype=tf.float32) * tf.abs(max_pred - min_pred),
+    )
+
     correct_trends = _get_correct_trends(y_true, y_pred)
 
-    correct_win_trend = tf.reduce_mean(tf.cast(correct_trends, dtype=tf.float32))
+    trend_amt_true_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(correct_trends), dtype=tf.float32) * tf.abs(max_true - min_true),
+    )
 
-    return correct_win_trend * 100
+    trend_amt_pred_error = tf.reduce_mean(
+        tf.abs(max_true - min_true) - tf.cast(correct_trends, dtype=tf.float32) * tf.abs(max_pred - min_pred),
+    )
+
+    trend_win_true_error = tf.reduce_mean(
+        tf.cast(tf.logical_not(band_inside & correct_trends), dtype=tf.float32) * tf.abs(max_true - min_true),
+    )
+
+    trend_win_pred_error = tf.reduce_mean(
+        tf.abs(max_true - min_true)
+        - tf.cast(band_inside & correct_trends, dtype=tf.float32) * tf.abs(max_pred - min_pred),
+    )
+
+    return (
+        z_max_above_error
+        + z_min_below_error
+        + z_pred_valid_error
+        + z_max_min_diff_error
+        # + penalty_half_inside(y_true, y_pred)
+        + win_amt_true_error
+        + win_amt_pred_error
+        + trend_amt_true_error
+        + trend_amt_pred_error
+        + trend_win_true_error
+        + trend_win_pred_error
+        # + stoploss_incurred(y_true, y_pred) / 6
+    )
 
 
-def metric_loss_comp_2(y_true, y_pred):
+def metric_loss_comp_2_old(y_true, y_pred):
     min_true, max_true, min_pred, max_pred = _get_min_max_values(y_true, y_pred)
 
     is_valid_pred = tf.greater_equal(max_pred, min_pred)
@@ -218,17 +283,16 @@ def metric_win_pred_capture_total_percent(y_true, y_pred):
     return pred_capture / (total_capture_possible + EPS) * 100
 
 
-def metric_win_correct_trend_percent(y_true, y_pred):
-    return metric_correct_trend_per_win_percent(y_true, y_pred)
-
-
 def metric_correct_trend_per_win_percent(y_true, y_pred):
     wins = _get_band_inside(y_true, y_pred)
 
     correct_trends = _get_correct_trends(y_true, y_pred)
+
     num = tf.reduce_mean(tf.cast(correct_trends & wins, dtype=tf.float32))
     denom = tf.reduce_mean(tf.cast(wins, dtype=tf.float32))
+
     correct_win_trend = num / (denom + EPS)
+
     return correct_win_trend * 100
 
 
@@ -259,6 +323,7 @@ def metric_try_1(y_true, y_pred):
     )
 
     total_capture_possible = tf.reduce_mean(tf.abs(max_true - min_true))
+
     return (pred_trend_capture - stoploss_incurred(y_true, y_pred)) / (total_capture_possible + EPS) * 100
 
 
@@ -326,3 +391,7 @@ def metric_abs_percent(y_true, y_pred):
 
 def metric_rmse_percent(y_true, y_pred):
     return training_common.metric_rmse_percent(y_true[:, :2], y_pred[:, :2])
+
+
+def metric_placeholder(y_true, y_pred):
+    return 1
